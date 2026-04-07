@@ -22,6 +22,10 @@ targets:
       - FileHoundTests
     dependencies:
       - target: FileHound
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cn.vanjay.FileHoundTests
+        GENERATE_INFOPLIST_FILE: YES
   FileHoundUITests:
     type: bundle.ui-testing
     platform: macOS
@@ -29,3 +33,7 @@ targets:
       - FileHoundUITests
     dependencies:
       - target: FileHound
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cn.vanjay.FileHoundUITests
+        GENERATE_INFOPLIST_FILE: YES

@@ -1,0 +1,546 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1535D5C84FBDD6F6CD75682C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D0A48861A21373DC250CB7 /* AppDelegate.swift */; };
+		16FDAA1B39724DF0AD900BDA /* ApplicationMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */; };
+		1C3C07491C775799E0EF8300 /* AppShellUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D566A160E55F5079F322E5 /* AppShellUITests.swift */; };
+		1CF0089C56D7F5100B35D7D1 /* FileHoundUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */; };
+		51E9BF1E14AB16AC5FF40BB1 /* SearchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */; };
+		9E8975D01A0C53A232FF18A4 /* FileHoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */; };
+		A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */; };
+		AAAA1EE5284E5D1AD64DC05C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DA6779D3010941E92766274 /* Assets.xcassets */; };
+		C0ABAD9CFF0EEFF3831EB395 /* FileHoundUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */; };
+		DF429A833B622102F9B84343 /* MainMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D9B94B38D425945A72BD39 /* MainMenuBuilder.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		608B26B22D4E9D7B9F91FFE2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8B33FB88648DF7E4CA06F98D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = ABDDBFA76A03F4EB53DBDE50;
+			remoteInfo = FileHound;
+		};
+		9463D7622C8930B484AAEA92 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8B33FB88648DF7E4CA06F98D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = ABDDBFA76A03F4EB53DBDE50;
+			remoteInfo = FileHound;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSplitViewController.swift; sourceTree = "<group>"; };
+		10D566A160E55F5079F322E5 /* AppShellUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellUITests.swift; sourceTree = "<group>"; };
+		2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowController.swift; sourceTree = "<group>"; };
+		4DA6779D3010941E92766274 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		50D0A48861A21373DC250CB7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITests.swift; sourceTree = "<group>"; };
+		C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		C6FF0940B950F6EEB38811E0 /* FileHound.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FileHound.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C8D9B94B38D425945A72BD39 /* MainMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuBuilder.swift; sourceTree = "<group>"; };
+		DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMain.swift; sourceTree = "<group>"; };
+		DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundTests.swift; sourceTree = "<group>"; };
+		E2A02BB6DDC828B9534A1EAA /* FileHoundTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		05E9E57CF84E3C64B1C68419 /* FileHound */ = {
+			isa = PBXGroup;
+			children = (
+				4DA6779D3010941E92766274 /* Assets.xcassets */,
+				9C17908009B84D24BE6F4A40 /* App */,
+				6A0030210E1822121A252FE5 /* Modules */,
+			);
+			path = FileHound;
+			sourceTree = "<group>";
+		};
+		10A3CFF253DC76FA10922249 /* FileHoundUITests */ = {
+			isa = PBXGroup;
+			children = (
+				10D566A160E55F5079F322E5 /* AppShellUITests.swift */,
+				BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */,
+				C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */,
+			);
+			path = FileHoundUITests;
+			sourceTree = "<group>";
+		};
+		18728B21D85CA4C131287197 = {
+			isa = PBXGroup;
+			children = (
+				05E9E57CF84E3C64B1C68419 /* FileHound */,
+				58429E7656E52FEAB5A0A009 /* FileHoundTests */,
+				10A3CFF253DC76FA10922249 /* FileHoundUITests */,
+				AEFC66A99582AA7A7028D392 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		58429E7656E52FEAB5A0A009 /* FileHoundTests */ = {
+			isa = PBXGroup;
+			children = (
+				DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */,
+			);
+			path = FileHoundTests;
+			sourceTree = "<group>";
+		};
+		6A0030210E1822121A252FE5 /* Modules */ = {
+			isa = PBXGroup;
+			children = (
+				FB40DAD68A08E47E84633C61 /* SearchWindow */,
+			);
+			path = Modules;
+			sourceTree = "<group>";
+		};
+		9C17908009B84D24BE6F4A40 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				50D0A48861A21373DC250CB7 /* AppDelegate.swift */,
+				DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */,
+				C8D9B94B38D425945A72BD39 /* MainMenuBuilder.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		AEFC66A99582AA7A7028D392 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C6FF0940B950F6EEB38811E0 /* FileHound.app */,
+				E2A02BB6DDC828B9534A1EAA /* FileHoundTests.xctest */,
+				6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		FB40DAD68A08E47E84633C61 /* SearchWindow */ = {
+			isa = PBXGroup;
+			children = (
+				00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */,
+				2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */,
+			);
+			path = SearchWindow;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		26FE55936B7FC95B00B31670 /* FileHoundUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5EA85937E6E45C81F554C484 /* Build configuration list for PBXNativeTarget "FileHoundUITests" */;
+			buildPhases = (
+				BA52D8914754499FCCAACA65 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B0633C88B18988B6266A875C /* PBXTargetDependency */,
+			);
+			name = FileHoundUITests;
+			packageProductDependencies = (
+			);
+			productName = FileHoundUITests;
+			productReference = 6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		ABDDBFA76A03F4EB53DBDE50 /* FileHound */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D9B9D42FB7B7C070CFFA773A /* Build configuration list for PBXNativeTarget "FileHound" */;
+			buildPhases = (
+				846A8D0CFE63ABC2B011839B /* Sources */,
+				0AEC4BB50083566EA3F77845 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FileHound;
+			packageProductDependencies = (
+			);
+			productName = FileHound;
+			productReference = C6FF0940B950F6EEB38811E0 /* FileHound.app */;
+			productType = "com.apple.product-type.application";
+		};
+		E33A4DEE94F762270C85CE96 /* FileHoundTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 041AF0153475EEF854F6FF01 /* Build configuration list for PBXNativeTarget "FileHoundTests" */;
+			buildPhases = (
+				F6CA86F58A750C629AD51B06 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				24E622886F2D09C768794AE8 /* PBXTargetDependency */,
+			);
+			name = FileHoundTests;
+			packageProductDependencies = (
+			);
+			productName = FileHoundTests;
+			productReference = E2A02BB6DDC828B9534A1EAA /* FileHoundTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8B33FB88648DF7E4CA06F98D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					26FE55936B7FC95B00B31670 = {
+						TestTargetID = ABDDBFA76A03F4EB53DBDE50;
+					};
+				};
+			};
+			buildConfigurationList = E0D5E1C8A33235421AEC2203 /* Build configuration list for PBXProject "FileHound" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 18728B21D85CA4C131287197;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = AEFC66A99582AA7A7028D392 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ABDDBFA76A03F4EB53DBDE50 /* FileHound */,
+				E33A4DEE94F762270C85CE96 /* FileHoundTests */,
+				26FE55936B7FC95B00B31670 /* FileHoundUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0AEC4BB50083566EA3F77845 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AAAA1EE5284E5D1AD64DC05C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		846A8D0CFE63ABC2B011839B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1535D5C84FBDD6F6CD75682C /* AppDelegate.swift in Sources */,
+				16FDAA1B39724DF0AD900BDA /* ApplicationMain.swift in Sources */,
+				DF429A833B622102F9B84343 /* MainMenuBuilder.swift in Sources */,
+				A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */,
+				51E9BF1E14AB16AC5FF40BB1 /* SearchWindowController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BA52D8914754499FCCAACA65 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C3C07491C775799E0EF8300 /* AppShellUITests.swift in Sources */,
+				1CF0089C56D7F5100B35D7D1 /* FileHoundUITests.swift in Sources */,
+				C0ABAD9CFF0EEFF3831EB395 /* FileHoundUITestsLaunchTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F6CA86F58A750C629AD51B06 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9E8975D01A0C53A232FF18A4 /* FileHoundTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		24E622886F2D09C768794AE8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = ABDDBFA76A03F4EB53DBDE50 /* FileHound */;
+			targetProxy = 608B26B22D4E9D7B9F91FFE2 /* PBXContainerItemProxy */;
+		};
+		B0633C88B18988B6266A875C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = ABDDBFA76A03F4EB53DBDE50 /* FileHound */;
+			targetProxy = 9463D7622C8930B484AAEA92 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		20B2F0EDFB05F372A9F1AEDB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = FileHound;
+			};
+			name = Release;
+		};
+		23536EEED3B393418C9BB104 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FileHound.app/Contents/MacOS/FileHound";
+			};
+			name = Release;
+		};
+		2C64174E238E2843B7A98A61 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundUITests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = FileHound;
+			};
+			name = Debug;
+		};
+		35E1FD3CF4163599C11F08EA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FileHound.app/Contents/MacOS/FileHound";
+			};
+			name = Debug;
+		};
+		48ECB57602E79C615269722C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		597730BBF00251E341258912 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMainStoryboardFile = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHound;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.1;
+			};
+			name = Release;
+		};
+		7A214A881285AD74FA77D08D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		C51E38BE40D484B68E6061A5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSMainStoryboardFile = "";
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHound;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		041AF0153475EEF854F6FF01 /* Build configuration list for PBXNativeTarget "FileHoundTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				35E1FD3CF4163599C11F08EA /* Debug */,
+				23536EEED3B393418C9BB104 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5EA85937E6E45C81F554C484 /* Build configuration list for PBXNativeTarget "FileHoundUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2C64174E238E2843B7A98A61 /* Debug */,
+				20B2F0EDFB05F372A9F1AEDB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D9B9D42FB7B7C070CFFA773A /* Build configuration list for PBXNativeTarget "FileHound" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C51E38BE40D484B68E6061A5 /* Debug */,
+				597730BBF00251E341258912 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E0D5E1C8A33235421AEC2203 /* Build configuration list for PBXProject "FileHound" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				48ECB57602E79C615269722C /* Debug */,
+				7A214A881285AD74FA77D08D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8B33FB88648DF7E4CA06F98D /* Project object */;
+}
