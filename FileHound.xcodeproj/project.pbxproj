@@ -291,6 +291,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundUITests;
 				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
 				TEST_TARGET_NAME = FileHound;
 			};
 			name = Release;
@@ -308,6 +309,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundTests;
 				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FileHound.app/Contents/MacOS/FileHound";
 			};
 			name = Release;
@@ -325,6 +327,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundUITests;
 				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
 				TEST_TARGET_NAME = FileHound;
 			};
 			name = Debug;
@@ -342,6 +345,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundTests;
 				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FileHound.app/Contents/MacOS/FileHound";
 			};
 			name = Debug;
@@ -405,7 +409,7 @@
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 5.10;
 			};
 			name = Debug;
 		};
@@ -423,7 +427,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHound;
 				SDKROOT = macosx;
-				SWIFT_VERSION = 5.1;
+				SWIFT_VERSION = 5.10;
 			};
 			name = Release;
 		};
@@ -479,7 +483,7 @@
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 5.10;
 			};
 			name = Release;
 		};
@@ -497,7 +501,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHound;
 				SDKROOT = macosx;
-				SWIFT_VERSION = 5.1;
+				SWIFT_VERSION = 5.10;
 			};
 			name = Debug;
 		};
