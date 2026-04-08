@@ -39,4 +39,32 @@ struct QueryCompilerTests {
 
         #expect(compiled.requiresContentScan == true)
     }
+
+    @Test
+    func rejectsUnsupportedExclusionRules() throws {
+        let query = SearchQuery(
+            scope: .roots(["/Users/VanJay"]),
+            rootGroup: .all([
+                .exclude(.nameContains("secret"))
+            ])
+        )
+
+        #expect(throws: QueryCompilerError.self) {
+            _ = try QueryCompiler().compile(query)
+        }
+    }
+
+    @Test
+    func detectsContentRegexRules() throws {
+        let query = SearchQuery(
+            scope: .roots(["/Users/VanJay"]),
+            rootGroup: .any([
+                .rule(.contentMatchesRegex("error\\d+"))
+            ])
+        )
+
+        let compiled = try QueryCompiler().compile(query)
+
+        #expect(compiled.requiresContentScan == true)
+    }
 }

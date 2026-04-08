@@ -1,16 +1,22 @@
 struct CompiledQuery: Sendable {
     let rootPaths: [String]
+    let rootGroup: QueryGroup
     let requiresContentScan: Bool
     let excludedPathFragments: Set<String>
+}
+
+enum QueryCompilerError: Error, Equatable, Sendable {
+    case unsupportedExclusion(QueryRule)
 }
 
 struct QueryCompiler {
     func compile(_ query: SearchQuery) throws -> CompiledQuery {
         var excluded: Set<String> = []
         let requiresContent = query.rootGroup.containsContentRule
-        query.rootGroup.collectExcludedPathFragments(into: &excluded)
+        try query.rootGroup.collectExcludedPathFragments(into: &excluded)
         return CompiledQuery(
             rootPaths: query.scope.rootPaths,
+            rootGroup: query.rootGroup,
             requiresContentScan: requiresContent,
             excludedPathFragments: excluded
         )
@@ -32,13 +38,17 @@ private extension QueryGroup {
         }
     }
 
-    func collectExcludedPathFragments(into set: inout Set<String>) {
+    func collectExcludedPathFragments(into set: inout Set<String>) throws {
         switch self {
         case .all(let groups), .any(let groups):
-            groups.forEach { $0.collectExcludedPathFragments(into: &set) }
+            for group in groups {
+                try group.collectExcludedPathFragments(into: &set)
+            }
         case .exclude(let rule):
             if case .pathContains(let fragment) = rule {
                 set.insert(fragment)
+            } else {
+                throw QueryCompilerError.unsupportedExclusion(rule)
             }
         case .rule:
             break
