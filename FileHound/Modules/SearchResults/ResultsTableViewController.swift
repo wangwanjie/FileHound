@@ -5,14 +5,15 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     private let tableView = NSTableView()
     private let scrollView = NSScrollView()
     private var items: [SearchResultItem] = []
+    private var filteredItems: [SearchResultItem] = []
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
 
     override func loadView() {
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
-        column.title = "名称"
-        tableView.addTableColumn(column)
-        tableView.headerView = nil
+        addColumn(id: "name", title: "Name", width: 420)
+        addColumn(id: "kind", title: "Kind", width: 180)
+        addColumn(id: "modified", title: "Modified", width: 180)
+        addColumn(id: "size", title: "Size", width: 80)
         tableView.delegate = self
         tableView.dataSource = self
         tableView.target = self
@@ -27,23 +28,54 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         view = scrollView
     }
 
+    private func addColumn(id: String, title: String, width: CGFloat) {
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
+        column.title = title
+        column.width = width
+        tableView.addTableColumn(column)
+    }
+
     func update(items: [SearchResultItem]) {
         self.items = items
+        self.filteredItems = items
+        tableView.reloadData()
+    }
+
+    func applyFilter(_ text: String) {
+        guard text.isEmpty == false else {
+            filteredItems = items
+            tableView.reloadData()
+            return
+        }
+        filteredItems = items.filter { item in
+            item.path.localizedCaseInsensitiveContains(text) || item.kind.localizedCaseInsensitiveContains(text)
+        }
         tableView.reloadData()
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int {
-        items.count
+        filteredItems.count
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let item = filteredItems[row]
         let identifier = NSUserInterfaceItemIdentifier("ResultsCell")
         let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView ?? NSTableCellView()
         cell.identifier = identifier
 
         let textField = cell.textField ?? NSTextField(labelWithString: "")
-        textField.stringValue = URL(fileURLWithPath: items[row].path).lastPathComponent
-        textField.identifier = NSUserInterfaceItemIdentifier(textField.stringValue)
+        textField.identifier = NSUserInterfaceItemIdentifier(URL(fileURLWithPath: item.path).lastPathComponent)
+
+        switch tableColumn?.identifier.rawValue {
+        case "kind":
+            textField.stringValue = item.kind
+        case "modified":
+            textField.stringValue = item.modifiedText
+        case "size":
+            textField.stringValue = item.sizeText
+        default:
+            textField.stringValue = URL(fileURLWithPath: item.path).lastPathComponent
+        }
 
         if textField.superview == nil {
             cell.addSubview(textField)
@@ -60,6 +92,6 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     @objc
     private func selectionDidChange() {
         let row = tableView.selectedRow
-        onSelectionChange?(row >= 0 ? items[row] : nil)
+        onSelectionChange?(row >= 0 ? filteredItems[row] : nil)
     }
 }

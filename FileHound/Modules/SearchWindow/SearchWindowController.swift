@@ -11,10 +11,10 @@ final class SearchWindowController: NSWindowController {
     convenience init() {
         let splitController = SearchSplitViewController()
         let window = NSWindow(contentViewController: splitController)
-        window.title = "FileHound"
-        window.setContentSize(NSSize(width: 1100, height: 720))
+        window.title = "Find Any File"
+        window.setContentSize(NSSize(width: 1140, height: 300))
         window.center()
-        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
         self.init(window: window)
     }

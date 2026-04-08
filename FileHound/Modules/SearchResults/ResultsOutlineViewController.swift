@@ -5,6 +5,7 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
     private let outlineView = NSOutlineView()
     private let scrollView = NSScrollView()
     private var items: [SearchResultItem] = []
+    private var filteredItems: [SearchResultItem] = []
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
 
@@ -31,16 +32,27 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
 
     func update(items: [SearchResultItem]) {
         self.items = items
+        self.filteredItems = items
         outlineView.reloadData()
         outlineView.expandItem(nil, expandChildren: true)
     }
 
+    func applyFilter(_ text: String) {
+        guard text.isEmpty == false else {
+            filteredItems = items
+            outlineView.reloadData()
+            return
+        }
+        filteredItems = items.filter { $0.path.localizedCaseInsensitiveContains(text) }
+        outlineView.reloadData()
+    }
+
     func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
-        item == nil ? items.count : 0
+        item == nil ? filteredItems.count : 0
     }
 
     func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-        items[index]
+        filteredItems[index]
     }
 
     func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {

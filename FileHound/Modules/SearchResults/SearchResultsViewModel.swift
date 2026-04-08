@@ -6,6 +6,14 @@ final class SearchResultsViewModel {
         case tree
     }
 
+    var title: String = ""
+    var filterText: String = "" {
+        didSet { onFilterChange?(filterText) }
+    }
+    var showInvisibleItems = false
+    var showPackageContents = false
+    var showTrashedItems = false
+
     var mode: Mode = .list {
         didSet { onModeChange?(mode) }
     }
@@ -21,4 +29,5 @@ final class SearchResultsViewModel {
     var onModeChange: ((Mode) -> Void)?
     var onItemsChange: (([SearchResultItem]) -> Void)?
     var onSelectionChange: ((SearchResultItem?) -> Void)?
+    var onFilterChange: ((String) -> Void)?
 }

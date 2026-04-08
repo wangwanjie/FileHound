@@ -30,6 +30,7 @@
 		428D4E5D78D69EA9964D2ACF /* SearchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233D1EF55ED9F49A465459E7 /* SearchSession.swift */; };
 		48F3B1B01B1A11CE248E9CCD /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B9771C1E6520696B0AAD015 /* L10n.swift */; };
 		51E9BF1E14AB16AC5FF40BB1 /* SearchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */; };
+		5A0754BDC36864A027E81076 /* SearchResultsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39503E86A4D81047DC45CD4C /* SearchResultsWindowController.swift */; };
 		5A4A6E58B1DF0A6A7FC49AD2 /* SearchResultsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */; };
 		6A7C04BCA40CEE6B137A7D92 /* UpdatePreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D1FEB9F6E319784E4A322D /* UpdatePreferencesViewController.swift */; };
 		70045AA87A1A7E0BEE833CD6 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7322A6060AB237975D245B4B /* AppLanguage.swift */; };
@@ -109,6 +110,7 @@
 		2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowController.swift; sourceTree = "<group>"; };
 		30BB21AE0D140F9289272CB6 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		32DD8B5150B2D2CDFD773081 /* PrivilegedSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivilegedSearchService.swift; sourceTree = "<group>"; };
+		39503E86A4D81047DC45CD4C /* SearchResultsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsWindowController.swift; sourceTree = "<group>"; };
 		3B50F28DA50D9DD65115648E /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
 		3DEA9F492802D3E305395461 /* DirectoryWalker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalker.swift; sourceTree = "<group>"; };
 		3E091BC05621A3E82813A75C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
@@ -262,6 +264,7 @@
 				4D0A8AC22615E407458B0A73 /* ResultsTableViewController.swift */,
 				F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */,
 				6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */,
+				39503E86A4D81047DC45CD4C /* SearchResultsWindowController.swift */,
 			);
 			path = SearchResults;
 			sourceTree = "<group>";
@@ -725,6 +728,7 @@
 				FCABC41A1EED6A78A52EE62C /* SearchResultItem.swift in Sources */,
 				3946F29B4B84621D2F6BE417 /* SearchResultsViewController.swift in Sources */,
 				5A4A6E58B1DF0A6A7FC49AD2 /* SearchResultsViewModel.swift in Sources */,
+				5A0754BDC36864A027E81076 /* SearchResultsWindowController.swift in Sources */,
 				05CD5E283916051DFB996ADB /* SearchRuleRowView.swift in Sources */,
 				16CA3F229B52E33585E757A2 /* SearchRulesViewController.swift in Sources */,
 				428D4E5D78D69EA9964D2ACF /* SearchSession.swift in Sources */,

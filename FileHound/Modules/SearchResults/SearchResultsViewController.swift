@@ -6,8 +6,12 @@ final class SearchResultsViewController: NSViewController {
     private let listController = ResultsTableViewController()
     private let treeController = ResultsOutlineViewController()
     private let containerView = NSView()
-    private let listButton = NSButton(title: L10n.string("results.mode.list"), target: nil, action: nil)
-    private let treeButton = NSButton(title: L10n.string("results.mode.tree"), target: nil, action: nil)
+    private let listButton = NSButton(title: "", target: nil, action: nil)
+    private let treeButton = NSButton(title: "", target: nil, action: nil)
+    private let invisiblesButton = NSButton(title: "Invisibles", target: nil, action: nil)
+    private let packageButton = NSButton(title: "Package Contents", target: nil, action: nil)
+    private let trashedButton = NSButton(title: "Trashed", target: nil, action: nil)
+    private let filterField = NSSearchField()
 
     init(viewModel: SearchResultsViewModel) {
         self.viewModel = viewModel
@@ -22,29 +26,51 @@ final class SearchResultsViewController: NSViewController {
     override func loadView() {
         let rootView = NSView()
 
+        rootView.wantsLayer = true
+        rootView.layer?.backgroundColor = NSColor(calibratedWhite: 0.14, alpha: 1).cgColor
+
         listButton.target = self
         listButton.action = #selector(showListMode)
         treeButton.target = self
         treeButton.action = #selector(showTreeMode)
+        listButton.title = "☷"
+        treeButton.title = "☰"
+        listButton.setAccessibilityIdentifier("列表视图")
+        treeButton.setAccessibilityIdentifier("树形视图")
 
-        let buttonStack = NSStackView(views: [listButton, treeButton])
-        buttonStack.orientation = .horizontal
-        buttonStack.spacing = 8
+        [invisiblesButton, packageButton, trashedButton].forEach { button in
+            button.setButtonType(.toggle)
+            button.bezelStyle = .texturedRounded
+        }
+
+        filterField.placeholderString = "Filter"
+        filterField.target = self
+        filterField.action = #selector(filterChanged)
+
+        let leftStack = NSStackView(views: [listButton, treeButton, invisiblesButton, packageButton, trashedButton])
+        leftStack.orientation = .horizontal
+        leftStack.spacing = 10
 
         addChild(listController)
         addChild(treeController)
         containerView.addSubview(listController.view)
         containerView.addSubview(treeController.view)
 
-        rootView.addSubview(buttonStack)
+        rootView.addSubview(leftStack)
+        rootView.addSubview(filterField)
         rootView.addSubview(containerView)
 
-        buttonStack.snp.makeConstraints { make in
-            make.leading.top.equalToSuperview().inset(20)
+        leftStack.snp.makeConstraints { make in
+            make.leading.top.equalToSuperview().inset(12)
+        }
+        filterField.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().inset(12)
+            make.centerY.equalTo(leftStack)
+            make.width.equalTo(220)
         }
         containerView.snp.makeConstraints { make in
-            make.leading.trailing.bottom.equalToSuperview().inset(20)
-            make.top.equalTo(buttonStack.snp.bottom).offset(12)
+            make.leading.trailing.bottom.equalToSuperview().inset(12)
+            make.top.equalTo(leftStack.snp.bottom).offset(12)
         }
         listController.view.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -73,6 +99,10 @@ final class SearchResultsViewController: NSViewController {
             self?.listController.update(items: items)
             self?.treeController.update(items: items)
         }
+        viewModel.onFilterChange = { [weak self] text in
+            self?.listController.applyFilter(text)
+            self?.treeController.applyFilter(text)
+        }
 
         render(mode: viewModel.mode)
         listController.update(items: viewModel.items)
@@ -87,6 +117,11 @@ final class SearchResultsViewController: NSViewController {
     @objc
     private func showTreeMode() {
         viewModel.mode = .tree
+    }
+
+    @objc
+    private func filterChanged() {
+        viewModel.filterText = filterField.stringValue
     }
 
     private func render(mode: SearchResultsViewModel.Mode) {

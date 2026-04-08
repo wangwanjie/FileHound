@@ -14,8 +14,8 @@ final class AppShellUITests: XCTestCase {
         app.launchArguments = ["--uitesting"]
         app.launch()
 
-        XCTAssertTrue(app.windows["FileHound"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.splitGroups.firstMatch.exists)
+        XCTAssertTrue(app.windows["Find Any File"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Find Items"].exists)
         XCTAssertTrue(app.menuBars.menuBarItems["FileHound"].exists)
     }
 }
