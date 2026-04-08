@@ -25,10 +25,10 @@ private extension QueryGroup {
         switch self {
         case .all(let groups):
             let cleaned = groups.compactMap { $0.removingExclusions() }
-            return .all(cleaned)
+            return cleaned.isEmpty ? nil : .all(cleaned)
         case .any(let groups):
             let cleaned = groups.compactMap { $0.removingExclusions() }
-            return .any(cleaned)
+            return cleaned.isEmpty ? nil : .any(cleaned)
         case .exclude:
             return nil
         case .rule:
