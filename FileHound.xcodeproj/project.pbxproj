@@ -13,7 +13,9 @@
 		1C3C07491C775799E0EF8300 /* AppShellUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D566A160E55F5079F322E5 /* AppShellUITests.swift */; };
 		1CF0089C56D7F5100B35D7D1 /* FileHoundUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */; };
 		28224DE2379AC287D86D9E6D /* SearchPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D32D718007D2229668D82AD /* SearchPlan.swift */; };
+		36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */; };
 		51E9BF1E14AB16AC5FF40BB1 /* SearchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */; };
+		79170FA8F16B08950E904401 /* DirectoryWalker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DEA9F492802D3E305395461 /* DirectoryWalker.swift */; };
 		8CE1DCF22F9C93B1D82B2081 /* PrivilegedFilesystemProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4BDF8D17887B5A95D1FCA55 /* PrivilegedFilesystemProvider.swift */; };
 		8F5320698BDB794D0C5A5B46 /* SearchPlanBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AF9B28B9C80F9AF4EC8D02 /* SearchPlanBuilderTests.swift */; };
 		90AA3654390F4E3CA706F803 /* QueryCompiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB60A6B6F7A30E3D3E761051 /* QueryCompiler.swift */; };
@@ -22,11 +24,13 @@
 		A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */; };
 		AAAA1EE5284E5D1AD64DC05C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DA6779D3010941E92766274 /* Assets.xcassets */; };
 		C0ABAD9CFF0EEFF3831EB395 /* FileHoundUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */; };
+		C5BAB602C99DC01CDE9896F9 /* DirectoryWalkerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4CBA719314F461F4E4C31D /* DirectoryWalkerTests.swift */; };
 		C64A00E7A36F221B4A8CE176 /* SearchPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A90F4E78DA7D4D5DC395DF7 /* SearchPlanBuilder.swift */; };
 		D122775DD7A2B69E3F082423 /* QueryRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F1B749CECAB816AE0AD7C00 /* QueryRule.swift */; };
 		DF429A833B622102F9B84343 /* MainMenuBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D9B94B38D425945A72BD39 /* MainMenuBuilder.swift */; };
 		DF6236E4A4D8AD413177EAA4 /* LocalFilesystemProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D57336FC454C25222E272 /* LocalFilesystemProvider.swift */; };
 		E880A721F079D51FDEFFF8E8 /* QueryCompilerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20CBCE4E22AC571CAA07D753 /* QueryCompilerTests.swift */; };
+		F0DCE3DD4C2DE1E0A2CE3C64 /* TemporaryFixtureTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,17 +52,21 @@
 
 /* Begin PBXFileReference section */
 		00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSplitViewController.swift; sourceTree = "<group>"; };
+		0A4CBA719314F461F4E4C31D /* DirectoryWalkerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalkerTests.swift; sourceTree = "<group>"; };
 		10D566A160E55F5079F322E5 /* AppShellUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellUITests.swift; sourceTree = "<group>"; };
 		20CBCE4E22AC571CAA07D753 /* QueryCompilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryCompilerTests.swift; sourceTree = "<group>"; };
 		2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowController.swift; sourceTree = "<group>"; };
+		3DEA9F492802D3E305395461 /* DirectoryWalker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalker.swift; sourceTree = "<group>"; };
 		4DA6779D3010941E92766274 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		50D0A48861A21373DC250CB7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryFixtureTree.swift; sourceTree = "<group>"; };
 		6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F1B749CECAB816AE0AD7C00 /* QueryRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryRule.swift; sourceTree = "<group>"; };
 		8A90F4E78DA7D4D5DC395DF7 /* SearchPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlanBuilder.swift; sourceTree = "<group>"; };
 		8D32D718007D2229668D82AD /* SearchPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlan.swift; sourceTree = "<group>"; };
 		932D57336FC454C25222E272 /* LocalFilesystemProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFilesystemProvider.swift; sourceTree = "<group>"; };
 		BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITests.swift; sourceTree = "<group>"; };
+		C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEvaluator.swift; sourceTree = "<group>"; };
 		C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		C6FF0940B950F6EEB38811E0 /* FileHound.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FileHound.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8D9B94B38D425945A72BD39 /* MainMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuBuilder.swift; sourceTree = "<group>"; };
@@ -114,12 +122,22 @@
 			path = Query;
 			sourceTree = "<group>";
 		};
+		4A4ED405830480B23282E081 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
 		58429E7656E52FEAB5A0A009 /* FileHoundTests */ = {
 			isa = PBXGroup;
 			children = (
 				DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */,
 				C80326376253750275AA7EDC /* Planner */,
 				FC613EC44C06E986D90E8555 /* Query */,
+				4A4ED405830480B23282E081 /* Support */,
+				C7E47975749B124305D73569 /* Walker */,
 			);
 			path = FileHoundTests;
 			sourceTree = "<group>";
@@ -161,6 +179,14 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		9F3B75A5CC57946510856B4A /* Matching */ = {
+			isa = PBXGroup;
+			children = (
+				C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */,
+			);
+			path = Matching;
+			sourceTree = "<group>";
+		};
 		AEFC66A99582AA7A7028D392 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -169,6 +195,22 @@
 				6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B7C4E44E3A98E0725E65272F /* Walker */ = {
+			isa = PBXGroup;
+			children = (
+				3DEA9F492802D3E305395461 /* DirectoryWalker.swift */,
+			);
+			path = Walker;
+			sourceTree = "<group>";
+		};
+		C7E47975749B124305D73569 /* Walker */ = {
+			isa = PBXGroup;
+			children = (
+				0A4CBA719314F461F4E4C31D /* DirectoryWalkerTests.swift */,
+			);
+			path = Walker;
 			sourceTree = "<group>";
 		};
 		C80326376253750275AA7EDC /* Planner */ = {
@@ -192,8 +234,10 @@
 			isa = PBXGroup;
 			children = (
 				7B9CB200A2BF68BCC7AD6609 /* Access */,
+				9F3B75A5CC57946510856B4A /* Matching */,
 				866FD5627584DF25AB358CDA /* Planner */,
 				3D35D7502C2617D1F90FA859 /* Query */,
+				B7C4E44E3A98E0725E65272F /* Walker */,
 			);
 			path = SearchEngine;
 			sourceTree = "<group>";
@@ -316,9 +360,11 @@
 			files = (
 				1535D5C84FBDD6F6CD75682C /* AppDelegate.swift in Sources */,
 				16FDAA1B39724DF0AD900BDA /* ApplicationMain.swift in Sources */,
+				79170FA8F16B08950E904401 /* DirectoryWalker.swift in Sources */,
 				A5835513CC29E9D11EA3EF61 /* FilesystemAccessProviding.swift in Sources */,
 				DF6236E4A4D8AD413177EAA4 /* LocalFilesystemProvider.swift in Sources */,
 				DF429A833B622102F9B84343 /* MainMenuBuilder.swift in Sources */,
+				36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */,
 				8CE1DCF22F9C93B1D82B2081 /* PrivilegedFilesystemProvider.swift in Sources */,
 				90AA3654390F4E3CA706F803 /* QueryCompiler.swift in Sources */,
 				D122775DD7A2B69E3F082423 /* QueryRule.swift in Sources */,
@@ -344,9 +390,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C5BAB602C99DC01CDE9896F9 /* DirectoryWalkerTests.swift in Sources */,
 				9E8975D01A0C53A232FF18A4 /* FileHoundTests.swift in Sources */,
 				E880A721F079D51FDEFFF8E8 /* QueryCompilerTests.swift in Sources */,
 				8F5320698BDB794D0C5A5B46 /* SearchPlanBuilderTests.swift in Sources */,
+				F0DCE3DD4C2DE1E0A2CE3C64 /* TemporaryFixtureTree.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
