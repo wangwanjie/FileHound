@@ -7,15 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		034670B96146CB5BF127C1D5 /* SearchResultsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */; };
+		05CD5E283916051DFB996ADB /* SearchRuleRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8BB3C940AFED69873C36D4C /* SearchRuleRowView.swift */; };
 		1535D5C84FBDD6F6CD75682C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D0A48861A21373DC250CB7 /* AppDelegate.swift */; };
+		16CA3F229B52E33585E757A2 /* SearchRulesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B21AD7D10D05F4D85F5D47 /* SearchRulesViewController.swift */; };
 		16FDAA1B39724DF0AD900BDA /* ApplicationMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */; };
 		1AE034117579A5D1C258D9BC /* SearchQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2951497A038EAC135D133D /* SearchQuery.swift */; };
 		1C3C07491C775799E0EF8300 /* AppShellUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D566A160E55F5079F322E5 /* AppShellUITests.swift */; };
 		1CF0089C56D7F5100B35D7D1 /* FileHoundUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */; };
 		28224DE2379AC287D86D9E6D /* SearchPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D32D718007D2229668D82AD /* SearchPlan.swift */; };
 		36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */; };
+		3946F29B4B84621D2F6BE417 /* SearchResultsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */; };
 		428D4E5D78D69EA9964D2ACF /* SearchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233D1EF55ED9F49A465459E7 /* SearchSession.swift */; };
 		51E9BF1E14AB16AC5FF40BB1 /* SearchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */; };
+		5A4A6E58B1DF0A6A7FC49AD2 /* SearchResultsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */; };
 		78BE86A2358D98F5FC1BA92F /* ContentMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064118F67E84C3BFE346ADA0 /* ContentMatcherTests.swift */; };
 		79170FA8F16B08950E904401 /* DirectoryWalker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DEA9F492802D3E305395461 /* DirectoryWalker.swift */; };
 		8CE1DCF22F9C93B1D82B2081 /* PrivilegedFilesystemProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4BDF8D17887B5A95D1FCA55 /* PrivilegedFilesystemProvider.swift */; };
@@ -27,6 +32,7 @@
 		AAAA1EE5284E5D1AD64DC05C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DA6779D3010941E92766274 /* Assets.xcassets */; };
 		BEE3473A1D89066ADB6E630F /* ContentMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2506011B8A2D8F049951A148 /* ContentMatcher.swift */; };
 		C0ABAD9CFF0EEFF3831EB395 /* FileHoundUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */; };
+		C0EDA9822991AE15D7F82484 /* PreviewPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E5D6ECFA65C552FB2051D /* PreviewPanelViewController.swift */; };
 		C5BAB602C99DC01CDE9896F9 /* DirectoryWalkerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4CBA719314F461F4E4C31D /* DirectoryWalkerTests.swift */; };
 		C64A00E7A36F221B4A8CE176 /* SearchPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A90F4E78DA7D4D5DC395DF7 /* SearchPlanBuilder.swift */; };
 		CFC72D5029BD64070970DF57 /* SearchSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 947EF1E39D1E6484403DD72A /* SearchSessionTests.swift */; };
@@ -35,6 +41,8 @@
 		DF6236E4A4D8AD413177EAA4 /* LocalFilesystemProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 932D57336FC454C25222E272 /* LocalFilesystemProvider.swift */; };
 		E880A721F079D51FDEFFF8E8 /* QueryCompilerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20CBCE4E22AC571CAA07D753 /* QueryCompilerTests.swift */; };
 		F0DCE3DD4C2DE1E0A2CE3C64 /* TemporaryFixtureTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */; };
+		F37A0E052328DAAB050E6EEA /* ResultsTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D0A8AC22615E407458B0A73 /* ResultsTableViewController.swift */; };
+		F948C800F74BEBE3CC43D0CF /* ResultsOutlineViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B16D8505E7337ECBED39880 /* ResultsOutlineViewController.swift */; };
 		FCABC41A1EED6A78A52EE62C /* SearchResultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48ADE2FFF952A0EBD95D7F29 /* SearchResultItem.swift */; };
 /* End PBXBuildFile section */
 
@@ -66,24 +74,32 @@
 		2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowController.swift; sourceTree = "<group>"; };
 		3DEA9F492802D3E305395461 /* DirectoryWalker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalker.swift; sourceTree = "<group>"; };
 		48ADE2FFF952A0EBD95D7F29 /* SearchResultItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultItem.swift; sourceTree = "<group>"; };
+		4D0A8AC22615E407458B0A73 /* ResultsTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsTableViewController.swift; sourceTree = "<group>"; };
 		4DA6779D3010941E92766274 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		50D0A48861A21373DC250CB7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryFixtureTree.swift; sourceTree = "<group>"; };
+		6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewModel.swift; sourceTree = "<group>"; };
 		6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6F1B749CECAB816AE0AD7C00 /* QueryRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryRule.swift; sourceTree = "<group>"; };
 		8A90F4E78DA7D4D5DC395DF7 /* SearchPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlanBuilder.swift; sourceTree = "<group>"; };
+		8B16D8505E7337ECBED39880 /* ResultsOutlineViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsOutlineViewController.swift; sourceTree = "<group>"; };
 		8D32D718007D2229668D82AD /* SearchPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlan.swift; sourceTree = "<group>"; };
 		932D57336FC454C25222E272 /* LocalFilesystemProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFilesystemProvider.swift; sourceTree = "<group>"; };
 		947EF1E39D1E6484403DD72A /* SearchSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSessionTests.swift; sourceTree = "<group>"; };
+		A07E5D6ECFA65C552FB2051D /* PreviewPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewPanelViewController.swift; sourceTree = "<group>"; };
+		A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsUITests.swift; sourceTree = "<group>"; };
+		B5B21AD7D10D05F4D85F5D47 /* SearchRulesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRulesViewController.swift; sourceTree = "<group>"; };
 		BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITests.swift; sourceTree = "<group>"; };
 		C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEvaluator.swift; sourceTree = "<group>"; };
 		C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		C6FF0940B950F6EEB38811E0 /* FileHound.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FileHound.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8D9B94B38D425945A72BD39 /* MainMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuBuilder.swift; sourceTree = "<group>"; };
 		D4BDF8D17887B5A95D1FCA55 /* PrivilegedFilesystemProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivilegedFilesystemProvider.swift; sourceTree = "<group>"; };
+		D8BB3C940AFED69873C36D4C /* SearchRuleRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRuleRowView.swift; sourceTree = "<group>"; };
 		DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMain.swift; sourceTree = "<group>"; };
 		DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundTests.swift; sourceTree = "<group>"; };
 		E2A02BB6DDC828B9534A1EAA /* FileHoundTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewController.swift; sourceTree = "<group>"; };
 		F57D52D99A5F7F37A000BE9A /* FilesystemAccessProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesystemAccessProviding.swift; sourceTree = "<group>"; };
 		F5AF9B28B9C80F9AF4EC8D02 /* SearchPlanBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlanBuilderTests.swift; sourceTree = "<group>"; };
 		FA2951497A038EAC135D133D /* SearchQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchQuery.swift; sourceTree = "<group>"; };
@@ -108,6 +124,7 @@
 				10D566A160E55F5079F322E5 /* AppShellUITests.swift */,
 				BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */,
 				C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */,
+				A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */,
 			);
 			path = FileHoundUITests;
 			sourceTree = "<group>";
@@ -120,6 +137,25 @@
 				10A3CFF253DC76FA10922249 /* FileHoundUITests */,
 				AEFC66A99582AA7A7028D392 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		385A21A9508989272D592907 /* SearchResults */ = {
+			isa = PBXGroup;
+			children = (
+				8B16D8505E7337ECBED39880 /* ResultsOutlineViewController.swift */,
+				4D0A8AC22615E407458B0A73 /* ResultsTableViewController.swift */,
+				F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */,
+				6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */,
+			);
+			path = SearchResults;
+			sourceTree = "<group>";
+		};
+		399BB6AE580961DF83E2B060 /* PreviewPanel */ = {
+			isa = PBXGroup;
+			children = (
+				A07E5D6ECFA65C552FB2051D /* PreviewPanelViewController.swift */,
+			);
+			path = PreviewPanel;
 			sourceTree = "<group>";
 		};
 		3D35D7502C2617D1F90FA859 /* Query */ = {
@@ -157,6 +193,9 @@
 		6A0030210E1822121A252FE5 /* Modules */ = {
 			isa = PBXGroup;
 			children = (
+				399BB6AE580961DF83E2B060 /* PreviewPanel */,
+				385A21A9508989272D592907 /* SearchResults */,
+				83CC041810140174ABD00FA3 /* SearchRules */,
 				FB40DAD68A08E47E84633C61 /* SearchWindow */,
 			);
 			path = Modules;
@@ -170,6 +209,15 @@
 				D4BDF8D17887B5A95D1FCA55 /* PrivilegedFilesystemProvider.swift */,
 			);
 			path = Access;
+			sourceTree = "<group>";
+		};
+		83CC041810140174ABD00FA3 /* SearchRules */ = {
+			isa = PBXGroup;
+			children = (
+				D8BB3C940AFED69873C36D4C /* SearchRuleRowView.swift */,
+				B5B21AD7D10D05F4D85F5D47 /* SearchRulesViewController.swift */,
+			);
+			path = SearchRules;
 			sourceTree = "<group>";
 		};
 		843E2BA8ED1BC1A5EF0749F9 /* Matching */ = {
@@ -405,13 +453,20 @@
 				DF6236E4A4D8AD413177EAA4 /* LocalFilesystemProvider.swift in Sources */,
 				DF429A833B622102F9B84343 /* MainMenuBuilder.swift in Sources */,
 				36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */,
+				C0EDA9822991AE15D7F82484 /* PreviewPanelViewController.swift in Sources */,
 				8CE1DCF22F9C93B1D82B2081 /* PrivilegedFilesystemProvider.swift in Sources */,
 				90AA3654390F4E3CA706F803 /* QueryCompiler.swift in Sources */,
 				D122775DD7A2B69E3F082423 /* QueryRule.swift in Sources */,
+				F948C800F74BEBE3CC43D0CF /* ResultsOutlineViewController.swift in Sources */,
+				F37A0E052328DAAB050E6EEA /* ResultsTableViewController.swift in Sources */,
 				28224DE2379AC287D86D9E6D /* SearchPlan.swift in Sources */,
 				C64A00E7A36F221B4A8CE176 /* SearchPlanBuilder.swift in Sources */,
 				1AE034117579A5D1C258D9BC /* SearchQuery.swift in Sources */,
 				FCABC41A1EED6A78A52EE62C /* SearchResultItem.swift in Sources */,
+				3946F29B4B84621D2F6BE417 /* SearchResultsViewController.swift in Sources */,
+				5A4A6E58B1DF0A6A7FC49AD2 /* SearchResultsViewModel.swift in Sources */,
+				05CD5E283916051DFB996ADB /* SearchRuleRowView.swift in Sources */,
+				16CA3F229B52E33585E757A2 /* SearchRulesViewController.swift in Sources */,
 				428D4E5D78D69EA9964D2ACF /* SearchSession.swift in Sources */,
 				A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */,
 				51E9BF1E14AB16AC5FF40BB1 /* SearchWindowController.swift in Sources */,
@@ -425,6 +480,7 @@
 				1C3C07491C775799E0EF8300 /* AppShellUITests.swift in Sources */,
 				1CF0089C56D7F5100B35D7D1 /* FileHoundUITests.swift in Sources */,
 				C0ABAD9CFF0EEFF3831EB395 /* FileHoundUITestsLaunchTests.swift in Sources */,
+				034670B96146CB5BF127C1D5 /* SearchResultsUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
