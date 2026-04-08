@@ -7,7 +7,7 @@ final class PreferencesUITests: XCTestCase {
         app.launchArguments = ["--uitesting"]
         app.launch()
 
-        app.menuBars.menuBarItems["FileHound"].menus.menuItems["设置…"].click()
+        app.menuBars.menuBarItems["FileHound"].menus.menuItems["openPreferences:"].click()
 
         XCTAssertTrue(app.windows["偏好设置"].waitForExistence(timeout: 2))
         XCTAssertTrue(app.buttons["外观"].exists)

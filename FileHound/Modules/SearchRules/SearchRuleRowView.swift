@@ -1,4 +1,5 @@
 import AppKit
+import SnapKit
 
 final class SearchRuleRowView: NSView {
     init(text: String) {
@@ -7,15 +8,11 @@ final class SearchRuleRowView: NSView {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: 12)
         label.textColor = .secondaryLabelColor
-        label.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(label)
-        NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: leadingAnchor),
-            label.trailingAnchor.constraint(equalTo: trailingAnchor),
-            label.topAnchor.constraint(equalTo: topAnchor),
-            label.bottomAnchor.constraint(equalTo: bottomAnchor)
-        ])
+        label.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
     }
 
     @available(*, unavailable)

@@ -1,4 +1,5 @@
 import Foundation
+import MMKV
 
 protocol KeyValueStoring {
     func string(forKey key: String) -> String?
@@ -42,15 +43,49 @@ final class InMemoryKeyValueStore: KeyValueStoring {
     }
 }
 
+final class MMKVKeyValueStore: KeyValueStoring {
+    static let shared = MMKVKeyValueStore()
+
+    private let mmkv: MMKV
+
+    private init() {
+        if MMKV.default() == nil {
+            MMKV.initialize(rootDir: nil)
+        }
+        guard let mmkv = MMKV.default() else {
+            fatalError("MMKV 初始化失败")
+        }
+        self.mmkv = mmkv
+    }
+
+    func string(forKey key: String) -> String? {
+        mmkv.string(forKey: key)
+    }
+
+    func set(_ value: String, forKey key: String) {
+        mmkv.set(value, forKey: key)
+    }
+
+    func data(forKey key: String) -> Data? {
+        mmkv.data(forKey: key)
+    }
+
+    func set(_ value: Data, forKey key: String) {
+        mmkv.set(value, forKey: key)
+    }
+}
+
 final class AppSettings {
     private enum Keys {
         static let preferredTheme = "preferredTheme"
         static let preferredLanguage = "preferredLanguage"
     }
 
+    static let shared = AppSettings(storage: MMKVKeyValueStore.shared)
+
     private let storage: KeyValueStoring
 
-    init(storage: KeyValueStoring = InMemoryKeyValueStore()) {
+    init(storage: KeyValueStoring = MMKVKeyValueStore.shared) {
         self.storage = storage
     }
 

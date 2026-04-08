@@ -1,28 +1,26 @@
 import AppKit
+import SnapKit
 
 final class SearchRulesViewController: NSViewController {
     override func loadView() {
         let container = NSView()
 
-        let titleLabel = NSTextField(labelWithString: "搜索规则")
+        let titleLabel = NSTextField(labelWithString: L10n.string("search_rules.title"))
         titleLabel.font = .systemFont(ofSize: 18, weight: .semibold)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        let rowView = SearchRuleRowView(text: "名称包含 report")
-        rowView.translatesAutoresizingMaskIntoConstraints = false
+        let rowView = SearchRuleRowView(text: L10n.string("search_rules.sample"))
 
         container.addSubview(titleLabel)
         container.addSubview(rowView)
 
-        NSLayoutConstraint.activate([
-            titleLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
-            titleLabel.topAnchor.constraint(equalTo: container.topAnchor, constant: 20),
-
-            rowView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
-            rowView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
-            rowView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            rowView.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -16)
-        ])
+        titleLabel.snp.makeConstraints { make in
+            make.leading.top.equalToSuperview().inset(20)
+        }
+        rowView.snp.makeConstraints { make in
+            make.leading.trailing.equalToSuperview().inset(20)
+            make.top.equalTo(titleLabel.snp.bottom).offset(12)
+            make.bottom.equalToSuperview().inset(16)
+        }
 
         view = container
     }

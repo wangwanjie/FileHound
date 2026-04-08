@@ -1,12 +1,13 @@
 import AppKit
+import SnapKit
 
 final class SearchResultsViewController: NSViewController {
     private let viewModel: SearchResultsViewModel
     private let listController = ResultsTableViewController()
     private let treeController = ResultsOutlineViewController()
     private let containerView = NSView()
-    private let listButton = NSButton(title: "列表视图", target: nil, action: nil)
-    private let treeButton = NSButton(title: "树形视图", target: nil, action: nil)
+    private let listButton = NSButton(title: L10n.string("results.mode.list"), target: nil, action: nil)
+    private let treeButton = NSButton(title: L10n.string("results.mode.tree"), target: nil, action: nil)
 
     init(viewModel: SearchResultsViewModel) {
         self.viewModel = viewModel
@@ -29,39 +30,28 @@ final class SearchResultsViewController: NSViewController {
         let buttonStack = NSStackView(views: [listButton, treeButton])
         buttonStack.orientation = .horizontal
         buttonStack.spacing = 8
-        buttonStack.translatesAutoresizingMaskIntoConstraints = false
-
-        containerView.translatesAutoresizingMaskIntoConstraints = false
 
         addChild(listController)
         addChild(treeController)
-        listController.view.translatesAutoresizingMaskIntoConstraints = false
-        treeController.view.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(listController.view)
         containerView.addSubview(treeController.view)
 
         rootView.addSubview(buttonStack)
         rootView.addSubview(containerView)
 
-        NSLayoutConstraint.activate([
-            buttonStack.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
-            buttonStack.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 16),
-
-            containerView.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
-            containerView.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
-            containerView.topAnchor.constraint(equalTo: buttonStack.bottomAnchor, constant: 12),
-            containerView.bottomAnchor.constraint(equalTo: rootView.bottomAnchor, constant: -16),
-
-            listController.view.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            listController.view.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            listController.view.topAnchor.constraint(equalTo: containerView.topAnchor),
-            listController.view.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
-
-            treeController.view.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
-            treeController.view.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            treeController.view.topAnchor.constraint(equalTo: containerView.topAnchor),
-            treeController.view.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
-        ])
+        buttonStack.snp.makeConstraints { make in
+            make.leading.top.equalToSuperview().inset(20)
+        }
+        containerView.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview().inset(20)
+            make.top.equalTo(buttonStack.snp.bottom).offset(12)
+        }
+        listController.view.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        treeController.view.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
 
         view = rootView
     }

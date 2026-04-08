@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import SnapKit
 
 final class SearchSplitViewController: NSSplitViewController {
     private let viewModel = SearchResultsViewModel()
@@ -74,58 +75,47 @@ private final class WorkspaceContentViewController: NSViewController {
 
     override func loadView() {
         let rootView = NSView()
-        let horizontalSplit = NSSplitView()
-        horizontalSplit.isVertical = true
-        horizontalSplit.dividerStyle = .thin
-        horizontalSplit.translatesAutoresizingMaskIntoConstraints = false
-
-        let leftStack = NSStackView()
-        leftStack.orientation = .vertical
-        leftStack.spacing = 12
-        leftStack.edgeInsets = NSEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-        leftStack.translatesAutoresizingMaskIntoConstraints = false
+        let leftPane = NSView()
+        let rightPane = NSView()
+        let divider = NSBox()
+        divider.boxType = .separator
 
         addChild(rulesController)
         addChild(resultsController)
         addChild(previewController)
 
-        rulesController.view.translatesAutoresizingMaskIntoConstraints = false
-        resultsController.view.translatesAutoresizingMaskIntoConstraints = false
-        previewController.view.translatesAutoresizingMaskIntoConstraints = false
-
-        leftStack.addArrangedSubview(rulesController.view)
-        leftStack.addArrangedSubview(resultsController.view)
-        rulesController.view.heightAnchor.constraint(equalToConstant: 100).isActive = true
-
-        let leftPane = NSView()
-        leftPane.addSubview(leftStack)
-
-        let rightPane = NSView()
+        leftPane.addSubview(rulesController.view)
+        leftPane.addSubview(resultsController.view)
         rightPane.addSubview(previewController.view)
+        rootView.addSubview(leftPane)
+        rootView.addSubview(divider)
+        rootView.addSubview(rightPane)
 
-        horizontalSplit.addArrangedSubview(leftPane)
-        horizontalSplit.addArrangedSubview(rightPane)
+        leftPane.snp.makeConstraints { make in
+            make.leading.top.bottom.equalToSuperview()
+        }
+        divider.snp.makeConstraints { make in
+            make.leading.equalTo(leftPane.snp.trailing)
+            make.width.equalTo(1)
+            make.top.bottom.equalToSuperview()
+        }
+        rightPane.snp.makeConstraints { make in
+            make.leading.equalTo(divider.snp.trailing)
+            make.trailing.top.bottom.equalToSuperview()
+            make.width.equalTo(260)
+        }
 
-        rootView.addSubview(horizontalSplit)
-
-        NSLayoutConstraint.activate([
-            horizontalSplit.leadingAnchor.constraint(equalTo: rootView.leadingAnchor),
-            horizontalSplit.trailingAnchor.constraint(equalTo: rootView.trailingAnchor),
-            horizontalSplit.topAnchor.constraint(equalTo: rootView.topAnchor),
-            horizontalSplit.bottomAnchor.constraint(equalTo: rootView.bottomAnchor),
-
-            leftStack.leadingAnchor.constraint(equalTo: leftPane.leadingAnchor),
-            leftStack.trailingAnchor.constraint(equalTo: leftPane.trailingAnchor),
-            leftStack.topAnchor.constraint(equalTo: leftPane.topAnchor),
-            leftStack.bottomAnchor.constraint(equalTo: leftPane.bottomAnchor),
-
-            previewController.view.leadingAnchor.constraint(equalTo: rightPane.leadingAnchor),
-            previewController.view.trailingAnchor.constraint(equalTo: rightPane.trailingAnchor),
-            previewController.view.topAnchor.constraint(equalTo: rightPane.topAnchor),
-            previewController.view.bottomAnchor.constraint(equalTo: rightPane.bottomAnchor),
-
-            rightPane.widthAnchor.constraint(equalToConstant: 260)
-        ])
+        rulesController.view.snp.makeConstraints { make in
+            make.leading.trailing.top.equalToSuperview()
+            make.height.equalTo(100)
+        }
+        resultsController.view.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview()
+            make.top.equalTo(rulesController.view.snp.bottom).offset(12)
+        }
+        previewController.view.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
 
         view = rootView
     }

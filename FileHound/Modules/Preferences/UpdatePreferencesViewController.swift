@@ -2,6 +2,9 @@ import AppKit
 
 final class UpdatePreferencesViewController: NSViewController {
     override func loadView() {
-        view = PreferencesSectionView(title: "更新", subtitle: "自动更新与版本检查")
+        view = PreferencesSectionView(
+            title: L10n.string("preferences.update.title"),
+            subtitle: L10n.string("preferences.update.subtitle")
+        )
     }
 }

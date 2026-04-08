@@ -1,4 +1,5 @@
 import AppKit
+import SnapKit
 
 final class ResultsTableViewController: NSViewController, NSTableViewDataSource, NSTableViewDelegate {
     private let tableView = NSTableView()
@@ -43,16 +44,14 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         let textField = cell.textField ?? NSTextField(labelWithString: "")
         textField.stringValue = URL(fileURLWithPath: items[row].path).lastPathComponent
         textField.identifier = NSUserInterfaceItemIdentifier(textField.stringValue)
-        textField.translatesAutoresizingMaskIntoConstraints = false
 
         if textField.superview == nil {
             cell.addSubview(textField)
             cell.textField = textField
-            NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8),
-                textField.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8),
-                textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor)
-            ])
+            textField.snp.makeConstraints { make in
+                make.leading.trailing.equalToSuperview().inset(8)
+                make.centerY.equalToSuperview()
+            }
         }
 
         return cell

@@ -7,10 +7,12 @@ struct SavedSearch: Codable, Equatable, Sendable {
 }
 
 final class SavedSearchStore {
+    static let shared = SavedSearchStore(storage: MMKVKeyValueStore.shared)
+
     private let storage: KeyValueStoring
     private let key = "savedSearches"
 
-    init(storage: KeyValueStoring = InMemoryKeyValueStore()) {
+    init(storage: KeyValueStoring = MMKVKeyValueStore.shared) {
         self.storage = storage
     }
 

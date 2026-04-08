@@ -22,7 +22,7 @@ final class MainMenuBuilder {
 
         let appMenu = NSMenu(title: "FileHound")
         let aboutItem = NSMenuItem(
-            title: "About FileHound",
+            title: L10n.string("menu.about"),
             action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
             keyEquivalent: ""
         )
@@ -32,7 +32,7 @@ final class MainMenuBuilder {
         appMenu.addItem(.separator())
 
         let preferencesItem = NSMenuItem(
-            title: "偏好设置…",
+            title: L10n.string("menu.preferences"),
             action: #selector(AppDelegate.openPreferences(_:)),
             keyEquivalent: ","
         )
@@ -42,7 +42,7 @@ final class MainMenuBuilder {
         appMenu.addItem(.separator())
 
         let quitItem = NSMenuItem(
-            title: "Quit FileHound",
+            title: L10n.string("menu.quit"),
             action: #selector(NSApplication.terminate(_:)),
             keyEquivalent: "q"
         )

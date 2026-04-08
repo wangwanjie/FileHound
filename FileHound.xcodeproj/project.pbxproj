@@ -9,7 +9,9 @@
 /* Begin PBXBuildFile section */
 		034670B96146CB5BF127C1D5 /* SearchResultsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */; };
 		05CD5E283916051DFB996ADB /* SearchRuleRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8BB3C940AFED69873C36D4C /* SearchRuleRowView.swift */; };
+		06DAFD96E2CAB50331F3F50A /* MMKV in Frameworks */ = {isa = PBXBuildFile; productRef = 63D15AD2E30CCCB256F247EA /* MMKV */; };
 		09CB98F7F5F4D4C3B813F1EB /* SavedSearchStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A0FF428CCCAD9BEC5AE145 /* SavedSearchStoreTests.swift */; };
+		0D6C650D92152F7221486541 /* LocalizationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86C1152C112901AD34F8CC6 /* LocalizationController.swift */; };
 		14E18B1B2AA1EB2390CAAA4D /* AppearancePreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF11B8D74E0AC0AED84A20D /* AppearancePreferencesViewController.swift */; };
 		1535D5C84FBDD6F6CD75682C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D0A48861A21373DC250CB7 /* AppDelegate.swift */; };
 		16CA3F229B52E33585E757A2 /* SearchRulesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B21AD7D10D05F4D85F5D47 /* SearchRulesViewController.swift */; };
@@ -17,8 +19,10 @@
 		1AE034117579A5D1C258D9BC /* SearchQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2951497A038EAC135D133D /* SearchQuery.swift */; };
 		1C3C07491C775799E0EF8300 /* AppShellUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D566A160E55F5079F322E5 /* AppShellUITests.swift */; };
 		1CF0089C56D7F5100B35D7D1 /* FileHoundUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */; };
+		238F68EF239D995C2C51D80E /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 584CCAD5BE12E3035F5B2176 /* SnapKit */; };
 		28224DE2379AC287D86D9E6D /* SearchPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D32D718007D2229668D82AD /* SearchPlan.swift */; };
 		2B71E0321D58964F4C665115 /* PreferencesUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8F0FD441B29CD521E53CED /* PreferencesUITests.swift */; };
+		2ED17CC3EB9C044D29F455D0 /* LocalizationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5CC26E668D8A3B91B90FDF2 /* LocalizationUITests.swift */; };
 		36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */; };
 		3946F29B4B84621D2F6BE417 /* SearchResultsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */; };
 		428D4E5D78D69EA9964D2ACF /* SearchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233D1EF55ED9F49A465459E7 /* SearchSession.swift */; };
@@ -35,6 +39,7 @@
 		90AA3654390F4E3CA706F803 /* QueryCompiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB60A6B6F7A30E3D3E761051 /* QueryCompiler.swift */; };
 		9E8975D01A0C53A232FF18A4 /* FileHoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */; };
 		9E8E4C78866ADFE257596082 /* SearchPreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49334770FFAFF93E6513802B /* SearchPreferencesViewController.swift */; };
+		9FB8739586460F0198CA6538 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 40658B17A939918CAC9F2285 /* Sparkle */; };
 		A044A60CF0F5AE126A50068D /* PermissionsPreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ADF6F5A640F0F628BC18813 /* PermissionsPreferencesViewController.swift */; };
 		A5835513CC29E9D11EA3EF61 /* FilesystemAccessProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = F57D52D99A5F7F37A000BE9A /* FilesystemAccessProviding.swift */; };
 		A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */; };
@@ -120,11 +125,13 @@
 		B5B21AD7D10D05F4D85F5D47 /* SearchRulesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRulesViewController.swift; sourceTree = "<group>"; };
 		BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITests.swift; sourceTree = "<group>"; };
 		C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEvaluator.swift; sourceTree = "<group>"; };
+		C5CC26E668D8A3B91B90FDF2 /* LocalizationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationUITests.swift; sourceTree = "<group>"; };
 		C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		C6FF0940B950F6EEB38811E0 /* FileHound.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FileHound.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8D9B94B38D425945A72BD39 /* MainMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuBuilder.swift; sourceTree = "<group>"; };
 		D4A0FF428CCCAD9BEC5AE145 /* SavedSearchStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchStoreTests.swift; sourceTree = "<group>"; };
 		D4BDF8D17887B5A95D1FCA55 /* PrivilegedFilesystemProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivilegedFilesystemProvider.swift; sourceTree = "<group>"; };
+		D86C1152C112901AD34F8CC6 /* LocalizationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationController.swift; sourceTree = "<group>"; };
 		D8BB3C940AFED69873C36D4C /* SearchRuleRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRuleRowView.swift; sourceTree = "<group>"; };
 		DAA0235942EA6D1409ADA604 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMain.swift; sourceTree = "<group>"; };
@@ -137,6 +144,19 @@
 		FA8F0FD441B29CD521E53CED /* PreferencesUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesUITests.swift; sourceTree = "<group>"; };
 		FB60A6B6F7A30E3D3E761051 /* QueryCompiler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryCompiler.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		034EC23490189917FB7A4FBB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				238F68EF239D995C2C51D80E /* SnapKit in Frameworks */,
+				06DAFD96E2CAB50331F3F50A /* MMKV in Frameworks */,
+				9FB8739586460F0198CA6538 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		01A49FF0BB5E2275C5373BFD /* Storage */ = {
@@ -166,6 +186,7 @@
 				10D566A160E55F5079F322E5 /* AppShellUITests.swift */,
 				BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */,
 				C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */,
+				C5CC26E668D8A3B91B90FDF2 /* LocalizationUITests.swift */,
 				FA8F0FD441B29CD521E53CED /* PreferencesUITests.swift */,
 				A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */,
 			);
@@ -310,6 +331,7 @@
 			children = (
 				7322A6060AB237975D245B4B /* AppLanguage.swift */,
 				9B9771C1E6520696B0AAD015 /* L10n.swift */,
+				D86C1152C112901AD34F8CC6 /* LocalizationController.swift */,
 			);
 			path = Localization;
 			sourceTree = "<group>";
@@ -491,6 +513,7 @@
 			buildPhases = (
 				846A8D0CFE63ABC2B011839B /* Sources */,
 				0AEC4BB50083566EA3F77845 /* Resources */,
+				034EC23490189917FB7A4FBB /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -498,6 +521,9 @@
 			);
 			name = FileHound;
 			packageProductDependencies = (
+				584CCAD5BE12E3035F5B2176 /* SnapKit */,
+				63D15AD2E30CCCB256F247EA /* MMKV */,
+				40658B17A939918CAC9F2285 /* Sparkle */,
 			);
 			productName = FileHound;
 			productReference = C6FF0940B950F6EEB38811E0 /* FileHound.app */;
@@ -546,6 +572,11 @@
 			);
 			mainGroup = 18728B21D85CA4C131287197;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				037E00163304228D8CCFA7FA /* XCRemoteSwiftPackageReference "MMKV" */,
+				563D02851684A0BB74009C03 /* XCRemoteSwiftPackageReference "SnapKit" */,
+				767DAFB0D45D2084B0838064 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AEFC66A99582AA7A7028D392 /* Products */;
 			projectDirPath = "";
@@ -586,6 +617,7 @@
 				A5835513CC29E9D11EA3EF61 /* FilesystemAccessProviding.swift in Sources */,
 				48F3B1B01B1A11CE248E9CCD /* L10n.swift in Sources */,
 				DF6236E4A4D8AD413177EAA4 /* LocalFilesystemProvider.swift in Sources */,
+				0D6C650D92152F7221486541 /* LocalizationController.swift in Sources */,
 				DF429A833B622102F9B84343 /* MainMenuBuilder.swift in Sources */,
 				36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */,
 				A044A60CF0F5AE126A50068D /* PermissionsPreferencesViewController.swift in Sources */,
@@ -622,6 +654,7 @@
 				1C3C07491C775799E0EF8300 /* AppShellUITests.swift in Sources */,
 				1CF0089C56D7F5100B35D7D1 /* FileHoundUITests.swift in Sources */,
 				C0ABAD9CFF0EEFF3831EB395 /* FileHoundUITestsLaunchTests.swift in Sources */,
+				2ED17CC3EB9C044D29F455D0 /* LocalizationUITests.swift in Sources */,
 				2B71E0321D58964F4C665115 /* PreferencesUITests.swift in Sources */,
 				034670B96146CB5BF127C1D5 /* SearchResultsUITests.swift in Sources */,
 			);
@@ -938,6 +971,51 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		037E00163304228D8CCFA7FA /* XCRemoteSwiftPackageReference "MMKV" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Tencent/MMKV";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.2.4;
+			};
+		};
+		563D02851684A0BB74009C03 /* XCRemoteSwiftPackageReference "SnapKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SnapKit/SnapKit";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.7.1;
+			};
+		};
+		767DAFB0D45D2084B0838064 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		40658B17A939918CAC9F2285 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 767DAFB0D45D2084B0838064 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+		584CCAD5BE12E3035F5B2176 /* SnapKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 563D02851684A0BB74009C03 /* XCRemoteSwiftPackageReference "SnapKit" */;
+			productName = SnapKit;
+		};
+		63D15AD2E30CCCB256F247EA /* MMKV */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 037E00163304228D8CCFA7FA /* XCRemoteSwiftPackageReference "MMKV" */;
+			productName = MMKV;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8B33FB88648DF7E4CA06F98D /* Project object */;
 }

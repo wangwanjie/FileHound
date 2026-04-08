@@ -1,11 +1,13 @@
 import AppKit
+import SnapKit
 
 final class PreferencesWindowController: NSWindowController {
-    private let tabButtons = ["外观", "搜索", "更新", "权限"].map { title in
-        let button = NSButton(title: title, target: nil, action: nil)
-        button.bezelStyle = .rounded
-        return button
-    }
+    private lazy var tabButtons = [
+        makeTabButton(title: L10n.string("preferences.tab.appearance")),
+        makeTabButton(title: L10n.string("preferences.tab.search")),
+        makeTabButton(title: L10n.string("preferences.tab.update")),
+        makeTabButton(title: L10n.string("preferences.tab.permissions"))
+    ]
 
     private lazy var contentControllers: [NSViewController] = [
         AppearancePreferencesViewController(),
@@ -23,10 +25,16 @@ final class PreferencesWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "偏好设置"
+        window.title = L10n.string("preferences.window.title")
         window.center()
         self.init(window: window)
         setupWindow()
+    }
+
+    private func makeTabButton(title: String) -> NSButton {
+        let button = NSButton(title: title, target: nil, action: nil)
+        button.bezelStyle = .rounded
+        return button
     }
 
     private func setupWindow() {
@@ -37,22 +45,17 @@ final class PreferencesWindowController: NSWindowController {
         buttonStack.orientation = .horizontal
         buttonStack.distribution = .fillEqually
         buttonStack.spacing = 8
-        buttonStack.translatesAutoresizingMaskIntoConstraints = false
-        contentContainer.translatesAutoresizingMaskIntoConstraints = false
 
         rootView.addSubview(buttonStack)
         rootView.addSubview(contentContainer)
 
-        NSLayoutConstraint.activate([
-            buttonStack.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
-            buttonStack.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
-            buttonStack.topAnchor.constraint(equalTo: rootView.topAnchor, constant: 20),
-
-            contentContainer.leadingAnchor.constraint(equalTo: rootView.leadingAnchor, constant: 20),
-            contentContainer.trailingAnchor.constraint(equalTo: rootView.trailingAnchor, constant: -20),
-            contentContainer.topAnchor.constraint(equalTo: buttonStack.bottomAnchor, constant: 16),
-            contentContainer.bottomAnchor.constraint(equalTo: rootView.bottomAnchor, constant: -20)
-        ])
+        buttonStack.snp.makeConstraints { make in
+            make.leading.trailing.top.equalToSuperview().inset(20)
+        }
+        contentContainer.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview().inset(20)
+            make.top.equalTo(buttonStack.snp.bottom).offset(16)
+        }
 
         window.contentView = rootView
 
@@ -75,40 +78,41 @@ final class PreferencesWindowController: NSWindowController {
 
         let controller = contentControllers[index]
         let contentView = controller.view
-        contentView.translatesAutoresizingMaskIntoConstraints = false
         contentContainer.addSubview(contentView)
 
-        NSLayoutConstraint.activate([
-            contentView.leadingAnchor.constraint(equalTo: contentContainer.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: contentContainer.trailingAnchor),
-            contentView.topAnchor.constraint(equalTo: contentContainer.topAnchor),
-            contentView.bottomAnchor.constraint(equalTo: contentContainer.bottomAnchor)
-        ])
+        contentView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
     }
 }
 
 final class PreferencesSectionView: NSView {
+    let contentGuide = NSView()
+
     init(title: String, subtitle: String) {
         super.init(frame: .zero)
 
         let titleLabel = NSTextField(labelWithString: title)
         titleLabel.font = .systemFont(ofSize: 22, weight: .semibold)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let subtitleLabel = NSTextField(labelWithString: subtitle)
         subtitleLabel.textColor = .secondaryLabelColor
-        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         addSubview(titleLabel)
         addSubview(subtitleLabel)
+        addSubview(contentGuide)
 
-        NSLayoutConstraint.activate([
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            titleLabel.topAnchor.constraint(equalTo: topAnchor),
-
-            subtitleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8)
-        ])
+        titleLabel.snp.makeConstraints { make in
+            make.leading.top.equalToSuperview()
+        }
+        subtitleLabel.snp.makeConstraints { make in
+            make.leading.equalToSuperview()
+            make.top.equalTo(titleLabel.snp.bottom).offset(8)
+        }
+        contentGuide.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview()
+            make.top.equalTo(subtitleLabel.snp.bottom).offset(20)
+        }
     }
 
     @available(*, unavailable)

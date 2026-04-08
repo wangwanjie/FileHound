@@ -3,6 +3,16 @@ options:
   deploymentTarget:
     macOS: "11.0"
   swiftVersion: "5.10"
+packages:
+  SnapKit:
+    url: https://github.com/SnapKit/SnapKit
+    from: 5.7.1
+  MMKV:
+    url: https://github.com/Tencent/MMKV
+    from: 2.2.4
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.8.1
 settings:
   base:
     SWIFT_VERSION: "5.10"
@@ -12,6 +22,10 @@ targets:
     platform: macOS
     sources:
       - FileHound
+    dependencies:
+      - package: SnapKit
+      - package: MMKV
+      - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: cn.vanjay.FileHound

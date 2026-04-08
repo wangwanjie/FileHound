@@ -1,4 +1,5 @@
 import AppKit
+import SnapKit
 
 final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSource, NSOutlineViewDelegate {
     private let outlineView = NSOutlineView()
@@ -57,16 +58,14 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         let title = URL(fileURLWithPath: result.path).lastPathComponent
         textField.stringValue = title
         textField.identifier = NSUserInterfaceItemIdentifier(title)
-        textField.translatesAutoresizingMaskIntoConstraints = false
 
         if textField.superview == nil {
             cell.addSubview(textField)
             cell.textField = textField
-            NSLayoutConstraint.activate([
-                textField.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 8),
-                textField.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -8),
-                textField.centerYAnchor.constraint(equalTo: cell.centerYAnchor)
-            ])
+            textField.snp.makeConstraints { make in
+                make.leading.trailing.equalToSuperview().inset(8)
+                make.centerY.equalToSuperview()
+            }
         }
 
         return cell
