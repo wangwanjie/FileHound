@@ -1,8 +1,9 @@
 struct SearchPlanBuilder: Sendable {
     func build(from compiledQuery: CompiledQuery, mode: SearchMode) -> SearchPlan {
-        SearchPlan(
+        let executableGroup = compiledQuery.rootGroup.removingExclusions() ?? .all([])
+        return SearchPlan(
             rootPaths: compiledQuery.rootPaths,
-            rootGroup: compiledQuery.rootGroup,
+            rootGroup: executableGroup,
             excludedPathFragments: compiledQuery.excludedPathFragments,
             providerKind: providerKind(for: mode),
             shouldScanContents: compiledQuery.requiresContentScan
@@ -15,6 +16,23 @@ struct SearchPlanBuilder: Sendable {
             return .local
         case .privileged:
             return .privileged
+        }
+    }
+}
+
+private extension QueryGroup {
+    func removingExclusions() -> QueryGroup? {
+        switch self {
+        case .all(let groups):
+            let cleaned = groups.compactMap { $0.removingExclusions() }
+            return .all(cleaned)
+        case .any(let groups):
+            let cleaned = groups.compactMap { $0.removingExclusions() }
+            return .any(cleaned)
+        case .exclude:
+            return nil
+        case .rule:
+            return self
         }
     }
 }
