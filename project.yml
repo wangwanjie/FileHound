@@ -33,6 +33,23 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSMainStoryboardFile: ""
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        CODE_SIGN_ENTITLEMENTS: FileHound/FileHound.entitlements
+      configs:
+        Debug:
+          SWIFT_VERSION: "5.10"
+        Release:
+          SWIFT_VERSION: "5.10"
+  FileHoundHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - FileHoundHelper
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cn.vanjay.FileHoundHelper
+        SWIFT_VERSION: "5.10"
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_ENTITLEMENTS: FileHoundHelper/FileHoundHelper.entitlements
       configs:
         Debug:
           SWIFT_VERSION: "5.10"

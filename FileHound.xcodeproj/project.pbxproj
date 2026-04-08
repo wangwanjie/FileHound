@@ -14,8 +14,10 @@
 		0D6C650D92152F7221486541 /* LocalizationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86C1152C112901AD34F8CC6 /* LocalizationController.swift */; };
 		14E18B1B2AA1EB2390CAAA4D /* AppearancePreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EF11B8D74E0AC0AED84A20D /* AppearancePreferencesViewController.swift */; };
 		1535D5C84FBDD6F6CD75682C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D0A48861A21373DC250CB7 /* AppDelegate.swift */; };
+		158DE26136088830700C4995 /* PrivilegedSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DD8B5150B2D2CDFD773081 /* PrivilegedSearchService.swift */; };
 		16CA3F229B52E33585E757A2 /* SearchRulesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B21AD7D10D05F4D85F5D47 /* SearchRulesViewController.swift */; };
 		16FDAA1B39724DF0AD900BDA /* ApplicationMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */; };
+		1A2D0376E1837A39DC29FEC4 /* PermissionGuidanceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7BE0110117689866110862 /* PermissionGuidanceCoordinator.swift */; };
 		1AE034117579A5D1C258D9BC /* SearchQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA2951497A038EAC135D133D /* SearchQuery.swift */; };
 		1C3C07491C775799E0EF8300 /* AppShellUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D566A160E55F5079F322E5 /* AppShellUITests.swift */; };
 		1CF0089C56D7F5100B35D7D1 /* FileHoundUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */; };
@@ -40,10 +42,13 @@
 		9E8975D01A0C53A232FF18A4 /* FileHoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */; };
 		9E8E4C78866ADFE257596082 /* SearchPreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49334770FFAFF93E6513802B /* SearchPreferencesViewController.swift */; };
 		9FB8739586460F0198CA6538 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 40658B17A939918CAC9F2285 /* Sparkle */; };
+		9FEAB67B569D6C392F93EFF3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E818B3D9455550E94E23AEB /* main.swift */; };
 		A044A60CF0F5AE126A50068D /* PermissionsPreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ADF6F5A640F0F628BC18813 /* PermissionsPreferencesViewController.swift */; };
 		A5835513CC29E9D11EA3EF61 /* FilesystemAccessProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = F57D52D99A5F7F37A000BE9A /* FilesystemAccessProviding.swift */; };
 		A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */; };
 		AAAA1EE5284E5D1AD64DC05C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DA6779D3010941E92766274 /* Assets.xcassets */; };
+		B7A6103622BDA33DA33318EE /* HelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114A3CC8BCFC1AC1D0B8B973 /* HelperProtocol.swift */; };
+		BAD1F0FCE5B04312E65A2FDB /* PermissionStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D626C293047FE0C90F28E82C /* PermissionStateTests.swift */; };
 		BEA9AD6EECF33E73783AF005 /* SavedSearchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01329F6D9901D50847ADEC14 /* SavedSearchStore.swift */; };
 		BEE3473A1D89066ADB6E630F /* ContentMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2506011B8A2D8F049951A148 /* ContentMatcher.swift */; };
 		C0ABAD9CFF0EEFF3831EB395 /* FileHoundUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */; };
@@ -87,9 +92,12 @@
 		00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSplitViewController.swift; sourceTree = "<group>"; };
 		01329F6D9901D50847ADEC14 /* SavedSearchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchStore.swift; sourceTree = "<group>"; };
 		064118F67E84C3BFE346ADA0 /* ContentMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentMatcherTests.swift; sourceTree = "<group>"; };
+		06B5635287B4B5EE4C97CB7E /* FileHoundHelper.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FileHoundHelper.entitlements; sourceTree = "<group>"; };
 		08D1FEB9F6E319784E4A322D /* UpdatePreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatePreferencesViewController.swift; sourceTree = "<group>"; };
 		0A4CBA719314F461F4E4C31D /* DirectoryWalkerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalkerTests.swift; sourceTree = "<group>"; };
 		10D566A160E55F5079F322E5 /* AppShellUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellUITests.swift; sourceTree = "<group>"; };
+		114A3CC8BCFC1AC1D0B8B973 /* HelperProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperProtocol.swift; sourceTree = "<group>"; };
+		1A7BE0110117689866110862 /* PermissionGuidanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGuidanceCoordinator.swift; sourceTree = "<group>"; };
 		1ADF6F5A640F0F628BC18813 /* PermissionsPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsPreferencesViewController.swift; sourceTree = "<group>"; };
 		1CF5B941185AE10322A03C74 /* ThemeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeController.swift; sourceTree = "<group>"; };
 		20CBCE4E22AC571CAA07D753 /* QueryCompilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryCompilerTests.swift; sourceTree = "<group>"; };
@@ -97,14 +105,17 @@
 		2506011B8A2D8F049951A148 /* ContentMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentMatcher.swift; sourceTree = "<group>"; };
 		2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowController.swift; sourceTree = "<group>"; };
 		30BB21AE0D140F9289272CB6 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		32DD8B5150B2D2CDFD773081 /* PrivilegedSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivilegedSearchService.swift; sourceTree = "<group>"; };
 		3B50F28DA50D9DD65115648E /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
 		3DEA9F492802D3E305395461 /* DirectoryWalker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalker.swift; sourceTree = "<group>"; };
 		3E091BC05621A3E82813A75C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		45361F864EB065A548118D1F /* SavedSearchSidebarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchSidebarViewController.swift; sourceTree = "<group>"; };
+		46809C2941B27B2E25C7D615 /* FileHoundHelper */ = {isa = PBXFileReference; includeInIndex = 0; path = FileHoundHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		48ADE2FFF952A0EBD95D7F29 /* SearchResultItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultItem.swift; sourceTree = "<group>"; };
 		49334770FFAFF93E6513802B /* SearchPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPreferencesViewController.swift; sourceTree = "<group>"; };
 		4D0A8AC22615E407458B0A73 /* ResultsTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsTableViewController.swift; sourceTree = "<group>"; };
 		4DA6779D3010941E92766274 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4E818B3D9455550E94E23AEB /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		50D0A48861A21373DC250CB7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryFixtureTree.swift; sourceTree = "<group>"; };
 		6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewModel.swift; sourceTree = "<group>"; };
@@ -129,8 +140,10 @@
 		C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITestsLaunchTests.swift; sourceTree = "<group>"; };
 		C6FF0940B950F6EEB38811E0 /* FileHound.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FileHound.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C8D9B94B38D425945A72BD39 /* MainMenuBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuBuilder.swift; sourceTree = "<group>"; };
+		CBF2FA258790154E0DAE5E78 /* FileHound.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FileHound.entitlements; sourceTree = "<group>"; };
 		D4A0FF428CCCAD9BEC5AE145 /* SavedSearchStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchStoreTests.swift; sourceTree = "<group>"; };
 		D4BDF8D17887B5A95D1FCA55 /* PrivilegedFilesystemProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivilegedFilesystemProvider.swift; sourceTree = "<group>"; };
+		D626C293047FE0C90F28E82C /* PermissionStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionStateTests.swift; sourceTree = "<group>"; };
 		D86C1152C112901AD34F8CC6 /* LocalizationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationController.swift; sourceTree = "<group>"; };
 		D8BB3C940AFED69873C36D4C /* SearchRuleRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRuleRowView.swift; sourceTree = "<group>"; };
 		DAA0235942EA6D1409ADA604 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
@@ -171,6 +184,7 @@
 			isa = PBXGroup;
 			children = (
 				4DA6779D3010941E92766274 /* Assets.xcassets */,
+				CBF2FA258790154E0DAE5E78 /* FileHound.entitlements */,
 				9C17908009B84D24BE6F4A40 /* App */,
 				267A8496B4DF12A6B631B511 /* Common */,
 				6A0030210E1822121A252FE5 /* Modules */,
@@ -197,6 +211,7 @@
 			isa = PBXGroup;
 			children = (
 				05E9E57CF84E3C64B1C68419 /* FileHound */,
+				E62B2A4DD75A037538F21D13 /* FileHoundHelper */,
 				58429E7656E52FEAB5A0A009 /* FileHoundTests */,
 				10A3CFF253DC76FA10922249 /* FileHoundUITests */,
 				AEFC66A99582AA7A7028D392 /* Products */,
@@ -245,6 +260,14 @@
 			path = SearchResults;
 			sourceTree = "<group>";
 		};
+		3970DAD11423DA11050C3C04 /* PermissionGuidance */ = {
+			isa = PBXGroup;
+			children = (
+				1A7BE0110117689866110862 /* PermissionGuidanceCoordinator.swift */,
+			);
+			path = PermissionGuidance;
+			sourceTree = "<group>";
+		};
 		399BB6AE580961DF83E2B060 /* PreviewPanel */ = {
 			isa = PBXGroup;
 			children = (
@@ -271,11 +294,20 @@
 			path = Support;
 			sourceTree = "<group>";
 		};
+		5005C7ECD34940AAB557BB51 /* Permissions */ = {
+			isa = PBXGroup;
+			children = (
+				D626C293047FE0C90F28E82C /* PermissionStateTests.swift */,
+			);
+			path = Permissions;
+			sourceTree = "<group>";
+		};
 		58429E7656E52FEAB5A0A009 /* FileHoundTests */ = {
 			isa = PBXGroup;
 			children = (
 				DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */,
 				843E2BA8ED1BC1A5EF0749F9 /* Matching */,
+				5005C7ECD34940AAB557BB51 /* Permissions */,
 				C80326376253750275AA7EDC /* Planner */,
 				FC613EC44C06E986D90E8555 /* Query */,
 				01A49FF0BB5E2275C5373BFD /* Storage */,
@@ -297,6 +329,7 @@
 		6A0030210E1822121A252FE5 /* Modules */ = {
 			isa = PBXGroup;
 			children = (
+				3970DAD11423DA11050C3C04 /* PermissionGuidance */,
 				366F4BC39A721A1F53544B10 /* Preferences */,
 				399BB6AE580961DF83E2B060 /* PreviewPanel */,
 				8E9F671DE8C2542D0E00ADDD /* SavedSearches */,
@@ -393,6 +426,7 @@
 			isa = PBXGroup;
 			children = (
 				C6FF0940B950F6EEB38811E0 /* FileHound.app */,
+				46809C2941B27B2E25C7D615 /* FileHoundHelper */,
 				E2A02BB6DDC828B9534A1EAA /* FileHoundTests.xctest */,
 				6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */,
 			);
@@ -445,6 +479,17 @@
 				2F3811B89489632B5FC48056 /* Localizable.strings */,
 			);
 			path = Localization;
+			sourceTree = "<group>";
+		};
+		E62B2A4DD75A037538F21D13 /* FileHoundHelper */ = {
+			isa = PBXGroup;
+			children = (
+				06B5635287B4B5EE4C97CB7E /* FileHoundHelper.entitlements */,
+				114A3CC8BCFC1AC1D0B8B973 /* HelperProtocol.swift */,
+				4E818B3D9455550E94E23AEB /* main.swift */,
+				32DD8B5150B2D2CDFD773081 /* PrivilegedSearchService.swift */,
+			);
+			path = FileHoundHelper;
 			sourceTree = "<group>";
 		};
 		FA600324BD04E5B91701F8B8 /* Streaming */ = {
@@ -506,6 +551,23 @@
 			productName = FileHoundUITests;
 			productReference = 6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		6FD10AE35F0DDA52261834F6 /* FileHoundHelper */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3B5D5CE2CF42A2654A504DBF /* Build configuration list for PBXNativeTarget "FileHoundHelper" */;
+			buildPhases = (
+				1ADF20D157BDCB52C20C65F0 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FileHoundHelper;
+			packageProductDependencies = (
+			);
+			productName = FileHoundHelper;
+			productReference = 46809C2941B27B2E25C7D615 /* FileHoundHelper */;
+			productType = "com.apple.product-type.tool";
 		};
 		ABDDBFA76A03F4EB53DBDE50 /* FileHound */ = {
 			isa = PBXNativeTarget;
@@ -583,6 +645,7 @@
 			projectRoot = "";
 			targets = (
 				ABDDBFA76A03F4EB53DBDE50 /* FileHound */,
+				6FD10AE35F0DDA52261834F6 /* FileHoundHelper */,
 				E33A4DEE94F762270C85CE96 /* FileHoundTests */,
 				26FE55936B7FC95B00B31670 /* FileHoundUITests */,
 			);
@@ -602,6 +665,16 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1ADF20D157BDCB52C20C65F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B7A6103622BDA33DA33318EE /* HelperProtocol.swift in Sources */,
+				158DE26136088830700C4995 /* PrivilegedSearchService.swift in Sources */,
+				9FEAB67B569D6C392F93EFF3 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		846A8D0CFE63ABC2B011839B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -620,6 +693,7 @@
 				0D6C650D92152F7221486541 /* LocalizationController.swift in Sources */,
 				DF429A833B622102F9B84343 /* MainMenuBuilder.swift in Sources */,
 				36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */,
+				1A2D0376E1837A39DC29FEC4 /* PermissionGuidanceCoordinator.swift in Sources */,
 				A044A60CF0F5AE126A50068D /* PermissionsPreferencesViewController.swift in Sources */,
 				FDE0457D765F9D84A3AFF972 /* PreferencesWindowController.swift in Sources */,
 				C0EDA9822991AE15D7F82484 /* PreviewPanelViewController.swift in Sources */,
@@ -667,6 +741,7 @@
 				78BE86A2358D98F5FC1BA92F /* ContentMatcherTests.swift in Sources */,
 				C5BAB602C99DC01CDE9896F9 /* DirectoryWalkerTests.swift in Sources */,
 				9E8975D01A0C53A232FF18A4 /* FileHoundTests.swift in Sources */,
+				BAD1F0FCE5B04312E65A2FDB /* PermissionStateTests.swift in Sources */,
 				E880A721F079D51FDEFFF8E8 /* QueryCompilerTests.swift in Sources */,
 				09CB98F7F5F4D4C3B813F1EB /* SavedSearchStoreTests.swift in Sources */,
 				8F5320698BDB794D0C5A5B46 /* SearchPlanBuilderTests.swift in Sources */,
@@ -843,6 +918,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FileHound/FileHound.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
@@ -856,6 +932,22 @@
 				SWIFT_VERSION = 5.10;
 			};
 			name = Release;
+		};
+		741981153B9B35432342093A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FileHoundHelper/FileHoundHelper.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundHelper;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
 		};
 		7A214A881285AD74FA77D08D /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -913,10 +1005,27 @@
 			};
 			name = Release;
 		};
+		8143B657D56181E13D0B5F84 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FileHoundHelper/FileHoundHelper.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = cn.vanjay.FileHoundHelper;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
 		C51E38BE40D484B68E6061A5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = FileHound/FileHound.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
@@ -939,6 +1048,15 @@
 			buildConfigurations = (
 				35E1FD3CF4163599C11F08EA /* Debug */,
 				23536EEED3B393418C9BB104 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		3B5D5CE2CF42A2654A504DBF /* Build configuration list for PBXNativeTarget "FileHoundHelper" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				741981153B9B35432342093A /* Debug */,
+				8143B657D56181E13D0B5F84 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
