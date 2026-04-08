@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        MMKV.initialize(rootDir: nil)
+        MMKVKeyValueStore.initializeStore()
         resetSettingsForUITestingIfNeeded()
         bindAppSettings()
         NSApp.mainMenu = MainMenuBuilder(target: self).build()

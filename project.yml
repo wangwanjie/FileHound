@@ -30,6 +30,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: cn.vanjay.FileHound
         SWIFT_VERSION: "5.10"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) SPARKLE_ENABLED"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_NSMainStoryboardFile: ""
         INFOPLIST_KEY_NSPrincipalClass: NSApplication

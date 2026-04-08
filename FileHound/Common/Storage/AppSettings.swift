@@ -48,9 +48,16 @@ final class MMKVKeyValueStore: KeyValueStoring {
 
     private let mmkv: MMKV
 
+    static func initializeStore() {
+        let rootURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("FileHound/MMKV", isDirectory: true)
+        try? FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
+        MMKV.initialize(rootDir: rootURL.path)
+    }
+
     private init() {
         if MMKV.default() == nil {
-            MMKV.initialize(rootDir: nil)
+            Self.initializeStore()
         }
         guard let mmkv = MMKV.default() else {
             fatalError("MMKV 初始化失败")

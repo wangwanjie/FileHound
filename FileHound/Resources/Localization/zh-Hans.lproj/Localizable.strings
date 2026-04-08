@@ -14,6 +14,7 @@
 "preferences.search.subtitle" = "搜索范围与默认行为";
 "preferences.update.title" = "更新";
 "preferences.update.subtitle" = "自动更新与版本检查";
+"preferences.update.check" = "检查更新";
 "preferences.permissions.title" = "权限";
 "preferences.permissions.subtitle" = "完全磁盘访问与权限状态";
 "preview.title" = "预览";

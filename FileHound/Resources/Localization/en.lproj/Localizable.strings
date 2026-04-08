@@ -14,6 +14,7 @@
 "preferences.search.subtitle" = "Search defaults";
 "preferences.update.title" = "Updates";
 "preferences.update.subtitle" = "Automatic update settings";
+"preferences.update.check" = "Check for Updates";
 "preferences.permissions.title" = "Permissions";
 "preferences.permissions.subtitle" = "Full Disk Access and helper state";
 "preview.title" = "Preview";
