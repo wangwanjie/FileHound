@@ -8,6 +8,12 @@
 import AppKit
 
 final class MainMenuBuilder {
+    private weak var target: AnyObject?
+
+    init(target: AnyObject? = nil) {
+        self.target = target
+    }
+
     func build() -> NSMenu {
         let mainMenu = NSMenu(title: "MainMenu")
 
@@ -22,6 +28,16 @@ final class MainMenuBuilder {
         )
         aboutItem.target = NSApp
         appMenu.addItem(aboutItem)
+
+        appMenu.addItem(.separator())
+
+        let preferencesItem = NSMenuItem(
+            title: "偏好设置…",
+            action: #selector(AppDelegate.openPreferences(_:)),
+            keyEquivalent: ","
+        )
+        preferencesItem.target = target
+        appMenu.addItem(preferencesItem)
 
         appMenu.addItem(.separator())
 

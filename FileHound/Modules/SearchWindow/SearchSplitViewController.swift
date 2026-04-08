@@ -14,7 +14,7 @@ final class SearchSplitViewController: NSSplitViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let sidebar = makePlaceholder(title: "Sidebar")
+        let sidebar = SavedSearchSidebarViewController()
         let workspace = WorkspaceContentViewController(
             rulesController: SearchRulesViewController(),
             resultsController: SearchResultsViewController(viewModel: viewModel),
@@ -33,22 +33,6 @@ final class SearchSplitViewController: NSSplitViewController {
             self?.previewController.render(item)
         }
         seedFixtureResultsIfNeeded()
-    }
-
-    private func makePlaceholder(title: String) -> NSViewController {
-        let controller = NSViewController()
-        let label = NSTextField(labelWithString: title)
-        label.translatesAutoresizingMaskIntoConstraints = false
-
-        let container = NSView()
-        container.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: container.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: container.centerYAnchor)
-        ])
-
-        controller.view = container
-        return controller
     }
 
     private func seedFixtureResultsIfNeeded() {
