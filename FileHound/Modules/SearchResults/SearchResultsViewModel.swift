@@ -57,6 +57,8 @@ final class SearchResultsViewModel {
     var projectedItems: [SearchResultItem] {
         items
             .filter { showInvisibleItems || $0.isInvisible == false }
+            .filter { showPackageContents || $0.isPackage == false }
+            .filter { showTrashedItems || $0.isTrashed == false }
             .filter { filterText.isEmpty || $0.path.localizedCaseInsensitiveContains(filterText) }
             .sorted(by: sortComparator)
     }
@@ -68,8 +70,12 @@ final class SearchResultsViewModel {
 
     private func sortComparator(lhs: SearchResultItem, rhs: SearchResultItem) -> Bool {
         switch sortField {
-        case .path, .enclosingFolder:
+        case .path:
             return lhs.path.localizedStandardCompare(rhs.path) == .orderedAscending
+        case .enclosingFolder:
+            return lhs.enclosingFolder.localizedStandardCompare(rhs.enclosingFolder) == .orderedAscending
+        case .kind:
+            return lhs.kind.localizedStandardCompare(rhs.kind) == .orderedAscending
         default:
             return lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
         }

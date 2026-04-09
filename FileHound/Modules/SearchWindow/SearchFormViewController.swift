@@ -151,7 +151,7 @@ final class SearchFormViewController: NSViewController {
         let viewModel = SearchResultsViewModel()
         viewModel.title = title
         viewModel.items = items
-        viewModel.mode = .table
+        viewModel.mode = .grid
 
         let controller = SearchResultsWindowController(viewModel: viewModel, title: title)
         controller.showWindow(nil)

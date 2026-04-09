@@ -3,15 +3,11 @@ import SnapKit
 
 final class SearchResultsViewController: NSViewController {
     private let viewModel: SearchResultsViewModel
-    private let listController = ResultsTableViewController()
+    private let gridController = ResultsCollectionViewController()
+    private let tableController = ResultsTableViewController()
     private let treeController = ResultsOutlineViewController()
+    private let toolbarView = ResultsToolbarView()
     private let containerView = NSView()
-    private let listButton = NSButton(title: "", target: nil, action: nil)
-    private let treeButton = NSButton(title: "", target: nil, action: nil)
-    private let invisiblesButton = NSButton(title: "Invisibles", target: nil, action: nil)
-    private let packageButton = NSButton(title: "Package Contents", target: nil, action: nil)
-    private let trashedButton = NSButton(title: "Trashed", target: nil, action: nil)
-    private let filterField = NSSearchField()
 
     init(viewModel: SearchResultsViewModel) {
         self.viewModel = viewModel
@@ -29,50 +25,42 @@ final class SearchResultsViewController: NSViewController {
         rootView.wantsLayer = true
         rootView.layer?.backgroundColor = NSColor(calibratedWhite: 0.14, alpha: 1).cgColor
 
-        listButton.target = self
-        listButton.action = #selector(showListMode)
-        treeButton.target = self
-        treeButton.action = #selector(showTreeMode)
-        listButton.title = "☷"
-        treeButton.title = "☰"
-        listButton.setAccessibilityIdentifier("列表视图")
-        treeButton.setAccessibilityIdentifier("树形视图")
-
-        [invisiblesButton, packageButton, trashedButton].forEach { button in
-            button.setButtonType(.toggle)
-            button.bezelStyle = .texturedRounded
-        }
-
-        filterField.placeholderString = "Filter"
-        filterField.target = self
-        filterField.action = #selector(filterChanged)
-
-        let leftStack = NSStackView(views: [listButton, treeButton, invisiblesButton, packageButton, trashedButton])
-        leftStack.orientation = .horizontal
-        leftStack.spacing = 10
-
-        addChild(listController)
+        addChild(gridController)
+        addChild(tableController)
         addChild(treeController)
-        containerView.addSubview(listController.view)
+        containerView.addSubview(gridController.view)
+        containerView.addSubview(tableController.view)
         containerView.addSubview(treeController.view)
 
-        rootView.addSubview(leftStack)
-        rootView.addSubview(filterField)
+        toolbarView.gridButton.target = self
+        toolbarView.gridButton.action = #selector(showGridMode)
+        toolbarView.tableButton.target = self
+        toolbarView.tableButton.action = #selector(showTableMode)
+        toolbarView.treeButton.target = self
+        toolbarView.treeButton.action = #selector(showTreeMode)
+        toolbarView.filterField.target = self
+        toolbarView.filterField.action = #selector(filterChanged)
+        toolbarView.invisiblesButton.target = self
+        toolbarView.invisiblesButton.action = #selector(toggleInvisibles)
+        toolbarView.packageButton.target = self
+        toolbarView.packageButton.action = #selector(togglePackages)
+        toolbarView.trashedButton.target = self
+        toolbarView.trashedButton.action = #selector(toggleTrashed)
+
+        rootView.addSubview(toolbarView)
         rootView.addSubview(containerView)
 
-        leftStack.snp.makeConstraints { make in
-            make.leading.top.equalToSuperview().inset(12)
-        }
-        filterField.snp.makeConstraints { make in
-            make.trailing.equalToSuperview().inset(12)
-            make.centerY.equalTo(leftStack)
-            make.width.equalTo(220)
+        toolbarView.snp.makeConstraints { make in
+            make.leading.trailing.top.equalToSuperview()
         }
         containerView.snp.makeConstraints { make in
             make.leading.trailing.bottom.equalToSuperview().inset(12)
-            make.top.equalTo(leftStack.snp.bottom).offset(12)
+            make.top.equalTo(toolbarView.snp.bottom)
         }
-        listController.view.snp.makeConstraints { make in
+        gridController.view.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        tableController.view.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
         treeController.view.snp.makeConstraints { make in
@@ -85,7 +73,10 @@ final class SearchResultsViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        listController.onSelectionChange = { [weak self] item in
+        gridController.onSelectionChange = { [weak self] item in
+            self?.viewModel.selectedItem = item
+        }
+        tableController.onSelectionChange = { [weak self] item in
             self?.viewModel.selectedItem = item
         }
         treeController.onSelectionChange = { [weak self] item in
@@ -96,21 +87,25 @@ final class SearchResultsViewController: NSViewController {
             self?.render(mode: mode)
         }
         viewModel.onItemsChange = { [weak self] items in
-            self?.listController.update(items: items)
+            self?.gridController.update(items: items)
+            self?.tableController.update(items: items)
             self?.treeController.update(items: items)
-        }
-        viewModel.onFilterChange = { [weak self] text in
-            self?.listController.applyFilter(text)
-            self?.treeController.applyFilter(text)
         }
 
         render(mode: viewModel.mode)
-        listController.update(items: viewModel.items)
-        treeController.update(items: viewModel.items)
+        let items = viewModel.projectedItems
+        gridController.update(items: items)
+        tableController.update(items: items)
+        treeController.update(items: items)
     }
 
     @objc
-    private func showListMode() {
+    private func showGridMode() {
+        viewModel.mode = .grid
+    }
+
+    @objc
+    private func showTableMode() {
         viewModel.mode = .table
     }
 
@@ -121,11 +116,27 @@ final class SearchResultsViewController: NSViewController {
 
     @objc
     private func filterChanged() {
-        viewModel.filterText = filterField.stringValue
+        viewModel.filterText = toolbarView.filterField.stringValue
+    }
+
+    @objc
+    private func toggleInvisibles() {
+        viewModel.showInvisibleItems = toolbarView.invisiblesButton.state == .on
+    }
+
+    @objc
+    private func togglePackages() {
+        viewModel.showPackageContents = toolbarView.packageButton.state == .on
+    }
+
+    @objc
+    private func toggleTrashed() {
+        viewModel.showTrashedItems = toolbarView.trashedButton.state == .on
     }
 
     private func render(mode: SearchResultsViewModel.Mode) {
-        listController.view.isHidden = mode != .table
+        gridController.view.isHidden = mode != .grid
+        tableController.view.isHidden = mode != .table
         treeController.view.isHidden = mode != .tree
     }
 }

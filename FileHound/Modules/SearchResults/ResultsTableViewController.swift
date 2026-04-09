@@ -5,7 +5,6 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     private let tableView = NSTableView()
     private let scrollView = NSScrollView()
     private var items: [SearchResultItem] = []
-    private var filteredItems: [SearchResultItem] = []
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
 
@@ -37,28 +36,15 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
 
     func update(items: [SearchResultItem]) {
         self.items = items
-        self.filteredItems = items
-        tableView.reloadData()
-    }
-
-    func applyFilter(_ text: String) {
-        guard text.isEmpty == false else {
-            filteredItems = items
-            tableView.reloadData()
-            return
-        }
-        filteredItems = items.filter { item in
-            item.path.localizedCaseInsensitiveContains(text) || item.kind.localizedCaseInsensitiveContains(text)
-        }
         tableView.reloadData()
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int {
-        filteredItems.count
+        items.count
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        let item = filteredItems[row]
+        let item = items[row]
         let identifier = NSUserInterfaceItemIdentifier("ResultsCell")
         let cell = tableView.makeView(withIdentifier: identifier, owner: self) as? NSTableCellView ?? NSTableCellView()
         cell.identifier = identifier
@@ -92,6 +78,6 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     @objc
     private func selectionDidChange() {
         let row = tableView.selectedRow
-        onSelectionChange?(row >= 0 ? filteredItems[row] : nil)
+        onSelectionChange?(row >= 0 ? items[row] : nil)
     }
 }

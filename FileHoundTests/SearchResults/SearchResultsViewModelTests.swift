@@ -29,4 +29,29 @@ struct SearchResultsViewModelTests {
         viewModel.showInvisibleItems = true
         #expect(viewModel.projectedItems.count == 2)
     }
+
+    @Test
+    func togglesPackageFilterWithoutDroppingVisibleFiles() {
+        let package = SearchResultItem(path: "/tmp/Demo.app", matchReason: "名称命中", previewSnippet: nil, isPackage: true)
+        let file = SearchResultItem(path: "/tmp/Demo.lookin", matchReason: "名称命中", previewSnippet: nil)
+
+        let viewModel = SearchResultsViewModel()
+        viewModel.items = [package, file]
+
+        #expect(viewModel.projectedItems.count == 1)
+        viewModel.showPackageContents = true
+        #expect(viewModel.projectedItems.count == 2)
+    }
+
+    @Test
+    func sortByPathUsesFullPathInsteadOfDisplayName() {
+        let a = SearchResultItem(path: "/z/report.lookin", matchReason: "名称命中", previewSnippet: nil)
+        let b = SearchResultItem(path: "/a/report.lookin", matchReason: "名称命中", previewSnippet: nil)
+
+        let viewModel = SearchResultsViewModel()
+        viewModel.items = [a, b]
+        viewModel.sortField = .path
+
+        #expect(viewModel.projectedItems.map(\.path) == ["/a/report.lookin", "/z/report.lookin"])
+    }
 }
