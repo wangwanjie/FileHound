@@ -1,25 +1,48 @@
 import Foundation
 
 final class SearchResultsViewModel {
-    enum Mode {
-        case list
+    enum Mode: Equatable {
+        case grid
+        case table
         case tree
+    }
+
+    enum SortField: Equatable {
+        case name
+        case dateModified
+        case dateCreated
+        case lastOpened
+        case dateAdded
+        case kind
+        case size
+        case tags
+        case enclosingFolder
+        case path
     }
 
     var title: String = ""
     var filterText: String = "" {
-        didSet { onFilterChange?(filterText) }
+        didSet { notifyProjectionChanged() }
     }
-    var showInvisibleItems = false
-    var showPackageContents = false
-    var showTrashedItems = false
+    var showInvisibleItems = false {
+        didSet { notifyProjectionChanged() }
+    }
+    var showPackageContents = false {
+        didSet { notifyProjectionChanged() }
+    }
+    var showTrashedItems = false {
+        didSet { notifyProjectionChanged() }
+    }
+    var sortField: SortField = .name {
+        didSet { notifyProjectionChanged() }
+    }
 
-    var mode: Mode = .list {
+    var mode: Mode = .grid {
         didSet { onModeChange?(mode) }
     }
 
     var items: [SearchResultItem] = [] {
-        didSet { onItemsChange?(items) }
+        didSet { notifyProjectionChanged() }
     }
 
     var selectedItem: SearchResultItem? {
@@ -30,4 +53,25 @@ final class SearchResultsViewModel {
     var onItemsChange: (([SearchResultItem]) -> Void)?
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onFilterChange: ((String) -> Void)?
+
+    var projectedItems: [SearchResultItem] {
+        items
+            .filter { showInvisibleItems || $0.isInvisible == false }
+            .filter { filterText.isEmpty || $0.path.localizedCaseInsensitiveContains(filterText) }
+            .sorted(by: sortComparator)
+    }
+
+    private func notifyProjectionChanged() {
+        onFilterChange?(filterText)
+        onItemsChange?(projectedItems)
+    }
+
+    private func sortComparator(lhs: SearchResultItem, rhs: SearchResultItem) -> Bool {
+        switch sortField {
+        case .path, .enclosingFolder:
+            return lhs.path.localizedStandardCompare(rhs.path) == .orderedAscending
+        default:
+            return lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
+        }
+    }
 }

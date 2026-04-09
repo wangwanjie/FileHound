@@ -11,6 +11,10 @@ struct SearchResultItem: Equatable, Identifiable, Sendable {
     let isInvisible: Bool
     let isPackage: Bool
 
+    var displayName: String {
+        URL(fileURLWithPath: path).lastPathComponent
+    }
+
     init(
         id: UUID = UUID(),
         path: String,

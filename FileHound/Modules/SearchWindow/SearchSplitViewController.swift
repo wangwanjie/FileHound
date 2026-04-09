@@ -290,7 +290,7 @@ final class SearchSplitViewController: NSViewController {
     private func openResultsWindow(title: String, items: [SearchResultItem]) {
         resultViewModel.title = title
         resultViewModel.items = items
-        resultViewModel.mode = .list
+        resultViewModel.mode = .table
 
         if let windowController = resultsWindowController {
             windowController.window?.title = title

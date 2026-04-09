@@ -111,7 +111,7 @@ final class SearchResultsViewController: NSViewController {
 
     @objc
     private func showListMode() {
-        viewModel.mode = .list
+        viewModel.mode = .table
     }
 
     @objc
@@ -125,7 +125,7 @@ final class SearchResultsViewController: NSViewController {
     }
 
     private func render(mode: SearchResultsViewModel.Mode) {
-        listController.view.isHidden = mode != .list
+        listController.view.isHidden = mode != .table
         treeController.view.isHidden = mode != .tree
     }
 }
