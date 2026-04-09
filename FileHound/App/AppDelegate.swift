@@ -61,7 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func reloadLocalizedInterface() {
         NSApp.mainMenu = MainMenuBuilder(target: self).build()
         if let window = windowController?.window {
-            window.contentViewController = SearchSplitViewController()
+            window.contentViewController = SearchFormViewController()
         }
 
         let preferencesVisible = preferencesWindowController.window?.isVisible == true

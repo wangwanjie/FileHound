@@ -2,8 +2,10 @@ import AppKit
 
 final class SearchResultsWindowController: NSWindowController {
     private let resultsViewController: SearchResultsViewController
+    private let viewModel: SearchResultsViewModel
 
     init(viewModel: SearchResultsViewModel, title: String) {
+        self.viewModel = viewModel
         self.resultsViewController = SearchResultsViewController(viewModel: viewModel)
         let window = NSWindow(contentViewController: resultsViewController)
         window.title = title
@@ -16,5 +18,11 @@ final class SearchResultsWindowController: NSWindowController {
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func update(title: String, items: [SearchResultItem]) {
+        window?.title = title
+        viewModel.title = title
+        viewModel.items = items
     }
 }

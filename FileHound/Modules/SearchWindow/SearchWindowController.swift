@@ -9,8 +9,8 @@ import AppKit
 
 final class SearchWindowController: NSWindowController {
     convenience init() {
-        let splitController = SearchSplitViewController()
-        let window = NSWindow(contentViewController: splitController)
+        let formController = SearchFormViewController()
+        let window = NSWindow(contentViewController: formController)
         window.title = "Find Any File"
         window.setContentSize(NSSize(width: 1140, height: 300))
         window.center()
