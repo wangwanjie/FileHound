@@ -23,3 +23,5 @@
 "search_rules.sample" = "名称包含 report";
 "results.mode.list" = "列表视图";
 "results.mode.tree" = "树形视图";
+"search_window.find_items" = "查找项目";
+"search_window.where" = "其中";

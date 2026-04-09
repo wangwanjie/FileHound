@@ -23,3 +23,5 @@
 "search_rules.sample" = "Name contains report";
 "results.mode.list" = "List";
 "results.mode.tree" = "Tree";
+"search_window.find_items" = "Find Items";
+"search_window.where" = "where";

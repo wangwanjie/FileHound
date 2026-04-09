@@ -9,13 +9,31 @@ import XCTest
 
 final class AppShellUITests: XCTestCase {
     @MainActor
-    func testLaunchShowsSearchWorkspace() throws {
+    func testLaunchShowsModernSearchWorkspace() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--uitesting"]
         app.launch()
 
         XCTAssertTrue(app.windows["Find Any File"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Find Items"].exists)
-        XCTAssertTrue(app.menuBars.menuBarItems["FileHound"].exists)
+        XCTAssertTrue(app.popUpButtons["SearchScopePopup"].exists)
+        XCTAssertTrue(app.popUpButtons["SearchRuleFieldPopup"].exists)
+        XCTAssertTrue(app.textFields["SearchRuleValueField"].exists)
+        XCTAssertTrue(app.buttons["PrimarySearchButton"].exists)
+        XCTAssertTrue(app.staticTexts["SearchStatusLabel"].exists)
+    }
+
+    @MainActor
+    func testSearchButtonSwitchesToStopDuringFixtureSearch() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--uitesting", "--fixture-delayed-search"]
+        app.launch()
+
+        let button = app.buttons["PrimarySearchButton"]
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        button.click()
+
+        XCTAssertEqual(button.label, "Stop")
+        XCTAssertTrue(app.activityIndicators["SearchActivityIndicator"].waitForExistence(timeout: 2))
+        XCTAssertEqual(app.staticTexts["SearchStatusLabel"].label, "Searching: Macintosh HD")
     }
 }

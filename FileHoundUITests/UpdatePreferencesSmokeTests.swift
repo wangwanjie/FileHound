@@ -2,14 +2,14 @@ import XCTest
 
 final class UpdatePreferencesSmokeTests: XCTestCase {
     @MainActor
-    func testUpdateTabShowsCheckForUpdatesButton() throws {
+    func testUpdatesTabShowsPolicyPopupAndCheckNowButton() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
+        app.launchArguments = ["--uitesting", "--open-preferences-on-launch", "--open-updates-preferences-on-launch"]
         app.launch()
+        let window = app.windows["偏好设置"]
+        XCTAssertTrue(window.waitForExistence(timeout: 3))
 
-        app.menuBars.menuBarItems["FileHound"].menus.menuItems["openPreferences:"].click()
-        app.buttons["更新"].click()
-
-        XCTAssertTrue(app.buttons["检查更新"].waitForExistence(timeout: 2))
+        XCTAssertTrue(window.popUpButtons["UpdatePolicyPopup"].waitForExistence(timeout: 2))
+        XCTAssertTrue(window.buttons["CheckNowButton"].exists)
     }
 }

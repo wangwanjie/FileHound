@@ -10,7 +10,7 @@ import Combine
 import MMKV
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var windowController: SearchWindowController?
+    private var windowController: NSWindowController?
     private lazy var preferencesWindowController = PreferencesWindowController()
     private var cancellables: Set<AnyCancellable> = []
 
@@ -20,22 +20,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bindAppSettings()
         NSApp.mainMenu = MainMenuBuilder(target: self).build()
 
+        if ProcessInfo.processInfo.arguments.contains("--open-preferences-on-launch") {
+            let initialSegment = ProcessInfo.processInfo.arguments.contains("--open-updates-preferences-on-launch") ? 3 : 2
+            let rootViewController = PreferencesRootViewController(initialSegment: initialSegment)
+            let window = NSWindow(contentViewController: rootViewController)
+            window.title = L10n.string("preferences.window.title")
+            window.setContentSize(NSSize(width: 760, height: 560))
+            window.styleMask = [.titled, .closable, .miniaturizable]
+            let controller = NSWindowController(window: window)
+            controller.showWindow(nil)
+            windowController = controller
+            NSApp.activate(ignoringOtherApps: true)
+            applyCurrentTheme()
+            return
+        }
+
         let controller = SearchWindowController()
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
         windowController = controller
         applyCurrentTheme()
+
+        if ProcessInfo.processInfo.arguments.contains("--show-secondary-preferences-on-launch") {
+            openPreferences(nil)
+        }
+
+        if UpdateManager.shared.shouldCheckOnLaunch() {
+            UpdateManager.shared.checkForUpdates(nil)
+        }
     }
 
     @objc
     func openPreferences(_ sender: Any?) {
         preferencesWindowController.showWindow(sender)
         preferencesWindowController.window?.makeKeyAndOrderFront(sender)
+        preferencesWindowController.window?.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
         applyCurrentTheme()
     }
 
     private func bindAppSettings() {
         LocalizationController.shared.publisher
+            .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.reloadLocalizedInterface()
@@ -43,6 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             .store(in: &cancellables)
 
         ThemeController.shared.publisher
+            .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.applyCurrentTheme()
@@ -56,12 +83,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         AppSettings.shared.preferredLanguage = .system
         AppSettings.shared.preferredTheme = .system
+        AppSettings.shared.updateCheckPolicy = .manualOnly
     }
 
     private func reloadLocalizedInterface() {
         NSApp.mainMenu = MainMenuBuilder(target: self).build()
         if let window = windowController?.window {
-            window.contentViewController = SearchSplitViewController()
+            window.contentViewController = SearchFormViewController()
         }
 
         let preferencesVisible = preferencesWindowController.window?.isVisible == true

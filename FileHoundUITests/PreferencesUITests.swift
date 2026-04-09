@@ -2,15 +2,16 @@ import XCTest
 
 final class PreferencesUITests: XCTestCase {
     @MainActor
-    func testPreferencesShowsAppearanceAndSearchTabs() throws {
+    func testPreferencesShowsSegmentedTabsAndAppearanceControls() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
+        app.launchArguments = ["--uitesting", "--open-preferences-on-launch"]
         app.launch()
 
-        app.menuBars.menuBarItems["FileHound"].menus.menuItems["openPreferences:"].click()
-
-        XCTAssertTrue(app.windows["偏好设置"].waitForExistence(timeout: 2))
-        XCTAssertTrue(app.buttons["外观"].exists)
-        XCTAssertTrue(app.buttons["搜索"].exists)
+        let window = app.windows["偏好设置"]
+        XCTAssertTrue(window.waitForExistence(timeout: 3))
+        XCTAssertTrue(window.popUpButtons["ThemePopup"].exists)
+        XCTAssertTrue(window.popUpButtons["LanguagePopup"].exists)
+        XCTAssertTrue(window.textFields["ResultsFontSizeField"].exists)
+        XCTAssertTrue(window.buttons["DimColorButton"].exists)
     }
 }

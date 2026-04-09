@@ -21,4 +21,8 @@ final class UpdateManager: NSObject {
         updaterController.checkForUpdates(sender)
         #endif
     }
+
+    func shouldCheckOnLaunch() -> Bool {
+        AppSettings.shared.updateCheckPolicy == .onLaunch
+    }
 }

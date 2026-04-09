@@ -1,27 +1,29 @@
 import AppKit
-import SnapKit
 
 final class SearchRulesViewController: NSViewController {
+    private let listView = SearchRuleListView()
+    private var rows: [SearchRuleRowView] = []
+
     override func loadView() {
-        let container = NSView()
+        view = listView
+    }
 
-        let titleLabel = NSTextField(labelWithString: L10n.string("search_rules.title"))
-        titleLabel.font = .systemFont(ofSize: 18, weight: .semibold)
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        addRow()
+    }
 
-        let rowView = SearchRuleRowView(text: L10n.string("search_rules.sample"))
+    var currentSelection: SearchRuleSelection {
+        rows.first?.selection ?? SearchRuleSelection()
+    }
 
-        container.addSubview(titleLabel)
-        container.addSubview(rowView)
+    func setEnabled(_ enabled: Bool) {
+        rows.forEach { $0.setEnabled(enabled) }
+    }
 
-        titleLabel.snp.makeConstraints { make in
-            make.leading.top.equalToSuperview().inset(20)
-        }
-        rowView.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview().inset(20)
-            make.top.equalTo(titleLabel.snp.bottom).offset(12)
-            make.bottom.equalToSuperview().inset(16)
-        }
-
-        view = container
+    private func addRow() {
+        let row = SearchRuleRowView()
+        rows.append(row)
+        listView.stackView.addArrangedSubview(row)
     }
 }

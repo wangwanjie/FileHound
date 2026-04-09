@@ -7,9 +7,19 @@ struct SearchResultItem: Equatable, Identifiable, Sendable {
     let previewSnippet: String?
     let kind: String
     let modifiedText: String
+    let createdText: String
+    let lastOpenedText: String
+    let addedText: String
     let sizeText: String
+    let tagsText: String
+    let enclosingFolder: String
     let isInvisible: Bool
     let isPackage: Bool
+    let isTrashed: Bool
+
+    var displayName: String {
+        URL(fileURLWithPath: path).lastPathComponent
+    }
 
     init(
         id: UUID = UUID(),
@@ -18,9 +28,15 @@ struct SearchResultItem: Equatable, Identifiable, Sendable {
         previewSnippet: String?,
         kind: String = "",
         modifiedText: String = "",
+        createdText: String = "",
+        lastOpenedText: String = "",
+        addedText: String = "",
         sizeText: String = "",
+        tagsText: String = "",
+        enclosingFolder: String = "",
         isInvisible: Bool = false,
-        isPackage: Bool = false
+        isPackage: Bool = false,
+        isTrashed: Bool = false
     ) {
         self.id = id
         self.path = path
@@ -28,9 +44,15 @@ struct SearchResultItem: Equatable, Identifiable, Sendable {
         self.previewSnippet = previewSnippet
         self.kind = kind
         self.modifiedText = modifiedText
+        self.createdText = createdText
+        self.lastOpenedText = lastOpenedText
+        self.addedText = addedText
         self.sizeText = sizeText
+        self.tagsText = tagsText
+        self.enclosingFolder = enclosingFolder
         self.isInvisible = isInvisible
         self.isPackage = isPackage
+        self.isTrashed = isTrashed
     }
 }
 
