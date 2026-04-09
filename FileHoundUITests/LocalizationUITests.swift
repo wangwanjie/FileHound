@@ -4,17 +4,19 @@ final class LocalizationUITests: XCTestCase {
     @MainActor
     func testLanguageSwitchAppliesWithoutRestart() throws {
         let app = XCUIApplication()
-        app.launchArguments = ["--uitesting"]
+        app.launchArguments = ["--uitesting", "--fixture-results", "--show-secondary-preferences-on-launch"]
         app.launch()
 
-        app.menuBars.menuBarItems["FileHound"].menus.menuItems["openPreferences:"].click()
-        XCTAssertTrue(app.windows["偏好设置"].waitForExistence(timeout: 2))
+        let preferencesWindow = app.windows["偏好设置"]
+        XCTAssertTrue(preferencesWindow.waitForExistence(timeout: 2))
 
-        let languagePopup = app.popUpButtons["LanguagePopup"]
+        let languagePopup = preferencesWindow.popUpButtons["LanguagePopup"]
         XCTAssertTrue(languagePopup.waitForExistence(timeout: 2))
         languagePopup.click()
         app.menuItems["English"].click()
 
-        XCTAssertTrue(app.staticTexts["Search Rules"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.windows["Find Any File"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["Find Items"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.windows["Name contains report"].exists)
     }
 }

@@ -23,3 +23,5 @@
 "search_rules.sample" = "名稱包含 report";
 "results.mode.list" = "列表檢視";
 "results.mode.tree" = "樹狀檢視";
+"search_window.find_items" = "查找項目";
+"search_window.where" = "其中";

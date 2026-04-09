@@ -22,8 +22,8 @@ final class SearchFormViewController: NSViewController {
         rootView.wantsLayer = true
         rootView.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
 
-        let titleLabel = NSTextField(labelWithString: "Find Items")
-        let whereLabel = NSTextField(labelWithString: "where")
+        let titleLabel = NSTextField(labelWithString: L10n.string("search_window.find_items"))
+        let whereLabel = NSTextField(labelWithString: L10n.string("search_window.where"))
 
         scopePopup.setAccessibilityIdentifier("SearchScopePopup")
         scopePopup.setAccessibilityLabel("SearchScopePopup")

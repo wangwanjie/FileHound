@@ -1,88 +1,15 @@
 import AppKit
-import SnapKit
 
 final class PreferencesWindowController: NSWindowController {
-    private lazy var tabButtons = [
-        makeTabButton(title: L10n.string("preferences.tab.appearance")),
-        makeTabButton(title: L10n.string("preferences.tab.search")),
-        makeTabButton(title: L10n.string("preferences.tab.update")),
-        makeTabButton(title: L10n.string("preferences.tab.permissions"))
-    ]
-
-    private lazy var contentControllers: [NSViewController] = [
-        AppearancePreferencesViewController(),
-        SearchPreferencesViewController(),
-        UpdatePreferencesViewController(),
-        PermissionsPreferencesViewController()
-    ]
-
-    private let contentContainer = NSView()
-
     convenience init() {
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 320),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
+        let rootViewController = PreferencesRootViewController()
+        let window = NSWindow(contentViewController: rootViewController)
+        window.setContentSize(NSSize(width: 760, height: 560))
         window.title = L10n.string("preferences.window.title")
         window.center()
+        window.styleMask = [.titled, .closable, .miniaturizable]
         self.init(window: window)
-        setupWindow()
-    }
-
-    private func makeTabButton(title: String) -> NSButton {
-        let button = NSButton(title: title, target: nil, action: nil)
-        button.bezelStyle = .rounded
-        return button
-    }
-
-    private func setupWindow() {
-        guard let window else { return }
-
-        let rootView = NSView()
-        let buttonStack = NSStackView(views: tabButtons)
-        buttonStack.orientation = .horizontal
-        buttonStack.distribution = .fillEqually
-        buttonStack.spacing = 8
-
-        rootView.addSubview(buttonStack)
-        rootView.addSubview(contentContainer)
-
-        buttonStack.snp.makeConstraints { make in
-            make.leading.trailing.top.equalToSuperview().inset(20)
-        }
-        contentContainer.snp.makeConstraints { make in
-            make.leading.trailing.bottom.equalToSuperview().inset(20)
-            make.top.equalTo(buttonStack.snp.bottom).offset(16)
-        }
-
-        window.contentView = rootView
-
-        for (index, button) in tabButtons.enumerated() {
-            button.target = self
-            button.action = #selector(selectTab(_:))
-            button.tag = index
-        }
-
-        renderTab(at: 0)
-    }
-
-    @objc
-    private func selectTab(_ sender: NSButton) {
-        renderTab(at: sender.tag)
-    }
-
-    private func renderTab(at index: Int) {
-        contentContainer.subviews.forEach { $0.removeFromSuperview() }
-
-        let controller = contentControllers[index]
-        let contentView = controller.view
-        contentContainer.addSubview(contentView)
-
-        contentView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-        }
+        window.styleMask.remove(.resizable)
     }
 }
 
