@@ -1,6 +1,6 @@
 import Foundation
 
-struct SearchResultItem: Equatable, Identifiable, Sendable {
+struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
     let id: UUID
     let path: String
     let matchReason: String
@@ -19,6 +19,26 @@ struct SearchResultItem: Equatable, Identifiable, Sendable {
 
     var displayName: String {
         URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    func withUpdatedPath(_ newPath: String) -> SearchResultItem {
+        SearchResultItem(
+            id: id,
+            path: newPath,
+            matchReason: matchReason,
+            previewSnippet: previewSnippet,
+            kind: kind,
+            modifiedText: modifiedText,
+            createdText: createdText,
+            lastOpenedText: lastOpenedText,
+            addedText: addedText,
+            sizeText: sizeText,
+            tagsText: tagsText,
+            enclosingFolder: URL(fileURLWithPath: newPath).deletingLastPathComponent().path,
+            isInvisible: isInvisible,
+            isPackage: isPackage,
+            isTrashed: isTrashed
+        )
     }
 
     init(

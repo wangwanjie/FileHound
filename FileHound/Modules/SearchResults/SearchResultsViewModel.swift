@@ -45,6 +45,12 @@ final class SearchResultsViewModel {
         didSet { notifyProjectionChanged() }
     }
 
+    var selectedIDs: Set<SearchResultItem.ID> = []
+
+    var selectedItems: [SearchResultItem] {
+        items.filter { selectedIDs.contains($0.id) }
+    }
+
     var selectedItem: SearchResultItem? {
         didSet { onSelectionChange?(selectedItem) }
     }
@@ -66,6 +72,16 @@ final class SearchResultsViewModel {
     private func notifyProjectionChanged() {
         onFilterChange?(filterText)
         onItemsChange?(projectedItems)
+    }
+
+    func removeItems(ids: Set<SearchResultItem.ID>) {
+        items.removeAll { ids.contains($0.id) }
+        selectedIDs.subtract(ids)
+    }
+
+    func replaceItems(_ updatedItems: [SearchResultItem]) {
+        let itemsByID = Dictionary(uniqueKeysWithValues: updatedItems.map { ($0.id, $0) })
+        items = items.map { itemsByID[$0.id] ?? $0 }
     }
 
     private func sortComparator(lhs: SearchResultItem, rhs: SearchResultItem) -> Bool {

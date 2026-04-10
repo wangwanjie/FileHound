@@ -54,4 +54,22 @@ struct SearchResultsViewModelTests {
 
         #expect(viewModel.projectedItems.map(\.path) == ["/a/report.lookin", "/z/report.lookin"])
     }
+
+    @Test
+    func removesUpdatedAndSelectedItemsWithoutRebuildingWindow() {
+        let first = SearchResultItem(path: "/tmp/a.txt", matchReason: "名称命中", previewSnippet: nil)
+        let second = SearchResultItem(path: "/tmp/b.txt", matchReason: "名称命中", previewSnippet: nil)
+
+        let viewModel = SearchResultsViewModel()
+        viewModel.items = [first, second]
+        viewModel.selectedIDs = [first.id, second.id]
+
+        viewModel.removeItems(ids: [first.id])
+        #expect(viewModel.items.map(\.path) == ["/tmp/b.txt"])
+        #expect(viewModel.selectedIDs == [second.id])
+
+        let renamed = second.withUpdatedPath("/tmp/renamed.txt")
+        viewModel.replaceItems([renamed])
+        #expect(viewModel.items.map(\.path) == ["/tmp/renamed.txt"])
+    }
 }
