@@ -3,8 +3,13 @@ import SnapKit
 
 final class PreferencesRootViewController: NSViewController {
     private let initialSegment: Int
-    private let segmentedControl = NSSegmentedControl(
-        labels: ["General", "Search", "Appearance", "Updates"],
+    private lazy var segmentedControl = NSSegmentedControl(
+        labels: [
+            L10n.string("preferences.tab.general"),
+            L10n.string("preferences.tab.search"),
+            L10n.string("preferences.tab.appearance"),
+            L10n.string("preferences.tab.update")
+        ],
         trackingMode: .selectOne,
         target: nil,
         action: nil
@@ -28,6 +33,10 @@ final class PreferencesRootViewController: NSViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    var selectedSegmentIndex: Int {
+        segmentedControl.selectedSegment
+    }
+
     override func loadView() {
         let rootView = NSView()
 
@@ -42,26 +51,49 @@ final class PreferencesRootViewController: NSViewController {
 
         segmentedControl.snp.makeConstraints { make in
             make.leading.top.equalToSuperview().inset(20)
-            make.width.equalTo(480)
         }
         contentContainer.snp.makeConstraints { make in
-            make.leading.trailing.bottom.equalToSuperview().inset(20)
+            make.leading.bottom.equalToSuperview().inset(20)
             make.top.equalTo(segmentedControl.snp.bottom).offset(16)
+            make.width.equalTo(PreferencesLayout.contentWidth)
+            make.trailing.lessThanOrEqualToSuperview().inset(20)
         }
 
         view = rootView
     }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        renderSelectedController()
+        renderSelectedController(animated: false)
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        refreshWindowSize(animated: false)
     }
 
     @objc
     private func segmentChanged() {
-        renderSelectedController()
+        renderSelectedController(animated: true)
     }
 
-    private func renderSelectedController() {
+    func refreshWindowSize(animated: Bool) {
+        guard let window = view.window else {
+            return
+        }
+
+        let targetHeight = min(
+            max(measuredContentHeight() + 86, PreferencesLayout.minWindowHeight),
+            PreferencesLayout.maxWindowHeight
+        )
+
+        let targetContentSize = NSSize(width: PreferencesLayout.windowWidth, height: targetHeight)
+        let targetFrame = window.frameRect(forContentRect: NSRect(origin: .zero, size: targetContentSize))
+        let origin = NSPoint(x: window.frame.origin.x, y: window.frame.maxY - targetFrame.height)
+        window.setFrame(NSRect(origin: origin, size: targetFrame.size), display: true, animate: animated)
+    }
+
+    private func renderSelectedController(animated: Bool) {
         let controller = contentControllers[segmentedControl.selectedSegment]
         let contentView = controller.view
         contentContainer.subviews.forEach { $0.removeFromSuperview() }
@@ -69,5 +101,13 @@ final class PreferencesRootViewController: NSViewController {
         contentView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
+        view.layoutSubtreeIfNeeded()
+        refreshWindowSize(animated: animated)
+    }
+
+    private func measuredContentHeight() -> CGFloat {
+        let controller = contentControllers[segmentedControl.selectedSegment]
+        controller.view.layoutSubtreeIfNeeded()
+        return max(controller.view.fittingSize.height, 220)
     }
 }

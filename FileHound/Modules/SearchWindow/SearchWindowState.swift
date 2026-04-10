@@ -4,6 +4,13 @@ enum SearchWindowPhase: Equatable, Sendable {
     case idle(matchCount: Int)
     case editing(matchCount: Int?)
     case searching(scopeDescription: String, matchCount: Int)
+
+    var isSearching: Bool {
+        if case .searching = self {
+            return true
+        }
+        return false
+    }
 }
 
 struct SearchWindowState: Equatable, Sendable {

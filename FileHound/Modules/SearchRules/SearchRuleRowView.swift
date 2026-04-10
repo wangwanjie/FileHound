@@ -7,6 +7,8 @@ final class SearchRuleRowView: NSView {
     let fieldPopup = NSPopUpButton()
     let operatorPopup = NSPopUpButton()
     let valueField = NSTextField()
+    var onAdd: (() -> Void)?
+    var onRemove: (() -> Void)?
 
     init() {
         super.init(frame: .zero)
@@ -19,6 +21,10 @@ final class SearchRuleRowView: NSView {
         valueField.setAccessibilityIdentifier("SearchRuleValueField")
         valueField.stringValue = ".lookin"
         valueField.alignment = .center
+        addButton.target = self
+        addButton.action = #selector(addTapped)
+        removeButton.target = self
+        removeButton.action = #selector(removeTapped)
 
         [addButton, removeButton, fieldPopup, operatorPopup, valueField].forEach(addSubview)
 
@@ -65,5 +71,19 @@ final class SearchRuleRowView: NSView {
         [addButton, removeButton, fieldPopup, operatorPopup].forEach { $0.isEnabled = enabled }
         valueField.isEnabled = enabled
         alphaValue = enabled ? 1 : 0.55
+    }
+
+    func setRemoveEnabled(_ enabled: Bool) {
+        removeButton.isEnabled = enabled
+    }
+
+    @objc
+    private func addTapped() {
+        onAdd?()
+    }
+
+    @objc
+    private func removeTapped() {
+        onRemove?()
     }
 }

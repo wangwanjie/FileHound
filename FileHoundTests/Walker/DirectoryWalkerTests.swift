@@ -39,4 +39,51 @@ final class DirectoryWalkerTests: XCTestCase {
 
         XCTAssertEqual(items.map(\.lastPathComponent).sorted(), [".secret.txt", "visible.txt"])
     }
+
+    func testWalkContinuesWhenSubdirectoryCannotBeRead() throws {
+        let provider = FailingSubdirectoryProvider()
+        let walker = DirectoryWalker(providerFactory: { _ in provider })
+        let plan = SearchPlan(
+            rootPaths: ["/root"],
+            rootGroup: .rule(.nameContains("txt")),
+            excludedPathFragments: [],
+            providerKind: .local,
+            shouldScanContents: false
+        )
+
+        let items = try walker.walk(plan: plan, includeHiddenFiles: true)
+
+        XCTAssertTrue(items.map(\.path).contains("/root/visible.txt"))
+        XCTAssertTrue(items.map(\.path).contains("/root/blocked"))
+    }
+}
+
+private struct FailingSubdirectoryProvider: FilesystemAccessProviding {
+    let kind: ProviderKind = .local
+
+    func contentsOfDirectory(atPath path: String) throws -> [String] {
+        switch path {
+        case "/root":
+            return ["visible.txt", "blocked"]
+        case "/root/blocked":
+            throw CocoaError(.fileReadNoPermission)
+        default:
+            return []
+        }
+    }
+
+    func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
+        switch path {
+        case "/root/visible.txt":
+            return [.type: FileAttributeType.typeRegular]
+        case "/root/blocked":
+            return [.type: FileAttributeType.typeDirectory]
+        default:
+            return [.type: FileAttributeType.typeRegular]
+        }
+    }
+
+    func contentsOfFile(atPath path: String) throws -> Data {
+        Data()
+    }
 }

@@ -50,6 +50,20 @@ final class MainMenuBuilder {
         appMenu.addItem(quitItem)
 
         appMenuItem.submenu = appMenu
+
+        let editMenuItem = NSMenuItem(title: L10n.string("menu.edit"), action: nil, keyEquivalent: "")
+        mainMenu.addItem(editMenuItem)
+
+        let editMenu = NSMenu(title: L10n.string("menu.edit"))
+        editMenu.addItem(withTitle: L10n.string("menu.undo"), action: Selector(("undo:")), keyEquivalent: "z")
+        editMenu.addItem(withTitle: L10n.string("menu.redo"), action: Selector(("redo:")), keyEquivalent: "Z")
+        editMenu.addItem(.separator())
+        editMenu.addItem(withTitle: L10n.string("menu.cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: L10n.string("menu.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: L10n.string("menu.paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: L10n.string("menu.select_all"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenuItem.submenu = editMenu
+
         return mainMenu
     }
 }

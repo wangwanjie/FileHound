@@ -1,7 +1,15 @@
 "menu.about" = "關於 FileHound";
+"menu.edit" = "編輯";
+"menu.undo" = "復原";
+"menu.redo" = "重做";
+"menu.cut" = "剪下";
+"menu.copy" = "拷貝";
+"menu.paste" = "貼上";
+"menu.select_all" = "全選";
 "menu.preferences" = "設定…";
 "menu.quit" = "結束 FileHound";
 "preferences.window.title" = "偏好設定";
+"preferences.tab.general" = "一般";
 "preferences.tab.appearance" = "外觀";
 "preferences.tab.search" = "搜尋";
 "preferences.tab.update" = "更新";

@@ -21,9 +21,11 @@ final class SearchPreferencesViewController: NSViewController {
         ])
         stack.orientation = .vertical
         stack.spacing = 14
+        stack.alignment = .leading
         rootView.addSubview(stack)
         stack.snp.makeConstraints { make in
-            make.edges.equalTo(rootView.contentGuide)
+            make.leading.top.bottom.equalTo(rootView.contentGuide)
+            make.trailing.lessThanOrEqualTo(rootView.contentGuide)
         }
 
         view = rootView

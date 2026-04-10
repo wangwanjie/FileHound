@@ -27,12 +27,8 @@ final class AppearancePreferencesViewController: NSViewController {
         languagePopup.target = self
         languagePopup.action = #selector(languageChanged)
 
-        [themePopup, languagePopup, fontSizeField, dimColorButton].forEach {
-            $0.alignment = .center
-        }
-
         fontSizeField.stringValue = String(AppSettings.shared.resultsFontSize)
-        fontSizeField.alignment = .center
+        fontSizeField.alignment = .left
         fontSizeStepper.minValue = 10
         fontSizeStepper.maxValue = 24
         fontSizeStepper.increment = 1
@@ -48,17 +44,19 @@ final class AppearancePreferencesViewController: NSViewController {
         dimColorButton.action = #selector(cycleDimColor)
 
         let stack = NSStackView(views: [
-            formRow(title: L10n.string("preferences.appearance.theme"), control: themePopup),
-            formRow(title: L10n.string("preferences.appearance.language"), control: languagePopup),
-            formRow(title: "Font Size", control: makeFontSizeControl()),
-            formRow(title: "Dim Color", control: makeDimColorControl())
+            makePreferencesFormRow(title: L10n.string("preferences.appearance.theme"), control: themePopup),
+            makePreferencesFormRow(title: L10n.string("preferences.appearance.language"), control: languagePopup),
+            makePreferencesFormRow(title: "Font Size", control: makeFontSizeControl()),
+            makePreferencesFormRow(title: "Dim Color", control: makeDimColorControl())
         ])
         stack.orientation = .vertical
         stack.spacing = 16
+        stack.alignment = .leading
 
         rootView.addSubview(stack)
         stack.snp.makeConstraints { make in
-            make.edges.equalTo(rootView.contentGuide)
+            make.leading.top.bottom.equalTo(rootView.contentGuide)
+            make.trailing.lessThanOrEqualTo(rootView.contentGuide)
         }
 
         themePopup.selectItem(at: AppTheme.allCases.firstIndex(of: ThemeController.shared.currentTheme) ?? 0)
@@ -110,14 +108,6 @@ final class AppearancePreferencesViewController: NSViewController {
             make.height.equalTo(24)
         }
         return stack
-    }
-
-    private func formRow(title: String, control: NSView) -> NSView {
-        let titleLabel = NSTextField(labelWithString: title)
-        let row = NSStackView(views: [titleLabel, control])
-        row.orientation = .horizontal
-        row.distribution = .fillEqually
-        return row
     }
 }
 

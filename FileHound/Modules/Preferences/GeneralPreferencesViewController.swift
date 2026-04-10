@@ -15,10 +15,10 @@ final class GeneralPreferencesViewController: NSViewController {
         )
 
         hotKeyField.placeholderString = "Click to set"
-        hotKeyField.alignment = .center
+        hotKeyField.alignment = .left
 
         let rows = NSStackView(views: [
-            formRow(title: "Hot Key", control: hotKeyField),
+            makePreferencesFormRow(title: "Hot Key", control: hotKeyField),
             finderOnlyButton,
             globalButton,
             openRecentButton,
@@ -26,20 +26,14 @@ final class GeneralPreferencesViewController: NSViewController {
         ])
         rows.orientation = .vertical
         rows.spacing = 14
+        rows.alignment = .leading
 
         rootView.addSubview(rows)
         rows.snp.makeConstraints { make in
-            make.edges.equalTo(rootView.contentGuide)
+            make.leading.top.bottom.equalTo(rootView.contentGuide)
+            make.trailing.lessThanOrEqualTo(rootView.contentGuide)
         }
 
         view = rootView
-    }
-
-    private func formRow(title: String, control: NSView) -> NSView {
-        let titleLabel = NSTextField(labelWithString: title)
-        let row = NSStackView(views: [titleLabel, control])
-        row.orientation = .horizontal
-        row.distribution = .fillEqually
-        return row
     }
 }

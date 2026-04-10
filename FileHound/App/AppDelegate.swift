@@ -11,6 +11,7 @@ import MMKV
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowController: NSWindowController?
+    private var searchWindowController: SearchWindowController?
     private lazy var preferencesWindowController = PreferencesWindowController()
     private var cancellables: Set<AnyCancellable> = []
 
@@ -22,20 +23,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if ProcessInfo.processInfo.arguments.contains("--open-preferences-on-launch") {
             let initialSegment = ProcessInfo.processInfo.arguments.contains("--open-updates-preferences-on-launch") ? 3 : 2
-            let rootViewController = PreferencesRootViewController(initialSegment: initialSegment)
-            let window = NSWindow(contentViewController: rootViewController)
-            window.title = L10n.string("preferences.window.title")
-            window.setContentSize(NSSize(width: 760, height: 560))
-            window.styleMask = [.titled, .closable, .miniaturizable]
-            let controller = NSWindowController(window: window)
-            controller.showWindow(nil)
-            windowController = controller
+            preferencesWindowController.show(segment: initialSegment)
+            windowController = preferencesWindowController
             NSApp.activate(ignoringOtherApps: true)
             applyCurrentTheme()
             return
         }
 
         let controller = SearchWindowController()
+        searchWindowController = controller
         controller.showWindow(nil)
         NSApp.activate(ignoringOtherApps: true)
         windowController = controller
@@ -52,8 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc
     func openPreferences(_ sender: Any?) {
-        preferencesWindowController.showWindow(sender)
-        preferencesWindowController.window?.makeKeyAndOrderFront(sender)
+        preferencesWindowController.show(sender: sender)
         preferencesWindowController.window?.orderFrontRegardless()
         NSApp.activate(ignoringOtherApps: true)
         applyCurrentTheme()
@@ -88,22 +83,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func reloadLocalizedInterface() {
         NSApp.mainMenu = MainMenuBuilder(target: self).build()
-        if let window = windowController?.window {
-            window.contentViewController = SearchFormViewController()
-        }
-
-        let preferencesVisible = preferencesWindowController.window?.isVisible == true
-        preferencesWindowController = PreferencesWindowController()
-        if preferencesVisible {
-            openPreferences(nil)
-        }
-
+        searchWindowController?.reloadLocalizedContent()
+        preferencesWindowController.reloadLocalizedContent()
         applyCurrentTheme()
     }
 
     private func applyCurrentTheme() {
         let theme = ThemeController.shared.currentTheme
-        ThemeController.shared.apply(theme: theme, to: windowController?.window)
+        ThemeController.shared.apply(theme: theme, to: searchWindowController?.window)
         ThemeController.shared.apply(theme: theme, to: preferencesWindowController.window)
     }
 }

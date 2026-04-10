@@ -1,7 +1,15 @@
 "menu.about" = "About FileHound";
+"menu.edit" = "Edit";
+"menu.undo" = "Undo";
+"menu.redo" = "Redo";
+"menu.cut" = "Cut";
+"menu.copy" = "Copy";
+"menu.paste" = "Paste";
+"menu.select_all" = "Select All";
 "menu.preferences" = "Preferences…";
 "menu.quit" = "Quit FileHound";
 "preferences.window.title" = "Preferences";
+"preferences.tab.general" = "General";
 "preferences.tab.appearance" = "Appearance";
 "preferences.tab.search" = "Search";
 "preferences.tab.update" = "Updates";

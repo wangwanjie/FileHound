@@ -26,22 +26,26 @@ final class UpdatePreferencesViewController: NSViewController {
         checkNowButton.setAccessibilityIdentifier("CheckNowButton")
         checkNowButton.target = UpdateManager.shared
         checkNowButton.action = #selector(UpdateManager.checkForUpdates(_:))
+        checkNowButton.isEnabled = UpdateManager.shared.canCheckForUpdates
+        checkNowButton.toolTip = UpdateManager.shared.canCheckForUpdates ? nil : "Update feed is not configured in this build."
 
         resetButton.target = self
         resetButton.action = #selector(resetDefaults)
 
         let stack = NSStackView(views: [
-            formRow(title: "Check Policy", control: policyPopup),
+            makePreferencesFormRow(title: "Check Policy", control: policyPopup),
             autoDownloadButton,
             checkNowButton,
             resetButton
         ])
         stack.orientation = .vertical
         stack.spacing = 14
+        stack.alignment = .leading
 
         rootView.addSubview(stack)
         stack.snp.makeConstraints { make in
-            make.edges.equalTo(rootView.contentGuide)
+            make.leading.top.bottom.equalTo(rootView.contentGuide)
+            make.trailing.lessThanOrEqualTo(rootView.contentGuide)
         }
 
         view = rootView
@@ -72,13 +76,5 @@ final class UpdatePreferencesViewController: NSViewController {
         case .manualOnly: return 1
         case .dailyAutomatic: return 2
         }
-    }
-
-    private func formRow(title: String, control: NSView) -> NSView {
-        let titleLabel = NSTextField(labelWithString: title)
-        let row = NSStackView(views: [titleLabel, control])
-        row.orientation = .horizontal
-        row.distribution = .fillEqually
-        return row
     }
 }

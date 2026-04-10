@@ -29,7 +29,10 @@ struct DirectoryWalker: Sendable {
     func walk(plan: SearchPlan, includeHiddenFiles: Bool) throws -> [DirectoryEntry] {
         let provider = providerFactory(plan.providerKind)
         return try plan.rootPaths.flatMap { rootPath in
-            try walkDirectory(
+            guard Task.isCancelled == false else {
+                return [DirectoryEntry]()
+            }
+            return try walkDirectory(
                 atPath: rootPath,
                 provider: provider,
                 includeHiddenFiles: includeHiddenFiles,
@@ -45,15 +48,30 @@ struct DirectoryWalker: Sendable {
         excludedPathFragments: Set<String>
     ) throws -> [DirectoryEntry] {
         var results: [DirectoryEntry] = []
+        let childNames: [String]
 
-        for childName in try provider.contentsOfDirectory(atPath: path) {
+        do {
+            childNames = try provider.contentsOfDirectory(atPath: path)
+        } catch {
+            return []
+        }
+
+        for childName in childNames {
+            guard Task.isCancelled == false else {
+                break
+            }
             let childPath = (path as NSString).appendingPathComponent(childName)
 
             guard excludedPathFragments.contains(where: childPath.contains) == false else {
                 continue
             }
 
-            let attributes = try provider.attributesOfItem(atPath: childPath)
+            let attributes: [FileAttributeKey: Any]
+            do {
+                attributes = try provider.attributesOfItem(atPath: childPath)
+            } catch {
+                continue
+            }
             let isDirectory = attributes[.type] as? FileAttributeType == .typeDirectory
             let entry = DirectoryEntry(
                 path: childPath,
@@ -65,19 +83,19 @@ struct DirectoryWalker: Sendable {
                 continue
             }
 
+            results.append(entry)
+
             if isDirectory {
                 results.append(
                     contentsOf: try walkDirectory(
-                    atPath: childPath,
-                    provider: provider,
-                    includeHiddenFiles: includeHiddenFiles,
-                    excludedPathFragments: excludedPathFragments
-                )
+                        atPath: childPath,
+                        provider: provider,
+                        includeHiddenFiles: includeHiddenFiles,
+                        excludedPathFragments: excludedPathFragments
+                    )
                 )
                 continue
             }
-
-            results.append(entry)
         }
 
         return results
