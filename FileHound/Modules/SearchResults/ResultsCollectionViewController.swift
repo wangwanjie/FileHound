@@ -4,8 +4,10 @@ import SnapKit
 final class ResultsCollectionViewController: NSViewController, NSCollectionViewDataSource, NSCollectionViewDelegate {
     private let collectionView = ContextMenuCollectionView()
     private let scrollView = NSScrollView()
+    private let layout = NSCollectionViewFlowLayout()
     private var items: [SearchResultItem] = []
     private let iconProvider = ResultIconProvider()
+    private var previewSize: CGFloat = 72
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onSelectionSetChange: (([SearchResultItem]) -> Void)?
@@ -14,11 +16,6 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
     var onQuickLookRequest: (([SearchResultItem]) -> Void)?
 
     override func loadView() {
-        let layout = NSCollectionViewFlowLayout()
-        layout.itemSize = NSSize(width: 132, height: 116)
-        layout.minimumInteritemSpacing = 16
-        layout.minimumLineSpacing = 16
-
         collectionView.collectionViewLayout = layout
         collectionView.dataSource = self
         collectionView.delegate = self
@@ -36,6 +33,8 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
             self?.quickLookRequested()
         }
 
+        applyPreviewLayout()
+
         scrollView.documentView = collectionView
         scrollView.hasVerticalScroller = true
         view = scrollView
@@ -43,6 +42,12 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
 
     func update(items: [SearchResultItem]) {
         self.items = items
+        collectionView.reloadData()
+    }
+
+    func updatePreviewSize(_ previewSize: CGFloat) {
+        self.previewSize = max(32, min(previewSize, 128))
+        applyPreviewLayout()
         collectionView.reloadData()
     }
 
@@ -60,7 +65,7 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
             return item
         }
 
-        resultItem.render(items[indexPath.item], iconProvider: iconProvider)
+        resultItem.render(items[indexPath.item], iconProvider: iconProvider, previewSize: previewSize)
         return resultItem
     }
 
@@ -114,6 +119,14 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
         onSelectionSetChange?(selected)
         onSelectionChange?(selected.first)
     }
+
+    private func applyPreviewLayout() {
+        let iconSize = previewSize
+        layout.itemSize = NSSize(width: iconSize + 60, height: iconSize + 44)
+        layout.minimumInteritemSpacing = max(14, floor(iconSize / 4))
+        layout.minimumLineSpacing = max(14, floor(iconSize / 4))
+        layout.sectionInset = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
+    }
 }
 
 private final class ResultGridItem: NSCollectionViewItem {
@@ -123,6 +136,7 @@ private final class ResultGridItem: NSCollectionViewItem {
     private let titleLabel = NSTextField(labelWithString: "")
     private let selectionOverlay = NSView()
     private var representedPath: String?
+    private var iconSizeConstraint: Constraint?
 
     override func loadView() {
         view = NSView()
@@ -151,7 +165,7 @@ private final class ResultGridItem: NSCollectionViewItem {
         iconView.snp.makeConstraints { make in
             make.top.equalToSuperview().inset(10)
             make.centerX.equalToSuperview()
-            make.size.equalTo(72)
+            iconSizeConstraint = make.size.equalTo(72).constraint
         }
         titleLabel.snp.makeConstraints { make in
             make.leading.trailing.bottom.equalToSuperview().inset(8)
@@ -169,8 +183,9 @@ private final class ResultGridItem: NSCollectionViewItem {
         }
     }
 
-    func render(_ item: SearchResultItem, iconProvider: ResultIconProvider) {
+    func render(_ item: SearchResultItem, iconProvider: ResultIconProvider, previewSize: CGFloat) {
         representedPath = item.path
+        iconSizeConstraint?.update(offset: previewSize)
         iconView.image = NSWorkspace.shared.icon(forFile: item.path)
         titleLabel.stringValue = item.displayName
         titleLabel.setAccessibilityIdentifier(item.displayName)
@@ -180,7 +195,7 @@ private final class ResultGridItem: NSCollectionViewItem {
             guard let self else { return }
             let image = await iconProvider.icon(
                 for: URL(fileURLWithPath: path),
-                size: NSSize(width: 72, height: 72),
+                size: NSSize(width: previewSize, height: previewSize),
                 preferThumbnail: true
             )
             guard self.representedPath == path else { return }
@@ -213,3 +228,11 @@ private final class ContextMenuCollectionView: NSCollectionView {
         super.keyDown(with: event)
     }
 }
+
+#if DEBUG
+extension ResultsCollectionViewController {
+    var debugItemSize: NSSize {
+        layout.itemSize
+    }
+}
+#endif

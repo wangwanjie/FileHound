@@ -56,6 +56,19 @@ struct SearchResultsViewModelTests {
     }
 
     @Test
+    func descendingSortReversesProjectedItems() {
+        let a = SearchResultItem(path: "/z/report.lookin", matchReason: "名称命中", previewSnippet: nil)
+        let b = SearchResultItem(path: "/a/report.lookin", matchReason: "名称命中", previewSnippet: nil)
+
+        let viewModel = SearchResultsViewModel()
+        viewModel.items = [a, b]
+        viewModel.sortField = .path
+        viewModel.sortOrder = .descending
+
+        #expect(viewModel.projectedItems.map(\.path) == ["/z/report.lookin", "/a/report.lookin"])
+    }
+
+    @Test
     func removesUpdatedAndSelectedItemsWithoutRebuildingWindow() {
         let first = SearchResultItem(path: "/tmp/a.txt", matchReason: "名称命中", previewSnippet: nil)
         let second = SearchResultItem(path: "/tmp/b.txt", matchReason: "名称命中", previewSnippet: nil)

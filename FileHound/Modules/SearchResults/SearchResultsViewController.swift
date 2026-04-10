@@ -10,6 +10,7 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     private let treeController = ResultsOutlineViewController()
     private let toolbarView = ResultsToolbarView()
     private let containerView = NSView()
+    private let statusBarView = ResultsStatusBarView()
     private let emptyStateLabel = NSTextField(labelWithString: "No Results")
     private lazy var actionController = ResultActionController(confirmationPresenter: { [weak self] request in
         self?.confirm(request: request) ?? false
@@ -54,6 +55,10 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         toolbarView.treeButton.action = #selector(showTreeMode)
         toolbarView.filterField.target = self
         toolbarView.filterField.action = #selector(filterChanged)
+        toolbarView.previewSlider.target = self
+        toolbarView.previewSlider.action = #selector(previewSizeChanged)
+        toolbarView.sortByPopup.target = self
+        toolbarView.sortByPopup.action = #selector(sortByChanged)
         toolbarView.invisiblesButton.target = self
         toolbarView.invisiblesButton.action = #selector(toggleInvisibles)
         toolbarView.packageButton.target = self
@@ -63,13 +68,19 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
         rootView.addSubview(toolbarView)
         rootView.addSubview(containerView)
+        rootView.addSubview(statusBarView)
 
         toolbarView.snp.makeConstraints { make in
             make.leading.trailing.top.equalToSuperview()
         }
         containerView.snp.makeConstraints { make in
-            make.leading.trailing.bottom.equalToSuperview().inset(12)
+            make.leading.trailing.equalToSuperview().inset(12)
             make.top.equalTo(toolbarView.snp.bottom)
+            make.bottom.equalTo(statusBarView.snp.top)
+        }
+        statusBarView.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview()
+            make.height.equalTo(28)
         }
         gridController.view.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -129,8 +140,14 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         gridController.onQuickLookRequest = { [weak self] items in
             self?.showQuickLook(items: items)
         }
+        tableController.onSortChange = { [weak self] field, order in
+            self?.applySort(field: field, order: order)
+        }
         tableController.onQuickLookRequest = { [weak self] items in
             self?.showQuickLook(items: items)
+        }
+        treeController.onSortChange = { [weak self] field, order in
+            self?.applySort(field: field, order: order)
         }
         treeController.onQuickLookRequest = { [weak self] items in
             self?.showQuickLook(items: items)
@@ -139,19 +156,34 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         viewModel.onModeChange = { [weak self] mode in
             self?.render(mode: mode)
         }
+        viewModel.onSelectionChange = { [weak self] item in
+            self?.statusBarView.updateSelectedItem(item)
+        }
         viewModel.onItemsChange = { [weak self] items in
             self?.gridController.update(items: items)
             self?.tableController.update(items: items)
             self?.treeController.update(items: items)
             self?.renderEmptyState(isVisible: items.isEmpty)
+            self?.statusBarView.updateMatchCount(items.count)
+        }
+        viewModel.onSortChange = { [weak self] field, order in
+            self?.toolbarView.selectSortField(field)
+            self?.tableController.applySort(field: field, order: order)
+            self?.treeController.applySort(field: field, order: order)
         }
 
         render(mode: viewModel.mode)
+        applyPreviewSize(CGFloat(toolbarView.previewSlider.doubleValue))
+        toolbarView.selectSortField(viewModel.sortField)
+        tableController.applySort(field: viewModel.sortField, order: viewModel.sortOrder)
+        treeController.applySort(field: viewModel.sortField, order: viewModel.sortOrder)
         let items = viewModel.projectedItems
         gridController.update(items: items)
         tableController.update(items: items)
         treeController.update(items: items)
         renderEmptyState(isVisible: items.isEmpty)
+        statusBarView.updateMatchCount(items.count)
+        statusBarView.updateSelectedItem(viewModel.selectedItem)
     }
 
     @objc
@@ -175,6 +207,27 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     @objc
+    private func previewSizeChanged() {
+        applyPreviewSize(CGFloat(toolbarView.previewSlider.doubleValue))
+    }
+
+    @objc
+    private func sortByChanged() {
+        let field: SearchResultsViewModel.SortField
+        switch toolbarView.sortByPopup.indexOfSelectedItem {
+        case 1:
+            field = .dateModified
+        case 2:
+            field = .kind
+        case 3:
+            field = .size
+        default:
+            field = .name
+        }
+        applySort(field: field, order: .ascending)
+    }
+
+    @objc
     private func toggleInvisibles() {
         viewModel.showInvisibleItems = toolbarView.invisiblesButton.state == .on
     }
@@ -193,6 +246,7 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         gridController.view.isHidden = mode != .grid
         tableController.view.isHidden = mode != .table
         treeController.view.isHidden = mode != .tree
+        toolbarView.apply(mode: mode)
     }
 
     private func renderEmptyState(isVisible: Bool) {
@@ -202,6 +256,15 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     private func updateSelection(_ items: [SearchResultItem]) {
         viewModel.selectedIDs = Set(items.map(\.id))
         viewModel.selectedItem = items.first
+    }
+
+    private func applyPreviewSize(_ previewSize: CGFloat) {
+        gridController.updatePreviewSize(previewSize)
+    }
+
+    private func applySort(field: SearchResultsViewModel.SortField, order: SearchResultsViewModel.SortOrder) {
+        viewModel.sortField = field
+        viewModel.sortOrder = order
     }
 
     private func makeContextMenu(for items: [SearchResultItem]) -> NSMenu? {
@@ -657,6 +720,44 @@ extension SearchResultsViewController {
     var debugShowsEmptyState: Bool {
         emptyStateLabel.isHidden == false
     }
+
+    var debugSelectedMode: SearchResultsViewModel.Mode? {
+        if toolbarView.gridButton.state == .on {
+            return .grid
+        }
+        if toolbarView.tableButton.state == .on {
+            return .table
+        }
+        if toolbarView.treeButton.state == .on {
+            return .tree
+        }
+        return nil
+    }
+
+    var debugShowsPreviewSlider: Bool {
+        toolbarView.previewSlider.isHidden == false
+    }
+
+    var debugShowsSortPopup: Bool {
+        toolbarView.sortByPopup.isHidden == false
+    }
+
+    var debugGridItemSize: NSSize {
+        gridController.debugItemSize
+    }
+
+    func debugSetPreviewSize(_ value: Double) {
+        toolbarView.previewSlider.doubleValue = value
+        previewSizeChanged()
+    }
+
+    var debugMatchCountValue: Int {
+        statusBarView.matchCountValue
+    }
+
+    var debugSelectedPathComponents: [String] {
+        statusBarView.displayedPathComponents
+    }
 }
 #endif
 
@@ -670,5 +771,223 @@ private final class MenuActionHandler: NSObject {
     @objc
     func invoke() {
         action()
+    }
+}
+
+private final class ResultsStatusBarView: NSView {
+    private let pathStackView = NSStackView()
+    private let countLabel = NSTextField(labelWithString: "")
+    private var buttonHandlers: [MenuActionHandler] = []
+
+    private(set) var displayedPathComponents: [String] = []
+    private(set) var matchCountValue = 0
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.94).cgColor
+        let borderLayer = CALayer()
+        borderLayer.backgroundColor = NSColor.separatorColor.cgColor
+        layer?.addSublayer(borderLayer)
+
+        pathStackView.orientation = .horizontal
+        pathStackView.alignment = .centerY
+        pathStackView.spacing = 4
+        pathStackView.edgeInsets = NSEdgeInsets(top: 0, left: 10, bottom: 0, right: 0)
+
+        countLabel.font = .systemFont(ofSize: 11)
+        countLabel.textColor = .secondaryLabelColor
+        countLabel.alignment = .right
+
+        addSubview(pathStackView)
+        addSubview(countLabel)
+
+        pathStackView.snp.makeConstraints { make in
+            make.leading.top.bottom.equalToSuperview()
+            make.trailing.lessThanOrEqualTo(countLabel.snp.leading).offset(-12)
+        }
+        countLabel.snp.makeConstraints { make in
+            make.trailing.equalToSuperview().inset(10)
+            make.centerY.equalToSuperview()
+            make.leading.greaterThanOrEqualTo(pathStackView.snp.trailing).offset(12)
+        }
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        guard let borderLayer = layer?.sublayers?.first else {
+            return
+        }
+        borderLayer.frame = NSRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1)
+    }
+
+    func updateMatchCount(_ count: Int) {
+        matchCountValue = count
+        countLabel.stringValue = String.localizedStringWithFormat(
+            NSLocalizedString("results.status.matched", comment: ""),
+            count
+        )
+    }
+
+    func updateSelectedItem(_ item: SearchResultItem?) {
+        buttonHandlers.removeAll()
+        displayedPathComponents = []
+        pathStackView.arrangedSubviews.forEach {
+            pathStackView.removeArrangedSubview($0)
+            $0.removeFromSuperview()
+        }
+
+        guard let item else {
+            pathStackView.isHidden = true
+            return
+        }
+
+        pathStackView.isHidden = false
+        let segments = breadcrumbSegments(for: item.path)
+        displayedPathComponents = segments.map(\.title)
+
+        for (index, segment) in segments.enumerated() {
+            let button = ResultsPathComponentButton(title: segment.title)
+            let handler = MenuActionHandler { [path = segment.path] in
+                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+            }
+            button.target = handler
+            button.action = #selector(MenuActionHandler.invoke)
+            buttonHandlers.append(handler)
+            pathStackView.addArrangedSubview(button)
+
+            if index < segments.count - 1 {
+                let separator = NSTextField(labelWithString: "/")
+                separator.font = .systemFont(ofSize: 11, weight: .medium)
+                separator.textColor = .tertiaryLabelColor
+                pathStackView.addArrangedSubview(separator)
+            }
+        }
+    }
+
+    private func breadcrumbSegments(for path: String) -> [(title: String, path: String)] {
+        let components = URL(fileURLWithPath: path).pathComponents.filter { $0 != "/" }
+        var currentPath = ""
+        return components.map { component in
+            currentPath += "/\(component)"
+            return (title: component, path: currentPath)
+        }
+    }
+}
+
+private final class ResultsPathComponentButton: NSButton {
+    private let fadeView = ResultsFadeView()
+    private var isHovered = false
+    private var trackingAreaReference: NSTrackingArea?
+
+    init(title: String) {
+        super.init(frame: .zero)
+        self.title = title
+        isBordered = false
+        bezelStyle = .inline
+        imagePosition = .noImage
+        setButtonType(.momentaryPushIn)
+        focusRingType = .none
+        wantsLayer = true
+        layer?.cornerRadius = 4
+        toolTip = title
+        cell?.lineBreakMode = .byTruncatingTail
+        addSubview(fadeView)
+        fadeView.snp.makeConstraints { make in
+            make.top.bottom.trailing.equalToSuperview()
+            make.width.equalTo(18)
+        }
+        snp.makeConstraints { make in
+            make.width.lessThanOrEqualTo(120)
+        }
+        setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        setContentHuggingPriority(.defaultLow, for: .horizontal)
+        updateAppearance()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingAreaReference {
+            removeTrackingArea(trackingAreaReference)
+        }
+
+        let trackingAreaReference = NSTrackingArea(
+            rect: bounds,
+            options: [.activeInActiveApp, .mouseEnteredAndExited, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(trackingAreaReference)
+        self.trackingAreaReference = trackingAreaReference
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        isHovered = true
+        updateAppearance()
+        super.mouseEntered(with: event)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        isHovered = false
+        updateAppearance()
+        super.mouseExited(with: event)
+    }
+
+    override func layout() {
+        super.layout()
+        fadeView.isHidden = intrinsicContentSize.width <= bounds.width || isHovered
+    }
+
+    private func updateAppearance() {
+        let color: NSColor = isHovered ? .controlAccentColor : .secondaryLabelColor
+        attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 11, weight: isHovered ? .semibold : .regular),
+                .foregroundColor: color
+            ]
+        )
+        layer?.backgroundColor = isHovered ? NSColor.controlAccentColor.withAlphaComponent(0.08).cgColor : NSColor.clear.cgColor
+    }
+}
+
+private final class ResultsFadeView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        let gradientLayer: CAGradientLayer
+        if let existing = layer as? CAGradientLayer {
+            gradientLayer = existing
+        } else {
+            gradientLayer = CAGradientLayer()
+            gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
+            gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
+            gradientLayer.colors = [
+                NSColor.windowBackgroundColor.withAlphaComponent(0).cgColor,
+                NSColor.windowBackgroundColor.cgColor
+            ]
+            self.layer = gradientLayer
+        }
+        gradientLayer.frame = bounds
     }
 }

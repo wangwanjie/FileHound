@@ -9,39 +9,126 @@ final class ResultsToolbarView: NSView {
     let packageButton = ResultsToolbarToggleButton(symbolName: "shippingbox", accessibilityID: "ResultsShowPackagesButton")
     let trashedButton = ResultsToolbarToggleButton(symbolName: "trash", accessibilityID: "ResultsShowTrashedButton")
     let filterField = NSSearchField()
+    let previewSlider = NSSlider(value: 72, minValue: 32, maxValue: 128, target: nil, action: nil)
+    let sortByPopup = NSPopUpButton()
+    private let topBar = NSStackView()
+    private let secondaryBar = NSView()
+    private let previewLabel = NSTextField(labelWithString: "Preview Size:")
+    private let sortLabel = NSTextField(labelWithString: "Sort By")
+    private var secondaryBarHeightConstraint: Constraint?
+    private var secondaryBarTopConstraint: Constraint?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
 
         filterField.setAccessibilityIdentifier("ResultsFilterField")
         filterField.placeholderString = "Filter"
+        previewSlider.controlSize = .small
+        previewSlider.isContinuous = true
+        previewSlider.setAccessibilityIdentifier("ResultsPreviewSlider")
+        sortByPopup.setAccessibilityIdentifier("ResultsSortByPopup")
+        sortByPopup.addItems(withTitles: ["Name", "Date Modified", "Kind", "Size"])
+        sortByPopup.selectItem(at: 0)
+        [previewLabel, sortLabel].forEach {
+            $0.font = .systemFont(ofSize: 11, weight: .medium)
+            $0.textColor = .secondaryLabelColor
+        }
 
         let modeGroup = makeGroupedStack(title: "View", views: [gridButton, tableButton, treeButton])
         let optionsGroup = makeGroupedStack(title: "Show", views: [invisiblesButton, packageButton, trashedButton])
-        let filterGroup = makeGroupedStack(title: nil, views: [filterField])
+        let filterGroup = makeGroupedStack(title: "Filter", views: [filterField])
 
-        let stack = NSStackView(views: [filterGroup, NSView(), modeGroup, optionsGroup])
-        stack.orientation = .horizontal
-        stack.alignment = .top
-        stack.spacing = 18
+        topBar.orientation = .horizontal
+        topBar.alignment = .top
+        topBar.spacing = 18
+        topBar.addArrangedSubview(modeGroup)
+        topBar.addArrangedSubview(optionsGroup)
+        topBar.addArrangedSubview(NSView())
+        topBar.addArrangedSubview(filterGroup)
 
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.92).cgColor
 
-        addSubview(stack)
+        addSubview(topBar)
+        addSubview(secondaryBar)
+        secondaryBar.addSubview(previewLabel)
+        secondaryBar.addSubview(previewSlider)
+        secondaryBar.addSubview(sortLabel)
+        secondaryBar.addSubview(sortByPopup)
 
-        stack.snp.makeConstraints { make in
-            make.edges.equalToSuperview().inset(10)
+        topBar.snp.makeConstraints { make in
+            make.leading.trailing.top.equalToSuperview().inset(10)
+        }
+        secondaryBar.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview().inset(10)
+            secondaryBarTopConstraint = make.top.equalTo(topBar.snp.bottom).offset(8).constraint
+            secondaryBarHeightConstraint = make.height.equalTo(22).constraint
+        }
+        previewLabel.snp.makeConstraints { make in
+            make.leading.centerY.equalToSuperview()
+        }
+        previewSlider.snp.makeConstraints { make in
+            make.leading.equalTo(previewLabel.snp.trailing).offset(8)
+            make.centerY.equalToSuperview()
+            make.width.equalTo(150)
+        }
+        sortLabel.snp.makeConstraints { make in
+            make.trailing.equalTo(sortByPopup.snp.leading).offset(-8)
+            make.centerY.equalToSuperview()
+        }
+        sortByPopup.snp.makeConstraints { make in
+            make.trailing.centerY.equalToSuperview()
+            make.width.equalTo(170)
         }
 
         filterField.snp.makeConstraints { make in
             make.width.equalTo(260)
         }
+
+        apply(mode: .grid)
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func apply(mode: SearchResultsViewModel.Mode) {
+        gridButton.state = mode == .grid ? .on : .off
+        tableButton.state = mode == .table ? .on : .off
+        treeButton.state = mode == .tree ? .on : .off
+
+        switch mode {
+        case .grid:
+            secondaryBar.isHidden = false
+            previewSlider.isHidden = false
+            previewLabel.isHidden = false
+            sortByPopup.isHidden = false
+            sortLabel.isHidden = false
+            secondaryBarHeightConstraint?.update(offset: 22)
+            secondaryBarTopConstraint?.update(offset: 8)
+        case .table, .tree:
+            secondaryBar.isHidden = true
+            previewSlider.isHidden = true
+            previewLabel.isHidden = true
+            sortByPopup.isHidden = true
+            sortLabel.isHidden = true
+            secondaryBarHeightConstraint?.update(offset: 0)
+            secondaryBarTopConstraint?.update(offset: 0)
+        }
+    }
+
+    func selectSortField(_ field: SearchResultsViewModel.SortField) {
+        switch field {
+        case .dateModified:
+            sortByPopup.selectItem(at: 1)
+        case .kind:
+            sortByPopup.selectItem(at: 2)
+        case .size:
+            sortByPopup.selectItem(at: 3)
+        default:
+            sortByPopup.selectItem(at: 0)
+        }
     }
 
     private func makeGroupedStack(title: String?, views: [NSView]) -> NSView {
@@ -81,15 +168,25 @@ final class ResultsToolbarButton: NSButton {
         image = NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityID)
         bezelStyle = .texturedRounded
         imagePosition = .imageOnly
-        setButtonType(.momentaryPushIn)
-        contentTintColor = .secondaryLabelColor
+        setButtonType(.toggle)
         focusRingType = .none
         setAccessibilityIdentifier(accessibilityID)
+        updateAppearance()
+    }
+
+    override var state: NSControl.StateValue {
+        didSet {
+            updateAppearance()
+        }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    private func updateAppearance() {
+        contentTintColor = state == .on ? .controlAccentColor : .secondaryLabelColor
     }
 }
 
@@ -100,13 +197,23 @@ final class ResultsToolbarToggleButton: NSButton {
         bezelStyle = .texturedRounded
         imagePosition = .imageOnly
         setButtonType(.toggle)
-        contentTintColor = .secondaryLabelColor
         focusRingType = .none
         setAccessibilityIdentifier(accessibilityID)
+        updateAppearance()
+    }
+
+    override var state: NSControl.StateValue {
+        didSet {
+            updateAppearance()
+        }
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    private func updateAppearance() {
+        contentTintColor = state == .on ? .controlAccentColor : .secondaryLabelColor
     }
 }

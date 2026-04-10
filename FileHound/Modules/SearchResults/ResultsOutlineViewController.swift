@@ -6,31 +6,35 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
     private let scrollView = NSScrollView()
     private var items: [SearchResultItem] = []
     private let iconProvider = ResultIconProvider()
+    private var isApplyingSortDescriptor = false
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onSelectionSetChange: (([SearchResultItem]) -> Void)?
     var contextMenuProvider: (([SearchResultItem]) -> NSMenu?)?
     var onOpenItems: (([SearchResultItem]) -> Void)?
     var onQuickLookRequest: (([SearchResultItem]) -> Void)?
+    var onSortChange: ((SearchResultsViewModel.SortField, SearchResultsViewModel.SortOrder) -> Void)?
 
     override func loadView() {
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("outline"))
-        column.title = "名称"
-        outlineView.addTableColumn(column)
-        outlineView.outlineTableColumn = column
-        outlineView.headerView = nil
+        addColumn(id: "name", title: "Name", width: 420, sortField: .name, isOutline: true)
+        addColumn(id: "kind", title: "Kind", width: 180, sortField: .kind)
+        addColumn(id: "modified", title: "Date Modified", width: 190, sortField: .dateModified)
+        addColumn(id: "size", title: "Size", width: 90, sortField: .size)
         outlineView.delegate = self
         outlineView.dataSource = self
         outlineView.target = self
         outlineView.action = #selector(selectionDidChange)
         outlineView.doubleAction = #selector(doubleClicked)
         outlineView.allowsMultipleSelection = true
+        outlineView.usesAlternatingRowBackgroundColors = true
         outlineView.frame = NSRect(x: 0, y: 0, width: 400, height: 300)
         outlineView.autoresizingMask = [.width, .height]
         outlineView.setAccessibilityElement(true)
         outlineView.setAccessibilityRole(.outline)
         outlineView.setAccessibilityIdentifier("ResultsOutline")
         outlineView.selectionHighlightStyle = .regular
+        outlineView.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.96)
+        outlineView.intercellSpacing = NSSize(width: 0, height: 2)
         outlineView.menuProvider = { [weak self] event in
             self?.menu(for: event)
         }
@@ -41,6 +45,27 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         scrollView.documentView = outlineView
         scrollView.hasVerticalScroller = true
         view = scrollView
+
+        applySort(field: .name, order: .ascending)
+    }
+
+    private func addColumn(
+        id: String,
+        title: String,
+        width: CGFloat,
+        sortField: SearchResultsViewModel.SortField?,
+        isOutline: Bool = false
+    ) {
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
+        column.title = title
+        column.width = width
+        if let sortField {
+            column.sortDescriptorPrototype = NSSortDescriptor(key: sortDescriptorKey(for: sortField), ascending: true)
+        }
+        outlineView.addTableColumn(column)
+        if isOutline {
+            outlineView.outlineTableColumn = column
+        }
     }
 
     func update(items: [SearchResultItem]) {
@@ -65,8 +90,20 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         guard let result = item as? SearchResultItem else { return nil }
 
         let cell = outlineView.makeView(withIdentifier: ResultOutlineCellView.identifier, owner: self) as? ResultOutlineCellView ?? ResultOutlineCellView()
-        cell.render(item: result, iconProvider: iconProvider)
+        cell.render(item: result, columnID: tableColumn?.identifier.rawValue ?? "name", iconProvider: iconProvider)
         return cell
+    }
+
+    func outlineView(_ outlineView: NSOutlineView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
+        guard isApplyingSortDescriptor == false,
+              let descriptor = outlineView.sortDescriptors.first,
+              let key = descriptor.key,
+              let field = sortField(for: key) else {
+            return
+        }
+
+        let order: SearchResultsViewModel.SortOrder = descriptor.ascending ? .ascending : .descending
+        onSortChange?(field, order)
     }
 
     @objc
@@ -111,6 +148,50 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
                 return nil
             }
             return item
+        }
+    }
+
+    func applySort(field: SearchResultsViewModel.SortField, order: SearchResultsViewModel.SortOrder) {
+        guard let key = sortDescriptorKeyIfSupported(for: field) else {
+            return
+        }
+
+        isApplyingSortDescriptor = true
+        outlineView.sortDescriptors = [NSSortDescriptor(key: key, ascending: order == .ascending)]
+        isApplyingSortDescriptor = false
+    }
+
+    private func sortField(for key: String) -> SearchResultsViewModel.SortField? {
+        switch key {
+        case "name":
+            return .name
+        case "kind":
+            return .kind
+        case "modified":
+            return .dateModified
+        case "size":
+            return .size
+        default:
+            return nil
+        }
+    }
+
+    private func sortDescriptorKey(for field: SearchResultsViewModel.SortField) -> String {
+        sortDescriptorKeyIfSupported(for: field) ?? "name"
+    }
+
+    private func sortDescriptorKeyIfSupported(for field: SearchResultsViewModel.SortField) -> String? {
+        switch field {
+        case .name:
+            return "name"
+        case .kind:
+            return "kind"
+        case .dateModified:
+            return "modified"
+        case .size:
+            return "size"
+        default:
+            return nil
         }
     }
 }
@@ -167,21 +248,36 @@ private final class ResultOutlineCellView: NSTableCellView {
     }
 
     func render(item: SearchResultItem, iconProvider: ResultIconProvider) {
-        representedPath = item.path
-        textField?.stringValue = item.displayName
-        textField?.identifier = NSUserInterfaceItemIdentifier(item.displayName)
-        imageView?.image = NSWorkspace.shared.icon(forFile: item.path)
+        render(item: item, columnID: "name", iconProvider: iconProvider)
+    }
 
-        let path = item.path
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            let image = await iconProvider.icon(
-                for: URL(fileURLWithPath: path),
-                size: NSSize(width: 16, height: 16),
-                preferThumbnail: false
-            )
-            guard self.representedPath == path else { return }
-            self.imageView?.image = image
+    func render(item: SearchResultItem, columnID: String, iconProvider: ResultIconProvider) {
+        representedPath = item.path
+        textField?.identifier = NSUserInterfaceItemIdentifier(item.displayName)
+        imageView?.isHidden = columnID != "name"
+
+        switch columnID {
+        case "kind":
+            textField?.stringValue = item.kind
+        case "modified":
+            textField?.stringValue = item.modifiedText
+        case "size":
+            textField?.stringValue = item.sizeText
+        default:
+            textField?.stringValue = item.displayName
+            imageView?.image = NSWorkspace.shared.icon(forFile: item.path)
+
+            let path = item.path
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let image = await iconProvider.icon(
+                    for: URL(fileURLWithPath: path),
+                    size: NSSize(width: 16, height: 16),
+                    preferThumbnail: false
+                )
+                guard self.representedPath == path else { return }
+                self.imageView?.image = image
+            }
         }
     }
 }

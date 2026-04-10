@@ -6,29 +6,34 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     private let scrollView = NSScrollView()
     private var items: [SearchResultItem] = []
     private let iconProvider = ResultIconProvider()
+    private var isApplyingSortDescriptor = false
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onSelectionSetChange: (([SearchResultItem]) -> Void)?
     var contextMenuProvider: (([SearchResultItem]) -> NSMenu?)?
     var onOpenItems: (([SearchResultItem]) -> Void)?
     var onQuickLookRequest: (([SearchResultItem]) -> Void)?
+    var onSortChange: ((SearchResultsViewModel.SortField, SearchResultsViewModel.SortOrder) -> Void)?
 
     override func loadView() {
-        addColumn(id: "name", title: "Name", width: 420)
-        addColumn(id: "kind", title: "Kind", width: 180)
-        addColumn(id: "modified", title: "Modified", width: 180)
-        addColumn(id: "size", title: "Size", width: 80)
+        addColumn(id: "name", title: "Name", width: 420, sortField: .name)
+        addColumn(id: "kind", title: "Kind", width: 180, sortField: .kind)
+        addColumn(id: "modified", title: "Modified", width: 180, sortField: .dateModified)
+        addColumn(id: "size", title: "Size", width: 80, sortField: .size)
         tableView.delegate = self
         tableView.dataSource = self
         tableView.target = self
         tableView.action = #selector(selectionDidChange)
         tableView.doubleAction = #selector(doubleClicked)
         tableView.allowsMultipleSelection = true
+        tableView.usesAlternatingRowBackgroundColors = true
         tableView.frame = NSRect(x: 0, y: 0, width: 400, height: 300)
         tableView.autoresizingMask = [.width, .height]
         tableView.setAccessibilityElement(true)
         tableView.setAccessibilityIdentifier("ResultsTable")
         tableView.selectionHighlightStyle = .regular
+        tableView.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.96)
+        tableView.intercellSpacing = NSSize(width: 0, height: 2)
         tableView.menuProvider = { [weak self] event in
             self?.menu(for: event)
         }
@@ -39,12 +44,17 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         scrollView.documentView = tableView
         scrollView.hasVerticalScroller = true
         view = scrollView
+
+        applySort(field: .name, order: .ascending)
     }
 
-    private func addColumn(id: String, title: String, width: CGFloat) {
+    private func addColumn(id: String, title: String, width: CGFloat, sortField: SearchResultsViewModel.SortField?) {
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
         column.title = title
         column.width = width
+        if let sortField {
+            column.sortDescriptorPrototype = NSSortDescriptor(key: sortDescriptorKey(for: sortField), ascending: true)
+        }
         tableView.addTableColumn(column)
     }
 
@@ -62,6 +72,18 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         let cell = tableView.makeView(withIdentifier: ResultTableCellView.identifier, owner: self) as? ResultTableCellView ?? ResultTableCellView()
         cell.render(item: item, columnID: tableColumn?.identifier.rawValue ?? "name", iconProvider: iconProvider)
         return cell
+    }
+
+    func tableView(_ tableView: NSTableView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
+        guard isApplyingSortDescriptor == false,
+              let descriptor = tableView.sortDescriptors.first,
+              let key = descriptor.key,
+              let field = sortField(for: key) else {
+            return
+        }
+
+        let order: SearchResultsViewModel.SortOrder = descriptor.ascending ? .ascending : .descending
+        onSortChange?(field, order)
     }
 
     @objc
@@ -103,6 +125,50 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     private func selectedItems() -> [SearchResultItem] {
         tableView.selectedRowIndexes.compactMap { row in
             items.indices.contains(row) ? items[row] : nil
+        }
+    }
+
+    func applySort(field: SearchResultsViewModel.SortField, order: SearchResultsViewModel.SortOrder) {
+        guard let key = sortDescriptorKeyIfSupported(for: field) else {
+            return
+        }
+
+        isApplyingSortDescriptor = true
+        tableView.sortDescriptors = [NSSortDescriptor(key: key, ascending: order == .ascending)]
+        isApplyingSortDescriptor = false
+    }
+
+    private func sortField(for key: String) -> SearchResultsViewModel.SortField? {
+        switch key {
+        case "name":
+            return .name
+        case "kind":
+            return .kind
+        case "modified":
+            return .dateModified
+        case "size":
+            return .size
+        default:
+            return nil
+        }
+    }
+
+    private func sortDescriptorKey(for field: SearchResultsViewModel.SortField) -> String {
+        sortDescriptorKeyIfSupported(for: field) ?? "name"
+    }
+
+    private func sortDescriptorKeyIfSupported(for field: SearchResultsViewModel.SortField) -> String? {
+        switch field {
+        case .name:
+            return "name"
+        case .kind:
+            return "kind"
+        case .dateModified:
+            return "modified"
+        case .size:
+            return "size"
+        default:
+            return nil
         }
     }
 }
@@ -162,6 +228,7 @@ private final class ResultTableCellView: NSTableCellView {
         representedPath = item.path
         imageView?.isHidden = columnID != "name"
         textField?.identifier = NSUserInterfaceItemIdentifier(item.displayName)
+        textField?.textColor = .labelColor
 
         switch columnID {
         case "kind":

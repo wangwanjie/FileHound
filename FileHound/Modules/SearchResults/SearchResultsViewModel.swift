@@ -20,6 +20,11 @@ final class SearchResultsViewModel {
         case path
     }
 
+    enum SortOrder: Equatable {
+        case ascending
+        case descending
+    }
+
     var title: String = ""
     var filterText: String = "" {
         didSet { notifyProjectionChanged() }
@@ -34,7 +39,16 @@ final class SearchResultsViewModel {
         didSet { notifyProjectionChanged() }
     }
     var sortField: SortField = .name {
-        didSet { notifyProjectionChanged() }
+        didSet {
+            onSortChange?(sortField, sortOrder)
+            notifyProjectionChanged()
+        }
+    }
+    var sortOrder: SortOrder = .ascending {
+        didSet {
+            onSortChange?(sortField, sortOrder)
+            notifyProjectionChanged()
+        }
     }
 
     var mode: Mode = .grid {
@@ -59,6 +73,7 @@ final class SearchResultsViewModel {
     var onItemsChange: (([SearchResultItem]) -> Void)?
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onFilterChange: ((String) -> Void)?
+    var onSortChange: ((SortField, SortOrder) -> Void)?
 
     var projectedItems: [SearchResultItem] {
         items
@@ -77,23 +92,48 @@ final class SearchResultsViewModel {
     func removeItems(ids: Set<SearchResultItem.ID>) {
         items.removeAll { ids.contains($0.id) }
         selectedIDs.subtract(ids)
+        selectedItem = selectedItems.first
     }
 
     func replaceItems(_ updatedItems: [SearchResultItem]) {
         let itemsByID = Dictionary(uniqueKeysWithValues: updatedItems.map { ($0.id, $0) })
         items = items.map { itemsByID[$0.id] ?? $0 }
+        selectedItem = selectedItems.first
     }
 
     private func sortComparator(lhs: SearchResultItem, rhs: SearchResultItem) -> Bool {
+        let comparison: ComparisonResult
+
         switch sortField {
         case .path:
-            return lhs.path.localizedStandardCompare(rhs.path) == .orderedAscending
+            comparison = lhs.path.localizedStandardCompare(rhs.path)
         case .enclosingFolder:
-            return lhs.enclosingFolder.localizedStandardCompare(rhs.enclosingFolder) == .orderedAscending
+            comparison = lhs.enclosingFolder.localizedStandardCompare(rhs.enclosingFolder)
         case .kind:
-            return lhs.kind.localizedStandardCompare(rhs.kind) == .orderedAscending
+            comparison = lhs.kind.localizedStandardCompare(rhs.kind)
+        case .dateModified:
+            comparison = lhs.modifiedText.localizedStandardCompare(rhs.modifiedText)
+        case .dateCreated:
+            comparison = lhs.createdText.localizedStandardCompare(rhs.createdText)
+        case .lastOpened:
+            comparison = lhs.lastOpenedText.localizedStandardCompare(rhs.lastOpenedText)
+        case .dateAdded:
+            comparison = lhs.addedText.localizedStandardCompare(rhs.addedText)
+        case .size:
+            comparison = lhs.sizeText.localizedStandardCompare(rhs.sizeText)
+        case .tags:
+            comparison = lhs.tagsText.localizedStandardCompare(rhs.tagsText)
         default:
-            return lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
+            comparison = lhs.displayName.localizedStandardCompare(rhs.displayName)
+        }
+
+        switch comparison {
+        case .orderedAscending:
+            return sortOrder == .ascending
+        case .orderedDescending:
+            return sortOrder == .descending
+        case .orderedSame:
+            return lhs.path.localizedStandardCompare(rhs.path) == .orderedAscending
         }
     }
 }
