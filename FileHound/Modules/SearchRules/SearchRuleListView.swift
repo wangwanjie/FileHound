@@ -3,7 +3,6 @@ import SnapKit
 
 final class SearchRuleListView: NSView {
     let stackView = NSStackView()
-    let logicLabel = NSTextField(labelWithString: "All rules must match")
     private let scrollView = NSScrollView()
     private let contentView = NSView()
 
@@ -29,7 +28,6 @@ final class SearchRuleListView: NSView {
         scrollView.documentView = contentView
 
         addSubview(scrollView)
-        addSubview(logicLabel)
         contentView.addSubview(stackView)
 
         scrollView.snp.makeConstraints { make in
@@ -42,15 +40,14 @@ final class SearchRuleListView: NSView {
         stackView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
-        logicLabel.snp.makeConstraints { make in
-            make.leading.bottom.equalToSuperview().inset(16)
-            make.top.equalTo(scrollView.snp.bottom).offset(10)
+        scrollView.snp.makeConstraints { make in
+            make.bottom.equalToSuperview().inset(16)
         }
     }
 
     var preferredContentHeight: CGFloat {
         layoutSubtreeIfNeeded()
-        return stackView.fittingSize.height + logicLabel.fittingSize.height + 42
+        return stackView.fittingSize.height + 32
     }
 
     func setScrollingEnabled(_ enabled: Bool) {

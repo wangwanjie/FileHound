@@ -1,5 +1,10 @@
 "menu.about" = "About FileHound";
 "menu.edit" = "Edit";
+"menu.file" = "File";
+"menu.window" = "Window";
+"menu.close" = "Close";
+"menu.minimize" = "Minimize";
+"menu.zoom" = "Zoom";
 "menu.undo" = "Undo";
 "menu.redo" = "Redo";
 "menu.cut" = "Cut";
@@ -31,5 +36,6 @@
 "search_rules.sample" = "Name contains report";
 "results.mode.list" = "List";
 "results.mode.tree" = "Tree";
+"results.status.matched" = "%lld matched";
 "search_window.find_items" = "Find Items";
 "search_window.where" = "where";

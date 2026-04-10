@@ -55,8 +55,7 @@ final class AppearancePreferencesViewController: NSViewController {
 
         rootView.addSubview(stack)
         stack.snp.makeConstraints { make in
-            make.leading.top.bottom.equalTo(rootView.contentGuide)
-            make.trailing.lessThanOrEqualTo(rootView.contentGuide)
+            make.edges.equalTo(rootView.contentGuide)
         }
 
         themePopup.selectItem(at: AppTheme.allCases.firstIndex(of: ThemeController.shared.currentTheme) ?? 0)

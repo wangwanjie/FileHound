@@ -30,8 +30,7 @@ final class GeneralPreferencesViewController: NSViewController {
 
         rootView.addSubview(rows)
         rows.snp.makeConstraints { make in
-            make.leading.top.bottom.equalTo(rootView.contentGuide)
-            make.trailing.lessThanOrEqualTo(rootView.contentGuide)
+            make.edges.equalTo(rootView.contentGuide)
         }
 
         view = rootView

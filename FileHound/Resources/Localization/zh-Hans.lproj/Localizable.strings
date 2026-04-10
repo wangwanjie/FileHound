@@ -1,5 +1,10 @@
 "menu.about" = "关于 FileHound";
 "menu.edit" = "编辑";
+"menu.file" = "文件";
+"menu.window" = "窗口";
+"menu.close" = "关闭";
+"menu.minimize" = "最小化";
+"menu.zoom" = "缩放";
 "menu.undo" = "撤销";
 "menu.redo" = "重做";
 "menu.cut" = "剪切";
@@ -31,5 +36,6 @@
 "search_rules.sample" = "名称包含 report";
 "results.mode.list" = "列表视图";
 "results.mode.tree" = "树形视图";
+"results.status.matched" = "找到 %lld 项";
 "search_window.find_items" = "查找项目";
 "search_window.where" = "其中";

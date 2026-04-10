@@ -64,6 +64,28 @@ final class MainMenuBuilder {
         editMenu.addItem(withTitle: L10n.string("menu.select_all"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
         editMenuItem.submenu = editMenu
 
+        let fileMenuItem = NSMenuItem(title: L10n.string("menu.file"), action: nil, keyEquivalent: "")
+        mainMenu.addItem(fileMenuItem)
+
+        let fileMenu = NSMenu(title: L10n.string("menu.file"))
+        fileMenu.addItem(
+            NSMenuItem(
+                title: L10n.string("menu.close"),
+                action: #selector(NSWindow.performClose(_:)),
+                keyEquivalent: "w"
+            )
+        )
+        fileMenuItem.submenu = fileMenu
+
+        let windowMenuItem = NSMenuItem(title: L10n.string("menu.window"), action: nil, keyEquivalent: "")
+        mainMenu.addItem(windowMenuItem)
+
+        let windowMenu = NSMenu(title: L10n.string("menu.window"))
+        windowMenu.addItem(NSMenuItem(title: L10n.string("menu.minimize"), action: #selector(NSWindow.miniaturize(_:)), keyEquivalent: "m"))
+        windowMenu.addItem(NSMenuItem(title: L10n.string("menu.zoom"), action: #selector(NSWindow.zoom(_:)), keyEquivalent: ""))
+        NSApp.windowsMenu = windowMenu
+        windowMenuItem.submenu = windowMenu
+
         return mainMenu
     }
 }

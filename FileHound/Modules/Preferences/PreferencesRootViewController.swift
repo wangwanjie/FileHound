@@ -50,13 +50,14 @@ final class PreferencesRootViewController: NSViewController {
         rootView.addSubview(contentContainer)
 
         segmentedControl.snp.makeConstraints { make in
-            make.leading.top.equalToSuperview().inset(20)
+            make.top.equalToSuperview().inset(18)
+            make.centerX.equalToSuperview()
         }
         contentContainer.snp.makeConstraints { make in
-            make.leading.bottom.equalToSuperview().inset(20)
+            make.leading.equalToSuperview().inset(20)
+            make.trailing.equalToSuperview().inset(20)
+            make.bottom.equalToSuperview().inset(20)
             make.top.equalTo(segmentedControl.snp.bottom).offset(16)
-            make.width.equalTo(PreferencesLayout.contentWidth)
-            make.trailing.lessThanOrEqualToSuperview().inset(20)
         }
 
         view = rootView
@@ -83,7 +84,7 @@ final class PreferencesRootViewController: NSViewController {
         }
 
         let targetHeight = min(
-            max(measuredContentHeight() + 86, PreferencesLayout.minWindowHeight),
+            max(measuredContentHeight() + 74, PreferencesLayout.minWindowHeight),
             PreferencesLayout.maxWindowHeight
         )
 

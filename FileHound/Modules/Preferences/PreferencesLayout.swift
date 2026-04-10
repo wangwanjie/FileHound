@@ -2,11 +2,11 @@ import AppKit
 import SnapKit
 
 enum PreferencesLayout {
-    static let windowWidth: CGFloat = 620
-    static let contentWidth: CGFloat = 560
-    static let minWindowHeight: CGFloat = 320
-    static let maxWindowHeight: CGFloat = 460
-    static let labelWidth: CGFloat = 160
+    static let windowWidth: CGFloat = 560
+    static let contentWidth: CGFloat = 500
+    static let minWindowHeight: CGFloat = 260
+    static let maxWindowHeight: CGFloat = 430
+    static let labelWidth: CGFloat = 145
 }
 
 func makePreferencesFormRow(title: String, control: NSView) -> NSView {

@@ -54,6 +54,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyCurrentTheme()
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        guard flag == false else {
+            return true
+        }
+
+        searchWindowController?.showWindow(sender)
+        searchWindowController?.window?.makeKeyAndOrderFront(sender)
+        NSApp.activate(ignoringOtherApps: true)
+        return true
+    }
+
     private func bindAppSettings() {
         LocalizationController.shared.publisher
             .dropFirst()
