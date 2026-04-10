@@ -4,6 +4,7 @@ final class PreferencesUITests: XCTestCase {
     @MainActor
     func testPreferencesShowsSegmentedTabsAndAppearanceControls() throws {
         let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
         app.launchArguments = ["--uitesting", "--open-preferences-on-launch"]
         app.launch()
 

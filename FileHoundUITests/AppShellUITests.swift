@@ -11,10 +11,11 @@ final class AppShellUITests: XCTestCase {
     @MainActor
     func testLaunchShowsModernSearchWorkspace() throws {
         let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
         app.launchArguments = ["--uitesting"]
         app.launch()
 
-        XCTAssertTrue(app.windows["Find Any File"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.windows["FileHound"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.popUpButtons["SearchScopePopup"].exists)
         XCTAssertTrue(app.popUpButtons["SearchRuleFieldPopup"].exists)
         XCTAssertTrue(app.textFields["SearchRuleValueField"].exists)
@@ -25,6 +26,7 @@ final class AppShellUITests: XCTestCase {
     @MainActor
     func testSearchButtonSwitchesToStopDuringFixtureSearch() throws {
         let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
         app.launchArguments = ["--uitesting", "--fixture-delayed-search"]
         app.launch()
 

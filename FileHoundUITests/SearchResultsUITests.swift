@@ -4,6 +4,7 @@ final class SearchResultsUITests: XCTestCase {
     @MainActor
     func testSwitchesBetweenGridTableAndTreeModes() throws {
         let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
         app.launchArguments = ["--uitesting", "--fixture-results"]
         app.launch()
 
@@ -22,6 +23,7 @@ final class SearchResultsUITests: XCTestCase {
     @MainActor
     func testFilterFieldNarrowsVisibleResults() throws {
         let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
         app.launchArguments = ["--uitesting", "--fixture-results"]
         app.launch()
 

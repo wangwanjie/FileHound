@@ -4,6 +4,7 @@ final class UpdatePreferencesSmokeTests: XCTestCase {
     @MainActor
     func testUpdatesTabShowsPolicyPopupAndCheckNowButton() throws {
         let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
         app.launchArguments = ["--uitesting", "--open-preferences-on-launch", "--open-updates-preferences-on-launch"]
         app.launch()
         let window = app.windows["偏好设置"]
