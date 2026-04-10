@@ -62,6 +62,7 @@
 		8F5320698BDB794D0C5A5B46 /* SearchPlanBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AF9B28B9C80F9AF4EC8D02 /* SearchPlanBuilderTests.swift */; };
 		90AA3654390F4E3CA706F803 /* QueryCompiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB60A6B6F7A30E3D3E761051 /* QueryCompiler.swift */; };
 		932DD1C9211F418B3E60FAC5 /* PreferencesLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C6BE97DC869DC42969BBB06 /* PreferencesLayout.swift */; };
+		937430A1CDB7AC488DEC4692 /* SpotlightSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29D14E4FEF5F4E78A4F564E /* SpotlightSearchService.swift */; };
 		9E8975D01A0C53A232FF18A4 /* FileHoundTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */; };
 		9E8E4C78866ADFE257596082 /* SearchPreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49334770FFAFF93E6513802B /* SearchPreferencesViewController.swift */; };
 		9FB8739586460F0198CA6538 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 40658B17A939918CAC9F2285 /* Sparkle */; };
@@ -187,6 +188,7 @@
 		9585CB09468947BFC142EB18 /* GeneralPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPreferencesViewController.swift; sourceTree = "<group>"; };
 		9B9771C1E6520696B0AAD015 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		A07E5D6ECFA65C552FB2051D /* PreviewPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewPanelViewController.swift; sourceTree = "<group>"; };
+		A29D14E4FEF5F4E78A4F564E /* SpotlightSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightSearchService.swift; sourceTree = "<group>"; };
 		A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsUITests.swift; sourceTree = "<group>"; };
 		AC8D31003CBA719AB8444DB2 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		B4AC53F7D77E27183F2A499D /* SearchFormViewControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFormViewControllerTests.swift; sourceTree = "<group>"; };
@@ -632,6 +634,7 @@
 			isa = PBXGroup;
 			children = (
 				34502D447312FDA2B69CD49E /* SearchExecutor.swift */,
+				A29D14E4FEF5F4E78A4F564E /* SpotlightSearchService.swift */,
 			);
 			path = Execution;
 			sourceTree = "<group>";
@@ -902,6 +905,7 @@
 				58A5122192D8539E712F999C /* SearchWindowLayoutCoordinator.swift in Sources */,
 				A28B691797BA0F0A0ABE9022 /* SearchWindowState.swift in Sources */,
 				269DAED1181F0FCBC54DD419 /* SearchWorkflowController.swift in Sources */,
+				937430A1CDB7AC488DEC4692 /* SpotlightSearchService.swift in Sources */,
 				F4F6D70C44CF17E7B653F2E8 /* ThemeController.swift in Sources */,
 				F06C32B7EB5B6883E9542C9F /* UpdateManager.swift in Sources */,
 				6A7C04BCA40CEE6B137A7D92 /* UpdatePreferencesViewController.swift in Sources */,

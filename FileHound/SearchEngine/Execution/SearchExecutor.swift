@@ -8,18 +8,25 @@ struct SearchExecutionResult: Sendable {
 struct SearchExecutor: Sendable {
     private let walker: DirectoryWalker
     private let provider: any FilesystemAccessProviding
+    private let spotlightSearchService: SpotlightSearchService
     private let metadataEvaluator = MetadataEvaluator()
     private let contentMatcher = ContentMatcher()
 
     init(
         walker: DirectoryWalker = DirectoryWalker(),
-        provider: any FilesystemAccessProviding = LocalFilesystemProvider()
+        provider: any FilesystemAccessProviding = LocalFilesystemProvider(),
+        spotlightSearchService: SpotlightSearchService = SpotlightSearchService()
     ) {
         self.walker = walker
         self.provider = provider
+        self.spotlightSearchService = spotlightSearchService
     }
 
     func execute(request: SearchRequest) -> SearchExecutionResult {
+        if let spotlightItems = executeSpotlightSearchIfPossible(request: request) {
+            return SearchExecutionResult(title: title(for: request.rules), items: spotlightItems)
+        }
+
         let plan = SearchPlan(
             rootPaths: [request.rootPath],
             rootGroup: .all([]),
@@ -51,6 +58,34 @@ struct SearchExecutor: Sendable {
             return SearchExecutionResult(title: title(for: request.rules), items: items)
         } catch {
             return SearchExecutionResult(title: title(for: request.rules), items: [])
+        }
+    }
+
+    private func executeSpotlightSearchIfPossible(request: SearchRequest) -> [SearchResultItem]? {
+        guard let paths = try? spotlightSearchService.search(rootPath: request.rootPath, rules: request.rules) else {
+            return nil
+        }
+
+        let uniquePaths = Array(Set(paths)).sorted()
+        let preview = request.rules.first?.value ?? ""
+
+        return uniquePaths.compactMap { path in
+            guard FileManager.default.fileExists(atPath: path) else {
+                return nil
+            }
+
+            let isDirectory = (try? provider.attributesOfItem(atPath: path)[.type] as? FileAttributeType) == .typeDirectory
+            let entry = DirectoryEntry(
+                path: path,
+                isDirectory: isDirectory,
+                isHidden: URL(fileURLWithPath: path).lastPathComponent.hasPrefix(".")
+            )
+
+            do {
+                return try makeResultItem(for: entry, preview: preview)
+            } catch {
+                return nil
+            }
         }
     }
 
