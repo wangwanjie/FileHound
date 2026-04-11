@@ -1,5 +1,10 @@
 import Foundation
 
+enum DirectoryWalkControl {
+    case `continue`
+    case stop
+}
+
 struct DirectoryEntry: Equatable, Sendable {
     let path: String
     let isDirectory: Bool
@@ -27,42 +32,69 @@ struct DirectoryWalker: Sendable {
     }
 
     func walk(plan: SearchPlan, includeHiddenFiles: Bool) throws -> [DirectoryEntry] {
+        var results: [DirectoryEntry] = []
+        _ = try walk(plan: plan, includeHiddenFiles: includeHiddenFiles) { entry in
+            results.append(entry)
+            return .continue
+        }
+        return results
+    }
+
+    @discardableResult
+    func walk(
+        plan: SearchPlan,
+        includeHiddenFiles: Bool,
+        visit: (DirectoryEntry) throws -> DirectoryWalkControl
+    ) throws -> Bool {
         let provider = providerFactory(plan.providerKind)
-        return try plan.rootPaths.flatMap { rootPath in
+        for rootPath in plan.rootPaths {
             guard Task.isCancelled == false else {
-                return [DirectoryEntry]()
+                return false
             }
-            return try walkDirectory(
+
+            let didFinish = try walkDirectory(
                 atPath: rootPath,
                 provider: provider,
                 includeHiddenFiles: includeHiddenFiles,
-                excludedPathFragments: plan.excludedPathFragments
+                excludedPathFragments: plan.excludedPathFragments,
+                specialFolderPlanning: plan.specialFolderPlanningResult,
+                visit: visit
             )
+
+            if didFinish == false {
+                return false
+            }
         }
+        return true
     }
 
     private func walkDirectory(
         atPath path: String,
         provider: any FilesystemAccessProviding,
         includeHiddenFiles: Bool,
-        excludedPathFragments: Set<String>
-    ) throws -> [DirectoryEntry] {
-        var results: [DirectoryEntry] = []
+        excludedPathFragments: Set<String>,
+        specialFolderPlanning: SpecialFolderPlanningResult,
+        visit: (DirectoryEntry) throws -> DirectoryWalkControl
+    ) throws -> Bool {
         let childNames: [String]
 
         do {
             childNames = try provider.contentsOfDirectory(atPath: path)
         } catch {
-            return []
+            return true
         }
 
         for childName in childNames {
             guard Task.isCancelled == false else {
-                break
+                return false
             }
             let childPath = (path as NSString).appendingPathComponent(childName)
 
             guard excludedPathFragments.contains(where: childPath.contains) == false else {
+                continue
+            }
+
+            guard specialFolderPlanning.allows(path: childPath) else {
                 continue
             }
 
@@ -83,21 +115,25 @@ struct DirectoryWalker: Sendable {
                 continue
             }
 
-            results.append(entry)
+            if try visit(entry) == .stop {
+                return false
+            }
 
             if isDirectory {
-                results.append(
-                    contentsOf: try walkDirectory(
-                        atPath: childPath,
-                        provider: provider,
-                        includeHiddenFiles: includeHiddenFiles,
-                        excludedPathFragments: excludedPathFragments
-                    )
+                let didFinish = try walkDirectory(
+                    atPath: childPath,
+                    provider: provider,
+                    includeHiddenFiles: includeHiddenFiles,
+                    excludedPathFragments: excludedPathFragments,
+                    specialFolderPlanning: specialFolderPlanning,
+                    visit: visit
                 )
-                continue
+                if didFinish == false {
+                    return false
+                }
             }
         }
 
-        return results
+        return true
     }
 }

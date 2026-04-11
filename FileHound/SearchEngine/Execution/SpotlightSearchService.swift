@@ -19,9 +19,36 @@ struct SpotlightSearchService: Sendable {
         return try runQuery(rootPath, query)
     }
 
+    func canSatisfyTextContentSearch(
+        rules: [SearchRuleSelection],
+        caseSensitive: Bool,
+        diacriticsSensitive: Bool
+    ) -> Bool {
+        guard caseSensitive == false, diacriticsSensitive == false else {
+            return false
+        }
+
+        return rules.contains(where: { $0.field == .textContent }) && buildQuery(from: rules) != nil
+    }
+
     func buildQuery(from rules: [SearchRuleSelection]) -> String? {
-        let predicates = rules.compactMap(buildPredicate(for:))
-        guard predicates.count == rules.count, predicates.isEmpty == false else {
+        var predicates: [String] = []
+
+        for rule in rules {
+            let trimmedValue = rule.value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if Self.filterOnlyFields.contains(rule.field) || trimmedValue.isEmpty {
+                continue
+            }
+
+            guard let predicate = buildPredicate(for: rule) else {
+                return nil
+            }
+
+            predicates.append(predicate)
+        }
+
+        guard predicates.isEmpty == false else {
             return nil
         }
 
@@ -40,7 +67,28 @@ struct SpotlightSearchService: Sendable {
         case .path:
             return predicate(for: "kMDItemPath", value: trimmedValue, operator: rule.operator)
         case .extensionName:
-            return predicate(for: "kMDItemFSName", value: ".\(trimmedValue)", operator: rule.operator, treatAsSuffix: true)
+            let normalizedValue = trimmedValue.trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            return predicate(for: "kMDItemFSName", value: ".\(normalizedValue)", operator: rule.operator, treatAsSuffix: true)
+        case .textContent:
+            return freeTextQuery(for: trimmedValue, operator: rule.operator)
+        default:
+            return nil
+        }
+    }
+
+    private func freeTextQuery(for value: String, operator searchOperator: SearchRuleOperator) -> String? {
+        let tokens = splitTerms(from: value)
+        guard tokens.isEmpty == false else {
+            return nil
+        }
+
+        switch searchOperator {
+        case .contains, .containsPhrase:
+            return "\"\(escapeForQuery(value))\""
+        case .containsWords:
+            return tokens.map { "\"\(escapeForQuery($0))\"" }.joined(separator: " && ")
+        case .containsAnyOf, .isAnyOf:
+            return tokens.map { "\"\(escapeForQuery($0))\"" }.joined(separator: " || ")
         default:
             return nil
         }
@@ -119,6 +167,18 @@ struct SpotlightSearchService: Sendable {
             .map(String.init)
             .filter { $0.isEmpty == false }
     }
+}
+
+private extension SpotlightSearchService {
+    static let filterOnlyFields: Set<SearchRuleField> = [
+        .caseSensitive,
+        .diacriticsSensitive,
+        .invisibleItems,
+        .packageContents,
+        .trashedContents,
+        .limitFolderDepth,
+        .limitAmount
+    ]
 }
 
 enum SpotlightSearchError: Error {

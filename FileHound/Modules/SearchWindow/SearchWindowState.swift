@@ -25,9 +25,9 @@ struct SearchWindowState: Equatable, Sendable {
 
     var primaryActionTitle: String {
         if case .searching = phase {
-            return "Stop"
+            return L10n.string("search_window.action.stop")
         }
-        return "Find"
+        return L10n.string("search_window.action.find")
     }
 
     var showsActivityIndicator: Bool {
@@ -40,11 +40,11 @@ struct SearchWindowState: Equatable, Sendable {
     var statusText: String {
         switch phase {
         case .idle(let matchCount):
-            return "Items Found: \(matchCount)"
+            return L10n.format("search_window.status.items_found", matchCount)
         case .editing(let matchCount):
-            return "Items Found: \(matchCount ?? 0)"
-        case .searching(let scopeDescription, _):
-            return "Searching: \(scopeDescription)"
+            return L10n.format("search_window.status.items_found", matchCount ?? 0)
+        case .searching(let scopeDescription, let matchCount):
+            return L10n.format("search_window.status.searching", scopeDescription, matchCount)
         }
     }
 }

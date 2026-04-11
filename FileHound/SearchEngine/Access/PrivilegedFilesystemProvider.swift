@@ -14,6 +14,6 @@ struct PrivilegedFilesystemProvider: FilesystemAccessProviding, Sendable {
     }
 
     func contentsOfFile(atPath path: String) throws -> Data {
-        try Data(contentsOf: URL(fileURLWithPath: path))
+        try Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedIfSafe])
     }
 }
