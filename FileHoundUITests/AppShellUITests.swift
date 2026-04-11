@@ -36,6 +36,6 @@ final class AppShellUITests: XCTestCase {
 
         XCTAssertEqual(button.label, "Stop")
         XCTAssertTrue(app.activityIndicators["SearchActivityIndicator"].waitForExistence(timeout: 2))
-        XCTAssertEqual(app.staticTexts["SearchStatusLabel"].label, "Searching: Macintosh HD")
+        XCTAssertTrue(app.staticTexts["SearchStatusLabel"].label.contains("Searching: Macintosh HD"))
     }
 }

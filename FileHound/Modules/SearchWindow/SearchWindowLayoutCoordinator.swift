@@ -24,13 +24,12 @@ struct SearchWindowLayoutCoordinator {
         let finalWindowHeight = min(maxAllowedHeight, desiredWindowHeight)
         let shouldScrollRules = desiredWindowHeight > maxAllowedHeight
         let finalRuleAreaHeight = max(minimumRuleAreaHeight, finalWindowHeight - chromeHeight)
-
-        let defaultOriginY = currentFrame.origin.y
-        let needsTopAlignment = currentFrame.maxY > visibleFrame.maxY || shouldScrollRules
-        let alignedOriginY = needsTopAlignment
-            ? visibleFrame.maxY - finalWindowHeight
-            : defaultOriginY
-        let finalOriginY = max(visibleFrame.minY, alignedOriginY)
+        let anchoredTop = min(
+            max(currentFrame.maxY, visibleFrame.minY + minimumWindowHeight),
+            visibleFrame.maxY
+        )
+        let topAnchoredOriginY = anchoredTop - finalWindowHeight
+        let finalOriginY = max(visibleFrame.minY, topAnchoredOriginY)
 
         return SearchWindowLayout(
             frame: NSRect(

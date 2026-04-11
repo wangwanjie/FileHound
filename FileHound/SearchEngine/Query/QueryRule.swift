@@ -1,4 +1,4 @@
-enum SearchScope: Equatable, Sendable {
+enum SearchScope: Codable, Equatable, Sendable {
     case roots([String])
 
     var rootPaths: [String] {
@@ -9,7 +9,7 @@ enum SearchScope: Equatable, Sendable {
     }
 }
 
-enum QueryRule: Equatable, Sendable {
+enum QueryRule: Codable, Equatable, Sendable {
     case nameContains(String)
     case pathContains(String)
     case extensionIs(String)
@@ -18,7 +18,7 @@ enum QueryRule: Equatable, Sendable {
     case contentMatchesRegex(String)
 }
 
-indirect enum QueryGroup: Equatable, Sendable {
+indirect enum QueryGroup: Codable, Equatable, Sendable {
     case all([QueryGroup])
     case any([QueryGroup])
     case exclude(QueryRule)

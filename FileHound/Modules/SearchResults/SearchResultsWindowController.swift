@@ -6,11 +6,20 @@ final class SearchResultsWindowController: NSWindowController {
     private let refreshHandler: (() -> Void)?
     private var activationObserver: NSObjectProtocol?
 
-    init(viewModel: SearchResultsViewModel, title: String, refreshHandler: (() -> Void)? = nil) {
+    init(
+        viewModel: SearchResultsViewModel,
+        title: String,
+        expandFoldersWhenShowingResults: Bool = false,
+        refreshHandler: (() -> Void)? = nil
+    ) {
         self.viewModel = viewModel
-        self.resultsViewController = SearchResultsViewController(viewModel: viewModel)
+        self.resultsViewController = SearchResultsViewController(
+            viewModel: viewModel,
+            expandsFoldersWhenShowingResults: expandFoldersWhenShowingResults
+        )
         self.refreshHandler = refreshHandler
         let window = NSWindow(contentViewController: resultsViewController)
+        window.setAccessibilityIdentifier("SearchResultsWindow")
         window.title = title
         window.setContentSize(NSSize(width: 1100, height: 720))
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
@@ -43,5 +52,13 @@ final class SearchResultsWindowController: NSWindowController {
         window?.title = title
         viewModel.title = title
         viewModel.items = items
+    }
+
+    func apply(presentationState: ResultPresentationState) {
+        viewModel.apply(presentationState: presentationState)
+    }
+
+    var currentPresentationState: ResultPresentationState {
+        viewModel.presentationState
     }
 }

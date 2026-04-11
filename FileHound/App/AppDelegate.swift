@@ -18,11 +18,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         MMKVKeyValueStore.initializeStore()
         resetSettingsForUITestingIfNeeded()
+        prepareUITestFixturesIfNeeded()
         bindAppSettings()
         NSApp.mainMenu = MainMenuBuilder(target: self).build()
 
         if ProcessInfo.processInfo.arguments.contains("--open-preferences-on-launch") {
-            let initialSegment = ProcessInfo.processInfo.arguments.contains("--open-updates-preferences-on-launch") ? 3 : 2
+            let initialSegment: Int
+            if ProcessInfo.processInfo.arguments.contains("--open-general-preferences-on-launch") {
+                initialSegment = 0
+            } else if ProcessInfo.processInfo.arguments.contains("--open-search-preferences-on-launch") {
+                initialSegment = 1
+            } else if ProcessInfo.processInfo.arguments.contains("--open-updates-preferences-on-launch") {
+                initialSegment = 3
+            } else {
+                initialSegment = 2
+            }
             preferencesWindowController.show(segment: initialSegment)
             windowController = preferencesWindowController
             NSApp.activate(ignoringOtherApps: true)
@@ -36,6 +46,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
         windowController = controller
         applyCurrentTheme()
+
+        if ProcessInfo.processInfo.arguments.contains("--open-seeded-saved-search-on-launch"),
+           let savedSearch = SavedSearchStore.shared.all().first(where: { $0.name == "UI Fixture Saved Search" }),
+           let criteria = savedSearch.criteria {
+            controller.apply(searchSessionSnapshot: SearchSessionSnapshot(
+                criteria: criteria,
+                presentationState: savedSearch.presentationState
+            ))
+        }
 
         if ProcessInfo.processInfo.arguments.contains("--show-secondary-preferences-on-launch") {
             openPreferences(nil)
@@ -52,6 +71,90 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         preferencesWindowController.window?.orderFrontRegardless()
         NSApp.activate(ignoringOtherApps: true)
         applyCurrentTheme()
+    }
+
+    @objc
+    func openRecentSearchItem(_ sender: NSMenuItem) {
+        guard let record = sender.representedObject as? RecentSearchRecord else {
+            return
+        }
+
+        let controller: SearchWindowController
+        if let existing = searchWindowController {
+            controller = existing
+        } else {
+            controller = SearchWindowController()
+            searchWindowController = controller
+        }
+
+        controller.apply(searchSessionSnapshot: SearchSessionSnapshot(
+            criteria: record.criteria,
+            presentationState: record.presentationState
+        ))
+        windowController = controller
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc
+    func openSavedSearchItem(_ sender: NSMenuItem) {
+        guard
+            let savedSearch = sender.representedObject as? SavedSearch,
+            let criteria = savedSearch.criteria
+        else {
+            return
+        }
+
+        let controller: SearchWindowController
+        if let existing = searchWindowController {
+            controller = existing
+        } else {
+            controller = SearchWindowController()
+            searchWindowController = controller
+        }
+
+        controller.apply(searchSessionSnapshot: SearchSessionSnapshot(
+            criteria: criteria,
+            presentationState: savedSearch.presentationState
+        ))
+        windowController = controller
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @objc
+    func saveCurrentSearch(_ sender: Any?) {
+        guard
+            let controller = searchWindowController,
+            let snapshot = controller.currentSearchSessionSnapshot()
+        else {
+            return
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "Save Search"
+        alert.informativeText = "Enter a name for this search."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
+        textField.stringValue = snapshot.criteria.querySummary
+        alert.accessoryView = textField
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return
+        }
+
+        let name = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard name.isEmpty == false else {
+            return
+        }
+
+        try? SavedSearchStore.shared.save(
+            name: name,
+            criteria: snapshot.criteria,
+            presentationState: snapshot.presentationState
+        )
+        NSApp.mainMenu = MainMenuBuilder(target: self).build()
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -90,6 +193,84 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppSettings.shared.preferredLanguage = .system
         AppSettings.shared.preferredTheme = .system
         AppSettings.shared.updateCheckPolicy = .manualOnly
+        if ProcessInfo.processInfo.arguments.contains("--enable-show-results-early") {
+            AppSettings.shared.showResultsEarly = true
+        }
+        if ProcessInfo.processInfo.arguments.contains("--disable-show-results-early") {
+            AppSettings.shared.showResultsEarly = false
+        }
+        if ProcessInfo.processInfo.arguments.contains("--disable-tie-results-window") {
+            AppSettings.shared.tieResultsWindowToFindWindow = false
+        }
+        if ProcessInfo.processInfo.arguments.contains("--enable-tie-results-window") {
+            AppSettings.shared.tieResultsWindowToFindWindow = true
+        }
+        if ProcessInfo.processInfo.arguments.contains("--disable-include-spotlight-results") {
+            AppSettings.shared.includeSpotlightResults = false
+        }
+        if ProcessInfo.processInfo.arguments.contains("--enable-include-spotlight-results") {
+            AppSettings.shared.includeSpotlightResults = true
+        }
+        if ProcessInfo.processInfo.arguments.contains("--enable-expand-folders-results") {
+            AppSettings.shared.expandFoldersWhenShowingResults = true
+        }
+        if ProcessInfo.processInfo.arguments.contains("--disable-expand-folders-results") {
+            AppSettings.shared.expandFoldersWhenShowingResults = false
+        }
+    }
+
+    private func prepareUITestFixturesIfNeeded() {
+        guard ProcessInfo.processInfo.arguments.contains("--uitesting") else {
+            return
+        }
+
+        if ProcessInfo.processInfo.arguments.contains("--seed-fixture-saved-search") {
+            try? SavedSearchStore.shared.save(
+                name: "UI Fixture Saved Search",
+                criteria: SearchCriteriaSnapshot(
+                    scope: SearchScopeSnapshot(
+                        title: "inside Fixtures",
+                        representedPath: "/tmp",
+                        scopeDescription: "Fixtures",
+                        sourceKind: .folder
+                    ),
+                    rules: [SearchRuleSelection(field: .name, operator: .contains, value: "fixture-report")]
+                ),
+                presentationState: ResultPresentationState(
+                    mode: .table,
+                    sortField: .path,
+                    sortOrder: .descending,
+                    filterText: "fixture",
+                    showInvisibleItems: true,
+                    previewSize: 88
+                )
+            )
+        }
+
+        if ProcessInfo.processInfo.arguments.contains("--seed-fixture-search-session") {
+            AppSettings.shared.restorePreviousSearch = true
+            try? SearchSessionStore.shared.save(
+                SearchSessionSnapshot(
+                    criteria: SearchCriteriaSnapshot(
+                        scope: SearchScopeSnapshot(
+                            title: "inside Fixtures",
+                            representedPath: "/tmp",
+                            scopeDescription: "Fixtures",
+                            sourceKind: .folder
+                        ),
+                        rules: [SearchRuleSelection(field: .name, operator: .contains, value: "fixture-report")]
+                    ),
+                    presentationState: ResultPresentationState(
+                        mode: .table,
+                        sortField: .path,
+                        sortOrder: .descending,
+                        filterText: "fixture",
+                        showInvisibleItems: true,
+                        previewSize: 88
+                    )
+                )
+            )
+        }
     }
 
     private func reloadLocalizedInterface() {

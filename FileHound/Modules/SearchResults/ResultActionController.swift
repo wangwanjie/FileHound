@@ -48,7 +48,24 @@ final class ResultActionController {
             return
         }
 
-        try fileService.deleteImmediately(urls: items.map { URL(fileURLWithPath: $0.path) })
-        viewModel.removeItems(ids: Set(items.map(\.id)))
+        var deletedIDs = Set<SearchResultItem.ID>()
+        var firstError: Error?
+
+        for item in items {
+            do {
+                try fileService.deleteImmediately(urls: [URL(fileURLWithPath: item.path)])
+                deletedIDs.insert(item.id)
+            } catch {
+                firstError = firstError ?? error
+            }
+        }
+
+        if deletedIDs.isEmpty == false {
+            viewModel.removeItems(ids: deletedIDs)
+        }
+
+        if let firstError {
+            throw firstError
+        }
     }
 }

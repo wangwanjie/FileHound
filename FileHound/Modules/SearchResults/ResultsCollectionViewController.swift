@@ -137,6 +137,7 @@ private final class ResultGridItem: NSCollectionViewItem {
     private let selectionOverlay = NSView()
     private var representedPath: String?
     private var iconSizeConstraint: Constraint?
+    private var currentItem: SearchResultItem?
 
     override func loadView() {
         view = NSView()
@@ -179,16 +180,17 @@ private final class ResultGridItem: NSCollectionViewItem {
             view.layer?.borderColor = isSelected
                 ? NSColor.controlAccentColor.cgColor
                 : NSColor.clear.cgColor
-            titleLabel.textColor = isSelected ? .controlAccentColor : .labelColor
+            applyHighlightedTitle()
         }
     }
 
     func render(_ item: SearchResultItem, iconProvider: ResultIconProvider, previewSize: CGFloat) {
+        currentItem = item
         representedPath = item.path
         iconSizeConstraint?.update(offset: previewSize)
         iconView.image = NSWorkspace.shared.icon(forFile: item.path)
-        titleLabel.stringValue = item.displayName
         titleLabel.setAccessibilityIdentifier(item.displayName)
+        applyHighlightedTitle()
 
         let path = item.path
         Task { @MainActor [weak self] in
@@ -201,6 +203,16 @@ private final class ResultGridItem: NSCollectionViewItem {
             guard self.representedPath == path else { return }
             self.iconView.image = image
         }
+    }
+
+    private func applyHighlightedTitle() {
+        guard let currentItem else {
+            return
+        }
+        titleLabel.attributedStringValue = SearchResultNameHighlighter.attributedTitle(
+            for: currentItem,
+            baseColor: isSelected ? .controlAccentColor : .labelColor
+        )
     }
 }
 

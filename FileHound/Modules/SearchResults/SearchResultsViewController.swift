@@ -5,21 +5,26 @@ import SnapKit
 
 final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSource, QLPreviewPanelDelegate {
     private let viewModel: SearchResultsViewModel
+    private let expandsFoldersWhenShowingResults: Bool
     private let gridController = ResultsCollectionViewController()
     private let tableController = ResultsTableViewController()
     private let treeController = ResultsOutlineViewController()
     private let toolbarView = ResultsToolbarView()
     private let containerView = NSView()
     private let statusBarView = ResultsStatusBarView()
-    private let emptyStateLabel = NSTextField(labelWithString: "No Results")
+    private let emptyStateLabel = NSTextField(labelWithString: L10n.string("results.empty"))
     private lazy var actionController = ResultActionController(confirmationPresenter: { [weak self] request in
         self?.confirm(request: request) ?? false
     })
     private var menuHandlers: [MenuActionHandler] = []
     private var quickLookURLs: [URL] = []
 
-    init(viewModel: SearchResultsViewModel) {
+    init(
+        viewModel: SearchResultsViewModel,
+        expandsFoldersWhenShowingResults: Bool = false
+    ) {
         self.viewModel = viewModel
+        self.expandsFoldersWhenShowingResults = expandsFoldersWhenShowingResults
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -30,6 +35,8 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
     override func loadView() {
         let rootView = NSView()
+        rootView.setAccessibilityIdentifier("SearchResultsRootView")
+        rootView.setAccessibilityElement(true)
 
         rootView.wantsLayer = true
         rootView.layer?.backgroundColor = NSColor(calibratedWhite: 0.14, alpha: 1).cgColor
@@ -100,6 +107,7 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        treeController.expandsFoldersOnReload = expandsFoldersWhenShowingResults
 
         gridController.onSelectionChange = { [weak self] item in
             self?.viewModel.selectedItem = item
@@ -171,9 +179,18 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
             self?.tableController.applySort(field: field, order: order)
             self?.treeController.applySort(field: field, order: order)
         }
+        viewModel.onPreviewSizeChange = { [weak self] previewSize in
+            self?.toolbarView.previewSlider.doubleValue = previewSize
+            self?.applyPreviewSize(CGFloat(previewSize))
+        }
 
+        toolbarView.invisiblesButton.state = viewModel.showInvisibleItems ? .on : .off
+        toolbarView.packageButton.state = viewModel.showPackageContents ? .on : .off
+        toolbarView.trashedButton.state = viewModel.showTrashedItems ? .on : .off
+        toolbarView.filterField.stringValue = viewModel.filterText
+        toolbarView.previewSlider.doubleValue = viewModel.previewSize
         render(mode: viewModel.mode)
-        applyPreviewSize(CGFloat(toolbarView.previewSlider.doubleValue))
+        applyPreviewSize(CGFloat(viewModel.previewSize))
         toolbarView.selectSortField(viewModel.sortField)
         tableController.applySort(field: viewModel.sortField, order: viewModel.sortOrder)
         treeController.applySort(field: viewModel.sortField, order: viewModel.sortOrder)
@@ -208,23 +225,12 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
     @objc
     private func previewSizeChanged() {
-        applyPreviewSize(CGFloat(toolbarView.previewSlider.doubleValue))
+        viewModel.previewSize = toolbarView.previewSlider.doubleValue
     }
 
     @objc
     private func sortByChanged() {
-        let field: SearchResultsViewModel.SortField
-        switch toolbarView.sortByPopup.indexOfSelectedItem {
-        case 1:
-            field = .dateModified
-        case 2:
-            field = .kind
-        case 3:
-            field = .size
-        default:
-            field = .name
-        }
-        applySort(field: field, order: .ascending)
+        applySort(field: toolbarView.selectedSortField, order: .ascending)
     }
 
     @objc
@@ -564,23 +570,38 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
         let url = URL(fileURLWithPath: path)
         let attributes = (try? FileManager.default.attributesOfItem(atPath: path)) ?? [:]
-        let resourceValues = try? url.resourceValues(forKeys: [.isHiddenKey, .tagNamesKey, .isApplicationKey])
+        let resourceValues = try? url.resourceValues(forKeys: [
+            .isHiddenKey,
+            .tagNamesKey,
+            .isApplicationKey,
+            .creationDateKey,
+            .contentAccessDateKey,
+            .addedToDirectoryDateKey
+        ])
         return SearchResultItem(
             id: item.id,
             path: path,
             matchReason: item.matchReason,
             previewSnippet: item.previewSnippet,
+            highlightKind: item.highlightKind,
+            highlightQuery: item.highlightQuery,
             kind: item.kind,
             modifiedText: displayModifiedDate(attributes: attributes),
-            createdText: item.createdText,
-            lastOpenedText: item.lastOpenedText,
-            addedText: item.addedText,
+            createdText: displayDate((attributes[.creationDate] as? Date) ?? resourceValues?.creationDate),
+            lastOpenedText: displayDate(resourceValues?.contentAccessDate),
+            addedText: displayDate(resourceValues?.addedToDirectoryDate),
             sizeText: displaySize(attributes: attributes),
             tagsText: resourceValues?.tagNames?.joined(separator: ", ") ?? item.tagsText,
             enclosingFolder: url.deletingLastPathComponent().path,
             isInvisible: resourceValues?.isHidden == true,
             isPackage: resourceValues?.isApplication == true || item.isPackage,
-            isTrashed: item.isTrashed
+            isTrashed: item.isTrashed,
+            modifiedDate: attributes[.modificationDate] as? Date,
+            createdDate: (attributes[.creationDate] as? Date) ?? resourceValues?.creationDate,
+            lastOpenedDate: resourceValues?.contentAccessDate,
+            addedDate: resourceValues?.addedToDirectoryDate,
+            sizeBytes: (attributes[.size] as? NSNumber)?.int64Value,
+            tags: resourceValues?.tagNames ?? item.tags
         )
     }
 
@@ -613,12 +634,17 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func displayModifiedDate(attributes: [FileAttributeKey: Any]) -> String {
-        guard let date = attributes[.modificationDate] as? Date else {
+        displayDate(attributes[.modificationDate] as? Date)
+    }
+
+    private func displayDate(_ date: Date?) -> String {
+        guard let date else {
             return ""
         }
 
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy/M/d, h:mm:ss a"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter.string(from: date)
     }
 
@@ -757,6 +783,33 @@ extension SearchResultsViewController {
 
     var debugSelectedPathComponents: [String] {
         statusBarView.displayedPathComponents
+    }
+
+    var debugToolbarTooltips: [String] {
+        [
+            toolbarView.gridButton.toolTip,
+            toolbarView.tableButton.toolTip,
+            toolbarView.treeButton.toolTip,
+            toolbarView.invisiblesButton.toolTip,
+            toolbarView.packageButton.toolTip,
+            toolbarView.trashedButton.toolTip
+        ].compactMap { $0 }
+    }
+
+    func debugToggleInvisibles() {
+        toolbarView.invisiblesButton.performClick(nil)
+    }
+
+    func debugTogglePackages() {
+        toolbarView.packageButton.performClick(nil)
+    }
+
+    func debugToggleTrashed() {
+        toolbarView.trashedButton.performClick(nil)
+    }
+
+    var debugSortTitles: [String] {
+        toolbarView.sortByPopup.itemTitles
     }
 }
 #endif
@@ -989,5 +1042,73 @@ private final class ResultsFadeView: NSView {
             self.layer = gradientLayer
         }
         gradientLayer.frame = bounds
+    }
+}
+
+struct SearchResultNameHighlighter {
+    static func attributedTitle(for item: SearchResultItem, baseColor: NSColor) -> NSAttributedString {
+        let title = item.displayName
+        let attributed = NSMutableAttributedString(
+            string: title,
+            attributes: [
+                .foregroundColor: baseColor,
+                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize)
+            ]
+        )
+
+        for range in highlightRanges(for: item, title: title) {
+            attributed.addAttributes(
+                [
+                    .backgroundColor: NSColor.controlAccentColor.withAlphaComponent(0.28),
+                    .foregroundColor: baseColor
+                ],
+                range: range
+            )
+        }
+
+        return attributed
+    }
+
+    private static func highlightRanges(for item: SearchResultItem, title: String) -> [NSRange] {
+        guard let kind = item.highlightKind,
+              let query = item.highlightQuery?.trimmingCharacters(in: .whitespacesAndNewlines),
+              query.isEmpty == false else {
+            return []
+        }
+
+        let searchTerms = query
+            .split(whereSeparator: { $0 == "," || $0.isWhitespace })
+            .map(String.init)
+            .filter { $0.isEmpty == false }
+        guard searchTerms.isEmpty == false else {
+            return []
+        }
+
+        let candidateRange: Range<String.Index>
+        switch kind {
+        case .name:
+            candidateRange = title.startIndex..<title.endIndex
+        case .extensionName:
+            guard let dotIndex = title.lastIndex(of: ".") else {
+                return []
+            }
+            candidateRange = dotIndex..<title.endIndex
+        }
+
+        return searchTerms.compactMap { term in
+            let normalized = kind == .extensionName ? term.trimmingCharacters(in: CharacterSet(charactersIn: ".")) : term
+            guard normalized.isEmpty == false else {
+                return nil
+            }
+
+            let scopedTitle = String(title[candidateRange])
+            guard let range = scopedTitle.range(of: normalized, options: [.caseInsensitive, .diacriticInsensitive]) else {
+                return nil
+            }
+
+            let lowerOffset = scopedTitle.distance(from: scopedTitle.startIndex, to: range.lowerBound)
+            let location = title.distance(from: title.startIndex, to: candidateRange.lowerBound) + lowerOffset
+            return NSRange(location: location, length: scopedTitle.distance(from: range.lowerBound, to: range.upperBound))
+        }
     }
 }

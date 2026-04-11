@@ -112,3 +112,11 @@ final class PreferencesRootViewController: NSViewController {
         return max(controller.view.fittingSize.height, 220)
     }
 }
+
+#if DEBUG
+extension PreferencesRootViewController {
+    var debugActiveSectionHasCardBackground: Bool {
+        (contentControllers[segmentedControl.selectedSegment].view as? PreferencesSectionView)?.debugHasCardBackground == true
+    }
+}
+#endif

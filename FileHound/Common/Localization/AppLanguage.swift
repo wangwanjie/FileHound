@@ -1,4 +1,4 @@
-enum AppLanguage: String, CaseIterable, Sendable {
+enum AppLanguage: String, CaseIterable, Codable, Sendable {
     case system
     case zhHans = "zh-Hans"
     case zhHant = "zh-Hant"
@@ -7,13 +7,13 @@ enum AppLanguage: String, CaseIterable, Sendable {
     var displayName: String {
         switch self {
         case .system:
-            return "跟随系统"
+            return L10n.string("preferences.appearance.language.system")
         case .zhHans:
-            return "简体中文"
+            return L10n.string("preferences.appearance.language.zh_hans")
         case .zhHant:
-            return "繁体中文"
+            return L10n.string("preferences.appearance.language.zh_hant")
         case .en:
-            return "English"
+            return L10n.string("preferences.appearance.language.en")
         }
     }
 }

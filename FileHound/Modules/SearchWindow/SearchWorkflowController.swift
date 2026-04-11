@@ -14,6 +14,12 @@ struct SearchRequest: Sendable {
     init(scopeDescription: String, rootPath: String, query: SearchRuleSelection) {
         self.init(scopeDescription: scopeDescription, rootPath: rootPath, rules: [query])
     }
+
+    var queryTitle: String {
+        rules
+            .map(\.summaryText)
+            .joined(separator: " and ")
+    }
 }
 
 final class SearchWorkflowController {
@@ -22,17 +28,48 @@ final class SearchWorkflowController {
 
     private var searchTask: Task<Void, Never>?
     private let executor: SearchExecutor
+    private var latestMatchCount = 0
+    private var latestItems: [SearchResultItem] = []
+    private var latestTitle = ""
+    private var latestScopeDescription = ""
 
     init(executor: SearchExecutor = SearchExecutor()) {
         self.executor = executor
     }
 
-    func start(request: SearchRequest) {
+    func start(
+        request: SearchRequest,
+        preferences: SearchExecutionPreferences = SearchExecutionPreferences()
+    ) {
         cancel()
+        latestMatchCount = 0
+        latestItems = []
+        latestTitle = request.queryTitle
+        latestScopeDescription = request.scopeDescription
         onStateChange?(.init(phase: .searching(scopeDescription: request.scopeDescription, matchCount: 0)))
 
         searchTask = Task(priority: .userInitiated) { [weak self, executor] in
             guard let self else { return }
+
+            let emitProgress: @MainActor (SearchExecutionProgress) -> Void = { progress in
+                guard Task.isCancelled == false else {
+                    return
+                }
+
+                self.latestMatchCount = progress.matchedCount
+                self.latestItems = progress.items
+                self.latestTitle = progress.title
+                self.onStateChange?(.init(
+                    phase: .searching(
+                        scopeDescription: request.scopeDescription,
+                        matchCount: progress.matchedCount
+                    )
+                ))
+
+                if preferences.showResultsEarly, progress.items.isEmpty == false {
+                    self.onResults?(progress.title, progress.items)
+                }
+            }
 
             if ProcessInfo.processInfo.arguments.contains("--fixture-delayed-search") {
                 try? await Task.sleep(nanoseconds: 5_000_000_000)
@@ -40,18 +77,54 @@ final class SearchWorkflowController {
                 let items = self.fixtureItems()
                 await MainActor.run {
                     self.onResults?("Name contains \(request.rules.first?.value ?? "")", items)
-                    self.onStateChange?(.init(phase: .editing(matchCount: items.count)))
+                    self.onStateChange?(.init(phase: .idle(matchCount: items.count)))
                 }
                 return
             }
 
-            let result = executor.execute(request: request)
+            if ProcessInfo.processInfo.arguments.contains("--fixture-streaming-search") ||
+                ProcessInfo.processInfo.arguments.contains("--fixture-streaming-search-slow") {
+                let items = self.fixtureItems()
+                var partialItems: [SearchResultItem] = []
+                let streamingDelayNanoseconds: UInt64 =
+                    ProcessInfo.processInfo.arguments.contains("--fixture-streaming-search-slow")
+                    ? 1_000_000_000
+                    : 400_000_000
+
+                for item in items {
+                    try? await Task.sleep(nanoseconds: streamingDelayNanoseconds)
+                    if Task.isCancelled { return }
+                    partialItems.append(item)
+                    await emitProgress(.init(
+                        title: request.queryTitle,
+                        items: partialItems,
+                        matchedCount: partialItems.count
+                    ))
+                }
+
+                await MainActor.run {
+                    self.onResults?(request.queryTitle, partialItems)
+                    self.onStateChange?(.init(phase: .idle(matchCount: partialItems.count)))
+                }
+                return
+            }
+
+            let result = executor.executeStreaming(
+                request: request,
+                options: SearchExecutionOptions(
+                    includeSpotlightResults: preferences.includeSpotlightResults
+                )
+            ) { progress in
+                Task { @MainActor in
+                    await emitProgress(progress)
+                }
+            }
             if Task.isCancelled { return }
             await MainActor.run {
                 if result.items.isEmpty == false {
                     self.onResults?(result.title, result.items)
                 }
-                self.onStateChange?(.init(phase: .editing(matchCount: result.items.count)))
+                self.onStateChange?(.init(phase: .idle(matchCount: result.items.count)))
             }
         }
     }
@@ -59,6 +132,7 @@ final class SearchWorkflowController {
     func cancel() {
         searchTask?.cancel()
         searchTask = nil
+        onStateChange?(.init(phase: .editing(matchCount: latestMatchCount)))
     }
 
     func fixtureItems() -> [SearchResultItem] {

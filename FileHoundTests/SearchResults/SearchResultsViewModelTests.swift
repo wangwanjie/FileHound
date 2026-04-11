@@ -85,4 +85,23 @@ struct SearchResultsViewModelTests {
         viewModel.replaceItems([renamed])
         #expect(viewModel.items.map(\.path) == ["/tmp/renamed.txt"])
     }
+
+    @Test
+    func presentationStateRoundTripsThroughViewModel() {
+        let state = ResultPresentationState(
+            mode: .table,
+            sortField: .path,
+            sortOrder: .descending,
+            filterText: "report",
+            showInvisibleItems: true,
+            showPackageContents: true,
+            showTrashedItems: true,
+            previewSize: 104
+        )
+        let viewModel = SearchResultsViewModel()
+
+        viewModel.apply(presentationState: state)
+
+        #expect(viewModel.presentationState == state)
+    }
 }

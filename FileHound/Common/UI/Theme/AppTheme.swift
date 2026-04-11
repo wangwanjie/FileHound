@@ -1,4 +1,4 @@
-enum AppTheme: String, CaseIterable, Sendable {
+enum AppTheme: String, CaseIterable, Codable, Sendable {
     case system
     case light
     case dark
@@ -6,11 +6,11 @@ enum AppTheme: String, CaseIterable, Sendable {
     var displayName: String {
         switch self {
         case .system:
-            return "跟随系统"
+            return L10n.string("preferences.appearance.theme.system")
         case .light:
-            return "浅色"
+            return L10n.string("preferences.appearance.theme.light")
         case .dark:
-            return "深色"
+            return L10n.string("preferences.appearance.theme.dark")
         }
     }
 }

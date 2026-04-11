@@ -5,6 +5,7 @@ final class SearchRuleListView: NSView {
     let stackView = NSStackView()
     private let scrollView = NSScrollView()
     private let contentView = NSView()
+    private(set) var logicSummary: String = ""
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -20,28 +21,34 @@ final class SearchRuleListView: NSView {
 
         stackView.orientation = .vertical
         stackView.spacing = 10
+        stackView.setContentHuggingPriority(.required, for: .vertical)
+        stackView.setContentCompressionResistancePriority(.required, for: .vertical)
 
         scrollView.drawsBackground = false
         scrollView.borderType = .noBorder
+        scrollView.hasHorizontalScroller = false
         scrollView.hasVerticalScroller = false
         scrollView.autohidesScrollers = true
+        scrollView.setAccessibilityIdentifier("SearchRulesScrollView")
+        scrollView.setAccessibilityLabel("SearchRulesScrollView")
         scrollView.documentView = contentView
+        contentView.setContentHuggingPriority(.required, for: .vertical)
+        contentView.setContentCompressionResistancePriority(.required, for: .vertical)
 
         addSubview(scrollView)
         contentView.addSubview(stackView)
 
         scrollView.snp.makeConstraints { make in
             make.leading.top.trailing.equalToSuperview().inset(16)
+            make.bottom.equalToSuperview().inset(16)
         }
         contentView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-            make.width.equalTo(scrollView.contentView)
+            make.top.leading.trailing.equalTo(scrollView.contentView)
+            make.width.equalTo(scrollView.contentView.snp.width)
+            make.height.greaterThanOrEqualTo(scrollView.contentView.snp.height)
         }
         stackView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
-        }
-        scrollView.snp.makeConstraints { make in
-            make.bottom.equalToSuperview().inset(16)
         }
     }
 
@@ -50,9 +57,15 @@ final class SearchRuleListView: NSView {
         return stackView.fittingSize.height + 32
     }
 
+    func updateLogicSummary(_ text: String) {
+        logicSummary = text
+        setAccessibilityValue(text)
+    }
+
     func setScrollingEnabled(_ enabled: Bool) {
         scrollView.hasVerticalScroller = enabled
         scrollView.verticalScrollElasticity = enabled ? .automatic : .none
+        scrollView.setAccessibilityValue(enabled ? "scrolling" : "fitting")
         if enabled == false {
             scrollView.contentView.scroll(to: .zero)
             scrollView.reflectScrolledClipView(scrollView.contentView)
@@ -64,3 +77,15 @@ final class SearchRuleListView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 }
+
+#if DEBUG
+extension SearchRuleListView {
+    var debugVisibleContentHeight: CGFloat {
+        scrollView.contentView.bounds.height
+    }
+
+    var debugDocumentContentHeight: CGFloat {
+        contentView.frame.height
+    }
+}
+#endif

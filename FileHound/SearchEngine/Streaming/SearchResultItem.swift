@@ -1,10 +1,17 @@
 import Foundation
 
+enum SearchResultHighlightKind: Equatable, Hashable, Sendable {
+    case name
+    case extensionName
+}
+
 struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
     let id: UUID
     let path: String
     let matchReason: String
     let previewSnippet: String?
+    let highlightKind: SearchResultHighlightKind?
+    let highlightQuery: String?
     let kind: String
     let modifiedText: String
     let createdText: String
@@ -16,6 +23,12 @@ struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
     let isInvisible: Bool
     let isPackage: Bool
     let isTrashed: Bool
+    let modifiedDate: Date?
+    let createdDate: Date?
+    let lastOpenedDate: Date?
+    let addedDate: Date?
+    let sizeBytes: Int64?
+    let tags: [String]
 
     var displayName: String {
         URL(fileURLWithPath: path).lastPathComponent
@@ -27,6 +40,8 @@ struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
             path: newPath,
             matchReason: matchReason,
             previewSnippet: previewSnippet,
+            highlightKind: highlightKind,
+            highlightQuery: highlightQuery,
             kind: kind,
             modifiedText: modifiedText,
             createdText: createdText,
@@ -37,7 +52,13 @@ struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
             enclosingFolder: URL(fileURLWithPath: newPath).deletingLastPathComponent().path,
             isInvisible: isInvisible,
             isPackage: isPackage,
-            isTrashed: isTrashed
+            isTrashed: isTrashed,
+            modifiedDate: modifiedDate,
+            createdDate: createdDate,
+            lastOpenedDate: lastOpenedDate,
+            addedDate: addedDate,
+            sizeBytes: sizeBytes,
+            tags: tags
         )
     }
 
@@ -46,6 +67,8 @@ struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
         path: String,
         matchReason: String,
         previewSnippet: String?,
+        highlightKind: SearchResultHighlightKind? = nil,
+        highlightQuery: String? = nil,
         kind: String = "",
         modifiedText: String = "",
         createdText: String = "",
@@ -56,12 +79,20 @@ struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
         enclosingFolder: String = "",
         isInvisible: Bool = false,
         isPackage: Bool = false,
-        isTrashed: Bool = false
+        isTrashed: Bool = false,
+        modifiedDate: Date? = nil,
+        createdDate: Date? = nil,
+        lastOpenedDate: Date? = nil,
+        addedDate: Date? = nil,
+        sizeBytes: Int64? = nil,
+        tags: [String] = []
     ) {
         self.id = id
         self.path = path
         self.matchReason = matchReason
         self.previewSnippet = previewSnippet
+        self.highlightKind = highlightKind
+        self.highlightQuery = highlightQuery
         self.kind = kind
         self.modifiedText = modifiedText
         self.createdText = createdText
@@ -73,6 +104,12 @@ struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
         self.isInvisible = isInvisible
         self.isPackage = isPackage
         self.isTrashed = isTrashed
+        self.modifiedDate = modifiedDate
+        self.createdDate = createdDate
+        self.lastOpenedDate = lastOpenedDate
+        self.addedDate = addedDate
+        self.sizeBytes = sizeBytes
+        self.tags = tags
     }
 }
 

@@ -12,6 +12,7 @@ protocol SearchWindowLayoutDelegate: AnyObject {
 }
 
 final class SearchWindowController: NSWindowController, SearchWindowLayoutDelegate {
+    private static let defaultContentSize = NSSize(width: 760, height: 214)
     private let layoutCoordinator: SearchWindowLayoutCoordinator
 
     init(
@@ -31,7 +32,7 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
         formController.windowLayoutDelegate = self
         let window = NSWindow(contentViewController: formController)
         window.title = "FileHound"
-        window.setContentSize(NSSize(width: 800, height: 236))
+        window.setContentSize(Self.defaultContentSize)
         window.center()
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
@@ -46,10 +47,16 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
     }
 
     func reloadLocalizedContent() {
+        window?.title = "FileHound"
+        if let controller = window?.contentViewController as? SearchFormViewController {
+            controller.reloadLocalizedStrings()
+            searchFormViewController(controller, desiredRulesContentHeight: controller.preferredRulesContentHeight)
+            return
+        }
+
         let controller = SearchFormViewController()
         controller.windowLayoutDelegate = self
         window?.contentViewController = controller
-        window?.title = "FileHound"
         _ = controller.view
         searchFormViewController(controller, desiredRulesContentHeight: controller.preferredRulesContentHeight)
     }
@@ -61,30 +68,46 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
         }
     }
 
+    func apply(searchSessionSnapshot: SearchSessionSnapshot) {
+        showWindow(nil)
+        guard let controller = window?.contentViewController as? SearchFormViewController else {
+            return
+        }
+
+        controller.applySearchSessionSnapshot(searchSessionSnapshot)
+        searchFormViewController(controller, desiredRulesContentHeight: controller.preferredRulesContentHeight)
+        window?.makeKeyAndOrderFront(nil)
+    }
+
+    func currentSearchSessionSnapshot() -> SearchSessionSnapshot? {
+        guard let controller = window?.contentViewController as? SearchFormViewController else {
+            return nil
+        }
+
+        return controller.currentSearchSessionSnapshot()
+    }
+
     func searchFormViewController(_ controller: SearchFormViewController?, desiredRulesContentHeight: CGFloat) {
         guard let window, let controller else {
             return
         }
 
-        let currentFrame = window.contentRect(forFrameRect: window.frame)
+        let currentWindowFrame = window.frame
+        let currentFrame = window.contentRect(forFrameRect: currentWindowFrame)
         let layout = layoutCoordinator.layout(
             currentFrame: currentFrame,
             desiredRuleContentHeight: desiredRulesContentHeight,
-            minimumRuleAreaHeight: 120,
-            minimumWindowHeight: 236,
-            chromeHeight: 120,
-            maxWindowHeightFraction: 0.72
+            minimumRuleAreaHeight: 78,
+            minimumWindowHeight: Self.defaultContentSize.height,
+            chromeHeight: 124,
+            maxWindowHeightFraction: 1
         )
 
         controller.applyRuleAreaLayout(height: layout.ruleAreaHeight, shouldScroll: layout.shouldScrollRules)
-        let frameSize = window.frameRect(forContentRect: NSRect(origin: .zero, size: layout.frame.size)).size
-        let titlebarDelta = frameSize.height - layout.frame.size.height
-        let nextFrame = NSRect(
-            x: window.frame.origin.x,
-            y: layout.frame.origin.y - titlebarDelta,
-            width: frameSize.width,
-            height: frameSize.height
-        )
-        window.setFrame(nextFrame, display: true)
+        let nextFrame = window.frameRect(forContentRect: layout.frame)
+        var preservedFrame = currentWindowFrame
+        preservedFrame.origin.y = nextFrame.origin.y
+        preservedFrame.size.height = nextFrame.size.height
+        window.setFrame(preservedFrame, display: true)
     }
 }

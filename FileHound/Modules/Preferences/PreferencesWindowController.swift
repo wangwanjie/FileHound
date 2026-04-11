@@ -1,4 +1,5 @@
 import AppKit
+import SnapKit
 
 final class PreferencesWindowController: NSWindowController {
     convenience init() {
@@ -57,6 +58,7 @@ final class PreferencesWindowController: NSWindowController {
 }
 
 final class PreferencesSectionView: NSView {
+    private let cardView = NSView()
     let contentGuide = NSView()
 
     init(title: String, subtitle: String) {
@@ -67,10 +69,16 @@ final class PreferencesSectionView: NSView {
 
         let subtitleLabel = NSTextField(labelWithString: subtitle)
         subtitleLabel.textColor = .secondaryLabelColor
+        cardView.wantsLayer = true
+        cardView.layer?.cornerRadius = 14
+        cardView.layer?.borderWidth = 1
+        cardView.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
+        cardView.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.72).cgColor
 
         addSubview(titleLabel)
         addSubview(subtitleLabel)
-        addSubview(contentGuide)
+        addSubview(cardView)
+        cardView.addSubview(contentGuide)
 
         titleLabel.snp.makeConstraints { make in
             make.leading.top.equalToSuperview()
@@ -79,10 +87,12 @@ final class PreferencesSectionView: NSView {
             make.leading.equalToSuperview()
             make.top.equalTo(titleLabel.snp.bottom).offset(8)
         }
-        contentGuide.snp.makeConstraints { make in
-            make.leading.bottom.equalToSuperview()
-            make.trailing.lessThanOrEqualToSuperview()
+        cardView.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview()
             make.top.equalTo(subtitleLabel.snp.bottom).offset(20)
+        }
+        contentGuide.snp.makeConstraints { make in
+            make.edges.equalToSuperview().inset(18)
         }
     }
 
@@ -90,4 +100,10 @@ final class PreferencesSectionView: NSView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    #if DEBUG
+    var debugHasCardBackground: Bool {
+        cardView.layer?.cornerRadius == 14 && cardView.layer?.backgroundColor != nil
+    }
+    #endif
 }

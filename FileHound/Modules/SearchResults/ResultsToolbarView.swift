@@ -2,6 +2,19 @@ import AppKit
 import SnapKit
 
 final class ResultsToolbarView: NSView {
+    static let supportedSortFields: [SearchResultsViewModel.SortField] = [
+        .name,
+        .dateModified,
+        .dateCreated,
+        .lastOpened,
+        .dateAdded,
+        .kind,
+        .size,
+        .tags,
+        .enclosingFolder,
+        .path
+    ]
+
     let gridButton = ResultsToolbarButton(symbolName: "square.grid.2x2", accessibilityID: "ResultsModeGridButton")
     let tableButton = ResultsToolbarButton(symbolName: "list.bullet.rectangle", accessibilityID: "ResultsModeTableButton")
     let treeButton = ResultsToolbarButton(symbolName: "list.bullet.indent", accessibilityID: "ResultsModeTreeButton")
@@ -23,11 +36,17 @@ final class ResultsToolbarView: NSView {
 
         filterField.setAccessibilityIdentifier("ResultsFilterField")
         filterField.placeholderString = "Filter"
+        gridButton.toolTip = "Grid View"
+        tableButton.toolTip = "List View"
+        treeButton.toolTip = "Tree View"
+        invisiblesButton.toolTip = "Show Invisible Items"
+        packageButton.toolTip = "Show Package Contents"
+        trashedButton.toolTip = "Show Trashed Items"
         previewSlider.controlSize = .small
         previewSlider.isContinuous = true
         previewSlider.setAccessibilityIdentifier("ResultsPreviewSlider")
         sortByPopup.setAccessibilityIdentifier("ResultsSortByPopup")
-        sortByPopup.addItems(withTitles: ["Name", "Date Modified", "Kind", "Size"])
+        sortByPopup.addItems(withTitles: Self.supportedSortFields.map(Self.title(for:)))
         sortByPopup.selectItem(at: 0)
         [previewLabel, sortLabel].forEach {
             $0.font = .systemFont(ofSize: 11, weight: .medium)
@@ -98,37 +117,23 @@ final class ResultsToolbarView: NSView {
         tableButton.state = mode == .table ? .on : .off
         treeButton.state = mode == .tree ? .on : .off
 
-        switch mode {
-        case .grid:
-            secondaryBar.isHidden = false
-            previewSlider.isHidden = false
-            previewLabel.isHidden = false
-            sortByPopup.isHidden = false
-            sortLabel.isHidden = false
-            secondaryBarHeightConstraint?.update(offset: 22)
-            secondaryBarTopConstraint?.update(offset: 8)
-        case .table, .tree:
-            secondaryBar.isHidden = true
-            previewSlider.isHidden = true
-            previewLabel.isHidden = true
-            sortByPopup.isHidden = true
-            sortLabel.isHidden = true
-            secondaryBarHeightConstraint?.update(offset: 0)
-            secondaryBarTopConstraint?.update(offset: 0)
-        }
+        secondaryBar.isHidden = false
+        previewSlider.isHidden = mode != .grid
+        previewLabel.isHidden = mode != .grid
+        sortByPopup.isHidden = false
+        sortLabel.isHidden = false
+        secondaryBarHeightConstraint?.update(offset: 22)
+        secondaryBarTopConstraint?.update(offset: 8)
     }
 
     func selectSortField(_ field: SearchResultsViewModel.SortField) {
-        switch field {
-        case .dateModified:
-            sortByPopup.selectItem(at: 1)
-        case .kind:
-            sortByPopup.selectItem(at: 2)
-        case .size:
-            sortByPopup.selectItem(at: 3)
-        default:
-            sortByPopup.selectItem(at: 0)
+        if let index = Self.supportedSortFields.firstIndex(of: field) {
+            sortByPopup.selectItem(at: index)
         }
+    }
+
+    var selectedSortField: SearchResultsViewModel.SortField {
+        Self.supportedSortFields[safe: sortByPopup.indexOfSelectedItem] ?? .name
     }
 
     private func makeGroupedStack(title: String?, views: [NSView]) -> NSView {
@@ -160,6 +165,37 @@ final class ResultsToolbarView: NSView {
         }
         return container
     }
+
+    private static func title(for field: SearchResultsViewModel.SortField) -> String {
+        switch field {
+        case .name:
+            return "Name"
+        case .dateModified:
+            return "Date Modified"
+        case .dateCreated:
+            return "Date Created"
+        case .lastOpened:
+            return "Last Opened"
+        case .dateAdded:
+            return "Date Added"
+        case .kind:
+            return "Kind"
+        case .size:
+            return "Size"
+        case .tags:
+            return "Tags"
+        case .enclosingFolder:
+            return "Enclosing Folder"
+        case .path:
+            return "Path"
+        }
+    }
+}
+
+private extension Collection {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
 }
 
 final class ResultsToolbarButton: NSButton {
@@ -170,7 +206,9 @@ final class ResultsToolbarButton: NSButton {
         imagePosition = .imageOnly
         setButtonType(.toggle)
         focusRingType = .none
+        setAccessibilityElement(true)
         setAccessibilityIdentifier(accessibilityID)
+        setAccessibilityLabel(accessibilityID)
         updateAppearance()
     }
 
@@ -198,7 +236,9 @@ final class ResultsToolbarToggleButton: NSButton {
         imagePosition = .imageOnly
         setButtonType(.toggle)
         focusRingType = .none
+        setAccessibilityElement(true)
         setAccessibilityIdentifier(accessibilityID)
+        setAccessibilityLabel(accessibilityID)
         updateAppearance()
     }
 

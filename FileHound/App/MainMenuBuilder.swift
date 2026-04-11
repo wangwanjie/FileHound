@@ -9,9 +9,20 @@ import AppKit
 
 final class MainMenuBuilder {
     private weak var target: AnyObject?
+    private let settings: AppSettings
+    private let searchHistoryStore: SearchHistoryStore
+    private let savedSearchStore: SavedSearchStore
 
-    init(target: AnyObject? = nil) {
+    init(
+        target: AnyObject? = nil,
+        settings: AppSettings = .shared,
+        searchHistoryStore: SearchHistoryStore = .shared,
+        savedSearchStore: SavedSearchStore = .shared
+    ) {
         self.target = target
+        self.settings = settings
+        self.searchHistoryStore = searchHistoryStore
+        self.savedSearchStore = savedSearchStore
     }
 
     func build() -> NSMenu {
@@ -38,6 +49,16 @@ final class MainMenuBuilder {
         )
         preferencesItem.target = target
         appMenu.addItem(preferencesItem)
+
+        if settings.openRecentSearchMenu {
+            let recentMenuItem = NSMenuItem(title: "Open Recent Search", action: nil, keyEquivalent: "")
+            recentMenuItem.submenu = buildRecentSearchMenu()
+            appMenu.addItem(recentMenuItem)
+        }
+
+        let savedSearchMenuItem = NSMenuItem(title: "Open Saved Search", action: nil, keyEquivalent: "")
+        savedSearchMenuItem.submenu = buildSavedSearchMenu()
+        appMenu.addItem(savedSearchMenuItem)
 
         appMenu.addItem(.separator())
 
@@ -68,6 +89,14 @@ final class MainMenuBuilder {
         mainMenu.addItem(fileMenuItem)
 
         let fileMenu = NSMenu(title: L10n.string("menu.file"))
+        let saveSearchItem = NSMenuItem(
+            title: "Save Search…",
+            action: #selector(AppDelegate.saveCurrentSearch(_:)),
+            keyEquivalent: "S"
+        )
+        saveSearchItem.target = target
+        fileMenu.addItem(saveSearchItem)
+        fileMenu.addItem(.separator())
         fileMenu.addItem(
             NSMenuItem(
                 title: L10n.string("menu.close"),
@@ -87,5 +116,59 @@ final class MainMenuBuilder {
         windowMenuItem.submenu = windowMenu
 
         return mainMenu
+    }
+
+    private func buildRecentSearchMenu() -> NSMenu {
+        let menu = NSMenu(title: "Open Recent Search")
+        let records = searchHistoryStore.all()
+
+        guard records.isEmpty == false else {
+            let emptyItem = NSMenuItem(title: "No Recent Searches", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            menu.addItem(emptyItem)
+            return menu
+        }
+
+        for record in records {
+            let item = NSMenuItem(
+                title: record.title,
+                action: #selector(AppDelegate.openRecentSearchItem(_:)),
+                keyEquivalent: ""
+            )
+            item.target = target
+            item.representedObject = record
+            menu.addItem(item)
+        }
+
+        return menu
+    }
+
+    private func buildSavedSearchMenu() -> NSMenu {
+        let menu = NSMenu(title: "Open Saved Search")
+        let searches = savedSearchStore.all()
+
+        guard searches.isEmpty == false else {
+            let emptyItem = NSMenuItem(title: "No Saved Searches", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            menu.addItem(emptyItem)
+            return menu
+        }
+
+        for search in searches {
+            let title = search.compatibility == .legacySummary
+                ? "\(search.name) (Summary Only)"
+                : search.name
+            let item = NSMenuItem(
+                title: title,
+                action: #selector(AppDelegate.openSavedSearchItem(_:)),
+                keyEquivalent: ""
+            )
+            item.target = target
+            item.representedObject = search
+            item.isEnabled = search.criteria != nil
+            menu.addItem(item)
+        }
+
+        return menu
     }
 }
