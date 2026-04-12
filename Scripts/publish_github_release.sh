@@ -20,6 +20,7 @@ NOTES_FILE=""
 GENERATE_NOTES=false
 DRAFT=false
 PRERELEASE=false
+TARGET_COMMITISH=""
 
 usage() {
     cat <<'EOF'
@@ -33,6 +34,7 @@ usage() {
   --repo OWNER/REPO   指定 GitHub 仓库，例如 wangwanjie/FileHound
   --tag TAG           指定 release tag，默认根据版本号推导为 v<version>
   --title TITLE       指定 release 标题，默认 FileHound v<version>
+  --target REF        指定 release 对应的提交或分支，默认当前 HEAD
   --notes TEXT        指定 release 说明
   --notes-file FILE   从文件读取 release 说明
   --generate-notes    让 GitHub 自动生成 release notes
@@ -196,6 +198,11 @@ while [[ $# -gt 0 ]]; do
             TITLE="$2"
             shift 2
             ;;
+        --target)
+            [[ -n "${2:-}" && "${2:-}" != --* ]] || fail "--target 需要指定提交或分支"
+            TARGET_COMMITISH="$2"
+            shift 2
+            ;;
         --notes)
             [[ -n "${2:-}" && "${2:-}" != --* ]] || fail "--notes 需要指定文本"
             NOTES="$2"
@@ -244,6 +251,10 @@ require_command stat
 
 gh auth status >/dev/null 2>&1 || fail "GitHub CLI 未登录，请先执行 gh auth login"
 
+if [[ -z "$TARGET_COMMITISH" ]]; then
+    TARGET_COMMITISH="$(git rev-parse HEAD)"
+fi
+
 if [[ -n "$DMG_PATH" ]]; then
     DMG_PATH="$(resolve_path "$DMG_PATH")"
 else
@@ -279,6 +290,7 @@ fi
 echo "仓库: $REPO"
 echo "Tag: $TAG"
 echo "标题: $TITLE"
+echo "Target: $TARGET_COMMITISH"
 echo "DMG: $DMG_PATH"
 
 if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
@@ -296,7 +308,7 @@ if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
     gh release upload "$TAG" "$DMG_PATH" -R "$REPO" --clobber
 else
     echo "Release 不存在，创建并上传 DMG..."
-    create_args=(release create "$TAG" "$DMG_PATH" -R "$REPO" --title "$TITLE")
+    create_args=(release create "$TAG" "$DMG_PATH" -R "$REPO" --title "$TITLE" --target "$TARGET_COMMITISH")
     build_notes_args
     create_args+=("${NOTES_ARGS[@]}")
     if [[ "$DRAFT" == true ]]; then
