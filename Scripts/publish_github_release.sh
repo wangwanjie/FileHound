@@ -85,17 +85,17 @@ resolve_path() {
 extract_github_repo_from_url() {
     local remote_url="$1"
 
-    if [[ "$remote_url" =~ ^https://github\.com/([^/]+)/([^/]+?)(\.git)?/?$ ]]; then
+    if [[ "$remote_url" =~ ^https://github\.com/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
         printf '%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
         return 0
     fi
 
-    if [[ "$remote_url" =~ ^git@github\.com:([^/]+)/([^/]+?)(\.git)?$ ]]; then
+    if [[ "$remote_url" =~ ^git@github\.com:([^/]+)/([^/]+)(\.git)?$ ]]; then
         printf '%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
         return 0
     fi
 
-    if [[ "$remote_url" =~ ^ssh://git@github\.com/([^/]+)/([^/]+?)(\.git)?$ ]]; then
+    if [[ "$remote_url" =~ ^ssh://git@github\.com/([^/]+)/([^/]+)(\.git)?$ ]]; then
         printf '%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
         return 0
     fi
@@ -154,25 +154,24 @@ read_marketing_version() {
     sed -n 's/.*MARKETING_VERSION = \([^;]*\);/\1/p' "$PBXPROJ" | head -1 | tr -d ' '
 }
 
-append_notes_args() {
-    local -n args_ref="$1"
-
+build_notes_args() {
+    NOTES_ARGS=()
     if [[ "$GENERATE_NOTES" == true ]]; then
-        args_ref+=(--generate-notes)
+        NOTES_ARGS+=(--generate-notes)
         return
     fi
 
     if [[ -n "$NOTES_FILE" ]]; then
-        args_ref+=(--notes-file "$NOTES_FILE")
+        NOTES_ARGS+=(--notes-file "$NOTES_FILE")
         return
     fi
 
     if [[ -n "$NOTES" ]]; then
-        args_ref+=(--notes "$NOTES")
+        NOTES_ARGS+=(--notes "$NOTES")
         return
     fi
 
-    args_ref+=(--notes "Release $TAG")
+    NOTES_ARGS+=(--notes "Release $TAG")
 }
 
 while [[ $# -gt 0 ]]; do
@@ -285,7 +284,8 @@ echo "DMG: $DMG_PATH"
 if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
     echo "Release 已存在，先更新元信息，再覆盖上传同名 DMG..."
     edit_args=(release edit "$TAG" -R "$REPO" --title "$TITLE")
-    append_notes_args edit_args
+    build_notes_args
+    edit_args+=("${NOTES_ARGS[@]}")
     if [[ "$DRAFT" == true ]]; then
         edit_args+=(--draft)
     fi
@@ -297,7 +297,8 @@ if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
 else
     echo "Release 不存在，创建并上传 DMG..."
     create_args=(release create "$TAG" "$DMG_PATH" -R "$REPO" --title "$TITLE")
-    append_notes_args create_args
+    build_notes_args
+    create_args+=("${NOTES_ARGS[@]}")
     if [[ "$DRAFT" == true ]]; then
         create_args+=(--draft)
     fi

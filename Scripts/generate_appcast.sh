@@ -82,12 +82,12 @@ resolve_path() {
 extract_github_repo_from_url() {
     local remote_url="$1"
 
-    if [[ "$remote_url" =~ ^https://github\.com/([^/]+)/([^/]+?)(\.git)?/?$ ]]; then
+    if [[ "$remote_url" =~ ^https://github\.com/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
         printf '%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
         return 0
     fi
 
-    if [[ "$remote_url" =~ ^git@github\.com:([^/]+)/([^/]+?)(\.git)?$ ]]; then
+    if [[ "$remote_url" =~ ^git@github\.com:([^/]+)/([^/]+)(\.git)?$ ]]; then
         printf '%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
         return 0
     fi
