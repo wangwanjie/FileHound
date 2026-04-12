@@ -2,6 +2,7 @@ name: FileHound
 options:
   deploymentTarget:
     macOS: "11.0"
+  postGenCommand: pod install
   swiftVersion: "5.10"
 packages:
   SnapKit:
@@ -16,6 +17,31 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.10"
+schemes:
+  FileHound:
+    build:
+      targets:
+        FileHound: all
+    run:
+      config: Debug
+      executable: FileHound
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - FileHoundTests
+        - FileHoundUITests
+    profile:
+      config: Release
+      executable: FileHound
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+    management:
+      shared: true
+      orderHint: 0
+      isShown: true
 targets:
   FileHound:
     type: application

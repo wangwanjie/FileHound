@@ -1,0 +1,22 @@
+PODS:
+  - ViewScopeServer (1.2.2)
+
+DEPENDENCIES:
+  - ViewScopeServer (from `https://github.com/wangwanjie/ViewScope.git`, branch `main`)
+
+EXTERNAL SOURCES:
+  ViewScopeServer:
+    :branch: main
+    :git: https://github.com/wangwanjie/ViewScope.git
+
+CHECKOUT OPTIONS:
+  ViewScopeServer:
+    :commit: 3cc1a9a40ae5e4607b45825176ed0c667796334d
+    :git: https://github.com/wangwanjie/ViewScope.git
+
+SPEC CHECKSUMS:
+  ViewScopeServer: 6cebb4ba7314ee47f82ef6f08207686f892da8ec
+
+PODFILE CHECKSUM: b9bdb623dee0e08d38f2d30606cc0754332e6ff1
+
+COCOAPODS: 1.16.2

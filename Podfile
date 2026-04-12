@@ -1,0 +1,32 @@
+platform :osx, '11.0'
+
+project 'FileHound.xcodeproj'
+
+install! 'cocoapods', :warn_for_unused_master_specs_repo => false
+
+inhibit_all_warnings!
+
+target 'FileHound' do
+  use_frameworks! :linkage => :static
+
+  # pod 'ViewScopeServer', :path => '/Users/VanJay/Documents/Work/Private/ViewScope'
+  pod 'ViewScopeServer', :git => 'https://github.com/wangwanjie/ViewScope.git', :branch => 'main', :configurations => ['Debug']
+
+  target 'FileHoundTests' do
+    inherit! :complete
+  end
+
+  target 'FileHoundUITests' do
+    inherit! :complete
+  end
+
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['MACOSX_DEPLOYMENT_TARGET'] = '11.0'
+      config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+    end
+  end
+end
