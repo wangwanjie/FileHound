@@ -777,6 +777,22 @@ extension SearchResultsViewController {
         previewSizeChanged()
     }
 
+    func debugGridTitleAlignmentOffset(for item: SearchResultItem, previewSize: CGFloat) -> CGFloat {
+        gridController.debugTitleAlignmentOffset(for: item, previewSize: previewSize)
+    }
+
+    func debugGridTitleParagraphAlignment(for item: SearchResultItem, previewSize: CGFloat) -> NSTextAlignment {
+        gridController.debugTitleParagraphAlignment(for: item, previewSize: previewSize)
+    }
+
+    var debugGridTitleMaximumNumberOfLines: Int {
+        gridController.debugTitleMaximumNumberOfLines
+    }
+
+    var debugGridTitleLineBreakMode: NSLineBreakMode {
+        gridController.debugTitleLineBreakMode
+    }
+
     var debugMatchCountValue: Int {
         statusBarView.matchCountValue
     }

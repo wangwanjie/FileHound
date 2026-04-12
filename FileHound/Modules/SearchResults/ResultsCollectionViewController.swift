@@ -209,10 +209,29 @@ private final class ResultGridItem: NSCollectionViewItem {
         guard let currentItem else {
             return
         }
-        titleLabel.attributedStringValue = SearchResultNameHighlighter.attributedTitle(
+        titleLabel.attributedStringValue = centeredGridTitle(
             for: currentItem,
             baseColor: isSelected ? .controlAccentColor : .labelColor
         )
+    }
+
+    private func centeredGridTitle(for item: SearchResultItem, baseColor: NSColor) -> NSAttributedString {
+        let attributed = NSMutableAttributedString(
+            attributedString: SearchResultNameHighlighter.attributedTitle(for: item, baseColor: baseColor)
+        )
+        guard attributed.length > 0 else {
+            return attributed
+        }
+
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+        paragraphStyle.lineBreakMode = .byTruncatingMiddle
+        attributed.addAttribute(
+            .paragraphStyle,
+            value: paragraphStyle,
+            range: NSRange(location: 0, length: attributed.length)
+        )
+        return attributed
     }
 }
 
@@ -242,9 +261,78 @@ private final class ContextMenuCollectionView: NSCollectionView {
 }
 
 #if DEBUG
+private extension ResultGridItem {
+    var debugTitleParagraphAlignment: NSTextAlignment {
+        guard titleLabel.attributedStringValue.length > 0,
+              let style = titleLabel.attributedStringValue.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle else {
+            return .left
+        }
+        return style.alignment
+    }
+
+    var debugTitleMaximumNumberOfLines: Int {
+        titleLabel.maximumNumberOfLines
+    }
+
+    var debugTitleLineBreakMode: NSLineBreakMode {
+        titleLabel.lineBreakMode
+    }
+
+    var debugTitleAlignmentOffset: CGFloat {
+        let iconRect = iconView.convert(iconView.bounds, to: view)
+        let labelRect = titleLabel.convert(titleLabel.bounds, to: view)
+        let measured = titleLabel.attributedStringValue.boundingRect(
+            with: NSSize(width: labelRect.width, height: labelRect.height),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
+        )
+        let textWidth = min(labelRect.width, ceil(measured.width))
+        let textMidX: CGFloat
+
+        switch debugTitleParagraphAlignment {
+        case .center:
+            textMidX = labelRect.minX + floor((labelRect.width - textWidth) / 2) + (textWidth / 2)
+        case .right:
+            textMidX = labelRect.maxX - (textWidth / 2)
+        default:
+            textMidX = labelRect.minX + (textWidth / 2)
+        }
+
+        return abs(iconRect.midX - textMidX)
+    }
+}
+
 extension ResultsCollectionViewController {
     var debugItemSize: NSSize {
         layout.itemSize
+    }
+
+    private func debugGridItem(for item: SearchResultItem, previewSize: CGFloat) -> ResultGridItem {
+        let gridItem = ResultGridItem()
+        _ = gridItem.view
+        gridItem.view.frame = NSRect(x: 0, y: 0, width: previewSize + 60, height: previewSize + 44)
+        gridItem.render(item, iconProvider: iconProvider, previewSize: previewSize)
+        gridItem.view.layoutSubtreeIfNeeded()
+        return gridItem
+    }
+
+    func debugTitleAlignmentOffset(for item: SearchResultItem, previewSize: CGFloat) -> CGFloat {
+        debugGridItem(for: item, previewSize: previewSize).debugTitleAlignmentOffset
+    }
+
+    func debugTitleParagraphAlignment(for item: SearchResultItem, previewSize: CGFloat) -> NSTextAlignment {
+        debugGridItem(for: item, previewSize: previewSize).debugTitleParagraphAlignment
+    }
+
+    var debugTitleMaximumNumberOfLines: Int {
+        let gridItem = ResultGridItem()
+        _ = gridItem.view
+        return gridItem.debugTitleMaximumNumberOfLines
+    }
+
+    var debugTitleLineBreakMode: NSLineBreakMode {
+        let gridItem = ResultGridItem()
+        _ = gridItem.view
+        return gridItem.debugTitleLineBreakMode
     }
 }
 #endif

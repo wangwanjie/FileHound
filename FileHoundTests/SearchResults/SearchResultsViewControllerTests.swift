@@ -169,6 +169,44 @@ struct SearchResultsViewControllerTests {
 
     @MainActor
     @Test
+    func gridTitlesStayHorizontallyCenteredAcrossPreviewSizes() {
+        let item = SearchResultItem(
+            path: "/tmp/2026-quarterly-preview-alignment-report.lookin",
+            matchReason: "名称命中",
+            previewSnippet: "report",
+            highlightKind: .name,
+            highlightQuery: "report"
+        )
+        let viewModel = SearchResultsViewModel()
+        viewModel.items = [item]
+        let controller = SearchResultsViewController(viewModel: viewModel)
+        _ = controller.view
+
+        #expect(controller.debugGridTitleParagraphAlignment(for: item, previewSize: 72) == .center)
+        #expect(controller.debugGridTitleAlignmentOffset(for: item, previewSize: 72) < 2)
+        #expect(controller.debugGridTitleAlignmentOffset(for: item, previewSize: 112) < 2)
+    }
+
+    @MainActor
+    @Test
+    func gridTitlesKeepTwoLineMiddleTruncation() {
+        let item = SearchResultItem(
+            path: "/tmp/this-is-a-very-very-long-file-name-used-to-lock-grid-preview-caption-behavior.lookin",
+            matchReason: "名称命中",
+            previewSnippet: "preview",
+            highlightKind: .name,
+            highlightQuery: "preview"
+        )
+        let controller = SearchResultsViewController(viewModel: SearchResultsViewModel())
+        _ = controller.view
+
+        #expect(controller.debugGridTitleMaximumNumberOfLines == 2)
+        #expect(controller.debugGridTitleLineBreakMode == .byTruncatingMiddle)
+        #expect(controller.debugGridTitleAlignmentOffset(for: item, previewSize: 48) < 2)
+    }
+
+    @MainActor
+    @Test
     func treeViewBuildsFolderHierarchyInsteadOfFlatList() {
         let outlineController = ResultsOutlineViewController()
         _ = outlineController.view
