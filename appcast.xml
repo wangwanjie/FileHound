@@ -1,6 +1,19 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
-  <channel>
-    <title>FileHound Updates</title>
-  </channel>
+<?xml version='1.0' encoding='utf-8'?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>FileHound</title>
+        <item>
+            <title>1.0.0</title>
+            <pubDate>Sun, 12 Apr 2026 23:36:08 +0800</pubDate>
+            <link>https://github.com/wangwanjie/FileHound/releases/tag/v1.0.0</link>
+            <sparkle:version>1</sparkle:version>
+            <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/wangwanjie/FileHound/releases/download/v1.0.0/FileHound_v1.0.0_1.dmg" length="4905504" type="application/octet-stream" />
+            <description />
+        </item>
+        <link>https://github.com/wangwanjie/FileHound</link>
+        <description>FileHound release feed.</description>
+        <language>zh-CN</language>
+    </channel>
 </rss>
