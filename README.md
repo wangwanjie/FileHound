@@ -39,5 +39,30 @@ rm -f FileHound.xcodeproj/project.xcworkspace/xcuserdata/"$USER".xcuserdatad/Use
 
 ```bash
 ./Scripts/build_dmg.sh
-./Scripts/generate_appcast.sh
+./Scripts/publish_github_release.sh
+./Scripts/generate_appcast.sh --archive build/dmg/FileHound_v1.0.0_1.dmg
+```
+
+说明：
+
+- `./Scripts/build_dmg.sh` 默认从 `FileHound.xcworkspace` 归档 `Release`，并执行 notarize + staple
+- 如需仅本地测试 DMG，可使用 `./Scripts/build_dmg.sh --no-notarize`
+- `./Scripts/publish_github_release.sh` 会把版本化 DMG 上传到 GitHub Release `v<版本号>`
+- `./Scripts/generate_appcast.sh` 会把 DMG 归档到 `build/appcast-archives/` 并重新生成仓库根目录的 `appcast.xml`
+- 发布后仍需把更新后的 `appcast.xml` 提交并推送到默认分支
+
+发布前置条件：
+
+- 已执行 `gh auth login`
+- 本机存在 `vanjay_mac_stapler` notarytool profile
+- 已生成 Sparkle 私钥：
+
+```bash
+<Sparkle bin>/generate_keys --account cn.vanjay.FileHound.sparkle
+```
+
+当前 Sparkle feed 地址为：
+
+```text
+https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast.xml
 ```
