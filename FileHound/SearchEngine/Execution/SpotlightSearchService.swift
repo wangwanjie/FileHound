@@ -89,7 +89,7 @@ struct SpotlightSearchService: Sendable {
             return tokens.map { "\"\(escapeForQuery($0))\"" }.joined(separator: " && ")
         case .containsAnyOf, .isAnyOf:
             return tokens.map { "\"\(escapeForQuery($0))\"" }.joined(separator: " || ")
-        default:
+        case .isNot, .beginsWith, .endsWith, .isExactly, .doesNotContain, .matchesPattern, .beginsWithAnyOf, .endsWithAnyOf, .matchesRegex, .doesNotMatchRegex, .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
             return nil
         }
     }
@@ -122,7 +122,7 @@ struct SpotlightSearchService: Sendable {
             return tokens.map { "\(field) == '*\(escapeForQuery($0))*'cd" }.joined(separator: " || ")
         case .isAnyOf:
             return tokens.map { "\(field) == '\(escapeForQuery($0))'cd" }.joined(separator: " || ")
-        default:
+        case .isNot, .doesNotContain, .containsWords, .matchesPattern, .beginsWithAnyOf, .endsWithAnyOf, .matchesRegex, .doesNotMatchRegex, .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
             if treatAsSuffix, searchOperator == .contains {
                 return "\(field) == '*\(escapeForQuery(value))'cd"
             }

@@ -3,6 +3,7 @@ import AppKit
 final class SearchRulesViewController: NSViewController {
     private let listView = SearchRuleListView()
     private var rows: [SearchRuleRowView] = []
+    private let validator = SearchRuleValidator()
     var onContentLayoutChange: ((CGFloat) -> Void)?
     var onSelectionsChange: (([SearchRuleSelection]) -> Void)?
 
@@ -24,6 +25,15 @@ final class SearchRulesViewController: NSViewController {
         rows.map(\.selection)
     }
 
+    var validationSummary: SearchRuleValidationSummary {
+        let results = rows.map { validator.validate($0.selection) }
+        let firstBlockingMessage = results.compactMap(\.blockingMessage).first
+        return SearchRuleValidationSummary(
+            canSearch: firstBlockingMessage == nil,
+            firstBlockingMessage: firstBlockingMessage
+        )
+    }
+
     func applySelections(_ selections: [SearchRuleSelection]) {
         let normalizedSelections = selections.isEmpty ? [SearchRuleSelection()] : selections
 
@@ -39,6 +49,7 @@ final class SearchRulesViewController: NSViewController {
             row.apply(selection: selection)
         }
 
+        updateRowValidations()
         updateRowControls()
         updateLogicSummary()
         notifyContentLayoutChange()
@@ -59,6 +70,7 @@ final class SearchRulesViewController: NSViewController {
 
     func reloadLocalizedStrings() {
         rows.forEach { $0.reloadLocalizedStrings() }
+        updateRowValidations()
         updateLogicSummary()
     }
 
@@ -77,6 +89,7 @@ final class SearchRulesViewController: NSViewController {
         let insertionIndex = sourceRow.flatMap { rows.firstIndex(of: $0).map { $0 + 1 } } ?? rows.count
         rows.insert(row, at: insertionIndex)
         listView.stackView.insertArrangedSubview(row, at: insertionIndex)
+        updateRowValidations()
         updateRowControls()
         updateLogicSummary()
         notifyContentLayoutChange()
@@ -91,6 +104,7 @@ final class SearchRulesViewController: NSViewController {
         rows.remove(at: index)
         listView.stackView.removeArrangedSubview(row)
         row.removeFromSuperview()
+        updateRowValidations()
         updateRowControls()
         updateLogicSummary()
         notifyContentLayoutChange()
@@ -103,6 +117,7 @@ final class SearchRulesViewController: NSViewController {
     }
 
     private func handleRowChange() {
+        updateRowValidations()
         updateLogicSummary()
         onSelectionsChange?(currentSelections)
     }
@@ -117,12 +132,26 @@ final class SearchRulesViewController: NSViewController {
         view.layoutSubtreeIfNeeded()
         onContentLayoutChange?(preferredContentHeight)
     }
+
+    private func updateRowValidations() {
+        rows.forEach { row in
+            row.applyValidation(validator.validate(row.selection))
+        }
+    }
 }
 
 #if DEBUG
 extension SearchRulesViewController {
     var debugLogicSummary: String {
         listView.logicSummary
+    }
+
+    var debugCanSearch: Bool {
+        validationSummary.canSearch
+    }
+
+    var debugBlockingMessage: String? {
+        validationSummary.firstBlockingMessage
     }
 }
 #endif

@@ -209,6 +209,54 @@ struct SearchExecutorTests {
         #expect(result.items.map(\.path) == [expectedPath])
         #expect(provider.didReadDirectory == false)
     }
+
+    @Test
+    func executeSupportsFafDateOperatorsAndKindMatching() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("Preview.app/Contents/Info.plist", contents: "plist")
+            try builder.file("today.txt", contents: "hello")
+            try builder.file("older.txt", contents: "older")
+        }
+
+        let fileManager = FileManager.default
+        let bundlePath = URL(fileURLWithPath: fixture.path).appendingPathComponent("Preview.app").path
+        let bundleContentsPath = URL(fileURLWithPath: bundlePath).appendingPathComponent("Contents").path
+        let plistPath = URL(fileURLWithPath: bundleContentsPath).appendingPathComponent("Info.plist").path
+        let todayPath = URL(fileURLWithPath: fixture.path).appendingPathComponent("today.txt").path
+        let olderPath = URL(fileURLWithPath: fixture.path).appendingPathComponent("older.txt").path
+        let staleBundleDate = ISO8601DateFormatter().date(from: "2026-04-08T08:00:00Z")!
+        try fileManager.setAttributes([.modificationDate: ISO8601DateFormatter().date(from: "2026-04-12T08:00:00Z")!], ofItemAtPath: todayPath)
+        try fileManager.setAttributes([.modificationDate: ISO8601DateFormatter().date(from: "2026-04-08T08:00:00Z")!], ofItemAtPath: olderPath)
+        try fileManager.setAttributes([.modificationDate: staleBundleDate], ofItemAtPath: bundlePath)
+        try fileManager.setAttributes([.modificationDate: staleBundleDate], ofItemAtPath: bundleContentsPath)
+        try fileManager.setAttributes([.modificationDate: staleBundleDate], ofItemAtPath: plistPath)
+
+        let executor = SearchExecutor(
+            provider: LocalFilesystemProvider(),
+            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] }),
+            nowProvider: { ISO8601DateFormatter().date(from: "2026-04-12T10:00:00Z")! }
+        )
+
+        let kindResult = executor.execute(
+            request: SearchRequest(
+                scopeDescription: "Root",
+                rootPath: fixture.path,
+                rules: [SearchRuleSelection(field: .kind, operator: .isExactly, value: "kind.application")]
+            ),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        )
+        let dateResult = executor.execute(
+            request: SearchRequest(
+                scopeDescription: "Root",
+                rootPath: fixture.path,
+                rules: [SearchRuleSelection(field: .lastModifiedDate, operator: .isWithinTheLast, value: "2|day")]
+            ),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        )
+
+        #expect(kindResult.items.contains { $0.path.hasSuffix("/Preview.app") })
+        #expect(dateResult.items.map(\.path) == [todayPath])
+    }
 }
 
 private struct FailingSearchProvider: FilesystemAccessProviding {

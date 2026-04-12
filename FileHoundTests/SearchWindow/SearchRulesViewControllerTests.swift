@@ -80,6 +80,37 @@ struct SearchRulesViewControllerTests {
 
     @MainActor
     @Test
+    func kindAndRelativeDateFieldsUseDedicatedEditors() {
+        let row = SearchRuleRowView()
+
+        row.apply(selection: SearchRuleSelection(field: .kind, operator: .isExactly, value: "kind.application"))
+        #expect(row.debugUsesChoiceEditor == true)
+
+        row.apply(selection: SearchRuleSelection(field: .lastModifiedDate, operator: .isWithinTheLast, value: "7|day"))
+        #expect(row.debugUsesRelativeDateEditor == true)
+    }
+
+    @MainActor
+    @Test
+    func unsupportedFieldsAreDisabledAndInvalidRulesExposeBlockingSummary() {
+        let row = SearchRuleRowView()
+        let commentsIndex = try! #require(SearchRuleField.allCases.firstIndex(of: .comments))
+        let commentsItem = try! #require(row.fieldPopup.item(at: commentsIndex))
+        #expect(commentsItem.isEnabled == false)
+
+        let controller = SearchRulesViewController()
+        _ = controller.view
+
+        controller.applySelections([
+            SearchRuleSelection(field: .kind, operator: .isNot, value: "kind.any")
+        ])
+
+        #expect(controller.debugCanSearch == false)
+        #expect(controller.debugBlockingMessage == L10n.string("search_rule.validation.kind_not_any"))
+    }
+
+    @MainActor
+    @Test
     func scrollingRuleListKeepsRowHeightsAndExpandsDocumentView() {
         let controller = SearchRulesViewController()
         let listView = try! #require(controller.view as? SearchRuleListView)

@@ -209,4 +209,27 @@ struct SearchFormViewControllerTests {
         #expect(controller.debugResultsWindowIdentifier == firstIdentifier)
         #expect(controller.debugResultsPresentationState == presentationState)
     }
+
+    @MainActor
+    @Test
+    func invalidRulesDisableFindAndKeepEditingState() {
+        let controller = SearchFormViewController()
+        _ = controller.view
+
+        controller.applySearchSessionSnapshot(
+            SearchSessionSnapshot(
+                criteria: SearchCriteriaSnapshot(
+                    scope: controller.debugCurrentSearchSessionSnapshot.criteria.scope,
+                    rules: [SearchRuleSelection(field: .kind, operator: .isNot, value: "kind.any")]
+                )
+            )
+        )
+
+        #expect(controller.debugPrimaryActionEnabled == false)
+        #expect(controller.debugStatusText == L10n.string("search_rule.validation.kind_not_any"))
+
+        controller.debugTriggerPrimaryAction()
+
+        #expect(controller.debugPrimaryActionTitle == L10n.string("search_window.action.find"))
+    }
 }

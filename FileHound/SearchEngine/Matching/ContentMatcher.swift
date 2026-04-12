@@ -152,6 +152,8 @@ struct ContentMatcher: Sendable {
             return candidate.range(of: trimmedValue, options: compareOptions.union(.backwards))?.upperBound == candidate.endIndex
         case .isExactly:
             return candidate.compare(trimmedValue, options: compareOptions) == .orderedSame
+        case .isNot:
+            return candidate.compare(trimmedValue, options: compareOptions) != .orderedSame
         case .doesNotContain:
             return candidate.range(of: trimmedValue, options: compareOptions) == nil
         case .containsWords:
@@ -180,7 +182,7 @@ struct ContentMatcher: Sendable {
             return matchRegex(candidate, pattern: trimmedValue, caseSensitive: caseSensitive)
         case .doesNotMatchRegex:
             return matchRegex(candidate, pattern: trimmedValue, caseSensitive: caseSensitive) == false
-        case .isGreaterThan, .isLessThan, .isBefore, .isAfter:
+        case .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
             return false
         }
     }

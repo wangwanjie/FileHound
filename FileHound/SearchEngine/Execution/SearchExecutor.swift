@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 struct SearchExecutionOptions: Sendable {
     var includeSpotlightResults: Bool = true
@@ -21,6 +22,8 @@ struct SearchExecutor: Sendable {
     private let spotlightSearchService: SpotlightSearchService
     private let specialFoldersStore: SpecialFoldersStore
     private let specialFolderPlanner: SpecialFolderPlanner
+    private let fileKindResolver: FileKindResolver
+    private let nowProvider: @Sendable () -> Date
     private let metadataEvaluator = MetadataEvaluator()
     private let contentMatcher = ContentMatcher()
 
@@ -29,13 +32,17 @@ struct SearchExecutor: Sendable {
         provider: any FilesystemAccessProviding = LocalFilesystemProvider(),
         spotlightSearchService: SpotlightSearchService = SpotlightSearchService(),
         specialFoldersStore: SpecialFoldersStore = .shared,
-        specialFolderPlanner: SpecialFolderPlanner = SpecialFolderPlanner()
+        specialFolderPlanner: SpecialFolderPlanner = SpecialFolderPlanner(),
+        fileKindResolver: FileKindResolver = FileKindResolver(),
+        nowProvider: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.walker = walker
         self.provider = provider
         self.spotlightSearchService = spotlightSearchService
         self.specialFoldersStore = specialFoldersStore
         self.specialFolderPlanner = specialFolderPlanner
+        self.fileKindResolver = fileKindResolver
+        self.nowProvider = nowProvider
     }
 
     func execute(
@@ -214,7 +221,7 @@ struct SearchExecutor: Sendable {
             let size = (attributes[.size] as? NSNumber)?.int64Value
             return compareNumber(size, using: rule)
         case .kind:
-            return matchString(entry.isDirectory ? "Folder" : "Document", using: rule, behavior: behavior)
+            return compareKind(entry: entry, attributes: attributes, using: rule)
         case .tag:
             let resourceValues = try? URL(fileURLWithPath: entry.path).resourceValues(forKeys: [.tagNamesKey])
             return matchString((resourceValues?.tagNames ?? []).joined(separator: ", "), using: rule, behavior: behavior)
@@ -263,13 +270,14 @@ struct SearchExecutor: Sendable {
         let lastOpenedDate = resourceValues?.contentAccessDate
         let addedDate = resourceValues?.addedToDirectoryDate
         let sizeBytes = (attributes[.size] as? NSNumber)?.int64Value
+        let kind = fileKindResolver.displayTitle(for: entry.path, isDirectory: entry.isDirectory, attributes: attributes)
         return SearchResultItem(
             path: entry.path,
             matchReason: highlight.map(matchReason(for:)) ?? (entry.isDirectory ? "文件夹命中" : "名称命中"),
             previewSnippet: preview,
             highlightKind: highlight?.kind,
             highlightQuery: highlight?.query,
-            kind: entry.isDirectory ? "Folder" : "Document",
+            kind: kind,
             modifiedText: Self.displayDate(modifiedDate),
             createdText: Self.displayDate(createdDate),
             lastOpenedText: Self.displayDate(lastOpenedDate),
@@ -335,6 +343,8 @@ struct SearchExecutor: Sendable {
             return candidate.range(of: value, options: options.union(.backwards))?.upperBound == candidate.endIndex
         case .isExactly:
             return candidate.compare(value, options: options) == .orderedSame
+        case .isNot:
+            return candidate.compare(value, options: options) != .orderedSame
         case .doesNotContain:
             return candidate.range(of: value, options: options) == nil
         case .containsWords:
@@ -355,7 +365,28 @@ struct SearchExecutor: Sendable {
             return matchRegex(candidate, pattern: value, caseSensitive: behavior.caseSensitive)
         case .doesNotMatchRegex:
             return matchRegex(candidate, pattern: value, caseSensitive: behavior.caseSensitive) == false
-        case .isGreaterThan, .isLessThan, .isBefore, .isAfter:
+        case .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
+            return false
+        }
+    }
+
+    private func compareKind(
+        entry: DirectoryEntry,
+        attributes: [FileAttributeKey: Any],
+        using rule: SearchRuleSelection
+    ) -> Bool {
+        let kindIDs = fileKindResolver.kindIDs(for: entry.path, isDirectory: entry.isDirectory, attributes: attributes)
+        let value = rule.value.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        switch rule.operator {
+        case .isExactly:
+            return value == "kind.any" || kindIDs.contains(value)
+        case .isNot:
+            guard value.isEmpty == false, value != "kind.any" else {
+                return false
+            }
+            return kindIDs.contains(value) == false
+        default:
             return false
         }
     }
@@ -408,19 +439,49 @@ struct SearchExecutor: Sendable {
     }
 
     private func compareDate(_ candidate: Date?, using rule: SearchRuleSelection) -> Bool {
-        guard let candidate, let target = parseDate(from: rule.value) else {
+        guard let candidate else {
             return false
         }
 
         let calendar = Calendar(identifier: .gregorian)
         switch rule.operator {
         case .isExactly:
+            guard let target = parseDate(from: rule.value) else {
+                return false
+            }
             return calendar.isDate(candidate, inSameDayAs: target)
         case .isBefore:
+            guard let target = parseDate(from: rule.value) else {
+                return false
+            }
             return candidate < calendar.startOfDay(for: target)
         case .isAfter:
+            guard let target = parseDate(from: rule.value) else {
+                return false
+            }
             let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: calendar.startOfDay(for: target)) ?? target
             return candidate > endOfDay
+        case .isOnOrAfter:
+            guard let target = parseDate(from: rule.value) else {
+                return false
+            }
+            return candidate >= calendar.startOfDay(for: target)
+        case .isOnOrBefore:
+            guard let target = parseDate(from: rule.value) else {
+                return false
+            }
+            let endOfDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: target)) ?? target
+            return candidate < endOfDay
+        case .isWithinTheLast:
+            guard let relative = parseRelativeDate(from: rule.value),
+                  let cutoff = calendar.date(byAdding: relative.component, value: -relative.amount, to: nowProvider()) else {
+                return false
+            }
+            return candidate >= cutoff
+        case .isToday:
+            return calendar.isDateInToday(candidate)
+        case .isYesterday:
+            return calendar.isDateInYesterday(candidate)
         default:
             return false
         }
@@ -456,23 +517,23 @@ struct SearchExecutor: Sendable {
     }
 
     private func parseDate(from value: String) -> Date? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isEmpty == false else {
+        SearchRuleDateParser.parse(value)
+    }
+
+    private func parseRelativeDate(from value: String) -> (amount: Int, component: Calendar.Component)? {
+        let relative = SearchRuleRelativeDateValue.parse(value)
+        guard let amount = relative.positiveAmount, let unit = relative.unit else {
             return nil
         }
 
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-
-        for format in ["yyyy-MM-dd", "yyyy/MM/dd", "yyyy-MM-dd HH:mm:ss"] {
-            formatter.dateFormat = format
-            if let date = formatter.date(from: trimmed) {
-                return date
-            }
+        switch unit {
+        case .day:
+            return (amount, .day)
+        case .week:
+            return (amount, .weekOfYear)
+        case .month:
+            return (amount, .month)
         }
-
-        return ISO8601DateFormatter().date(from: trimmed)
     }
 
     private static func displayDate(_ date: Date?) -> String {
@@ -611,6 +672,195 @@ private struct SearchRuleExecutionBehavior {
             Int($0.value.trimmingCharacters(in: .whitespacesAndNewlines))
         }
     }
+}
+
+struct FileKindResolver: Sendable {
+    func kindIDs(
+        for path: String,
+        isDirectory: Bool,
+        attributes: [FileAttributeKey: Any]
+    ) -> Set<String> {
+        let url = URL(fileURLWithPath: path)
+        let ext = url.pathExtension.lowercased()
+        let fileManager = FileManager.default
+        let resourceValues = try? url.resourceValues(forKeys: [.isPackageKey, .isAliasFileKey, .contentTypeKey])
+        let fileType = attributes[.type] as? FileAttributeType
+        var ids: Set<String> = []
+
+        if fileType == .typeSymbolicLink {
+            ids.formUnion(["kind.symlink", "kind.alias_or_symlink"])
+            return ids
+        }
+
+        if resourceValues?.isAliasFile == true || ext == "alias" {
+            ids.formUnion(["kind.finder_alias", "kind.alias_or_symlink"])
+        }
+
+        if isDirectory {
+            if ext == "app" {
+                ids.insert("kind.application")
+                return ids
+            }
+            if resourceValues?.isPackage == true || Self.packageExtensions.contains(ext) {
+                ids.insert("kind.package")
+            }
+            ids.formUnion(["kind.folder", "kind.directory"])
+            return ids
+        }
+
+        ids.insert("kind.file")
+
+        if let explicitKind = Self.explicitExtensionKinds[ext] {
+            ids.formUnion(explicitKind)
+        }
+
+        if fileManager.isExecutableFile(atPath: path) {
+            ids.insert("kind.unix_executable")
+        }
+
+        if let contentType = resourceValues?.contentType ?? UTType(filenameExtension: ext) {
+            if contentType.conforms(to: .audio) {
+                ids.insert("kind.audio")
+            }
+            if contentType.conforms(to: .font) {
+                ids.insert("kind.font")
+            }
+            if contentType.conforms(to: .image) {
+                ids.insert("kind.image")
+            }
+            if contentType.conforms(to: .movie) || contentType.conforms(to: .audiovisualContent) {
+                ids.insert("kind.video")
+            }
+            if contentType.conforms(to: .pdf) {
+                ids.insert("kind.pdf")
+            }
+            if contentType.conforms(to: .plainText) {
+                ids.formUnion(["kind.plain_text", "kind.text"])
+            } else if contentType.conforms(to: .text) {
+                ids.insert("kind.text")
+            }
+            if contentType.conforms(to: .archive) {
+                ids.insert("kind.archive")
+            }
+        }
+
+        return ids
+    }
+
+    func displayTitle(
+        for path: String,
+        isDirectory: Bool,
+        attributes: [FileAttributeKey: Any]
+    ) -> String {
+        let ids = kindIDs(for: path, isDirectory: isDirectory, attributes: attributes)
+        let primaryID = Self.displayPriority.first(where: { ids.contains($0) }) ?? "kind.file"
+        return L10n.string(Self.localizedTitleKey(for: primaryID))
+    }
+
+    private static func localizedTitleKey(for id: String) -> String {
+        switch id {
+        case "kind.any":
+            return "search_rule.kind.any"
+        case "kind.alias_or_symlink":
+            return "search_rule.kind.alias_or_symlink"
+        case "kind.applescript":
+            return "search_rule.kind.applescript"
+        case "kind.application":
+            return "search_rule.kind.application"
+        case "kind.archive":
+            return "search_rule.kind.archive"
+        case "kind.audio":
+            return "search_rule.kind.audio"
+        case "kind.directory":
+            return "search_rule.kind.directory"
+        case "kind.disk_image":
+            return "search_rule.kind.disk_image"
+        case "kind.ebook":
+            return "search_rule.kind.ebook"
+        case "kind.finder_alias":
+            return "search_rule.kind.finder_alias"
+        case "kind.folder":
+            return "search_rule.kind.folder"
+        case "kind.font":
+            return "search_rule.kind.font"
+        case "kind.image":
+            return "search_rule.kind.image"
+        case "kind.package":
+            return "search_rule.kind.package"
+        case "kind.pdf":
+            return "search_rule.kind.pdf"
+        case "kind.plain_text":
+            return "search_rule.kind.plain_text"
+        case "kind.presentation":
+            return "search_rule.kind.presentation"
+        case "kind.spreadsheet":
+            return "search_rule.kind.spreadsheet"
+        case "kind.symlink":
+            return "search_rule.kind.symlink"
+        case "kind.text":
+            return "search_rule.kind.text"
+        case "kind.unix_executable":
+            return "search_rule.kind.unix_executable"
+        case "kind.video":
+            return "search_rule.kind.video"
+        case "kind.word_pages":
+            return "search_rule.kind.word_pages"
+        default:
+            return "search_rule.kind.file"
+        }
+    }
+
+    private static let packageExtensions: Set<String> = ["bundle", "framework", "plugin", "xcodeproj", "playground"]
+
+    private static let explicitExtensionKinds: [String: Set<String>] = [
+        "alias": ["kind.finder_alias", "kind.alias_or_symlink"],
+        "scpt": ["kind.applescript"],
+        "applescript": ["kind.applescript"],
+        "app": ["kind.application"],
+        "zip": ["kind.archive"],
+        "tar": ["kind.archive"],
+        "gz": ["kind.archive"],
+        "tgz": ["kind.archive"],
+        "bz2": ["kind.archive"],
+        "7z": ["kind.archive"],
+        "rar": ["kind.archive"],
+        "dmg": ["kind.disk_image"],
+        "epub": ["kind.ebook"],
+        "numbers": ["kind.spreadsheet"],
+        "xls": ["kind.spreadsheet"],
+        "xlsx": ["kind.spreadsheet"],
+        "ppt": ["kind.presentation"],
+        "pptx": ["kind.presentation"],
+        "key": ["kind.presentation"],
+        "doc": ["kind.word_pages"],
+        "docx": ["kind.word_pages"],
+        "pages": ["kind.word_pages"]
+    ]
+
+    private static let displayPriority: [String] = [
+        "kind.application",
+        "kind.package",
+        "kind.finder_alias",
+        "kind.symlink",
+        "kind.folder",
+        "kind.directory",
+        "kind.disk_image",
+        "kind.ebook",
+        "kind.archive",
+        "kind.applescript",
+        "kind.audio",
+        "kind.font",
+        "kind.image",
+        "kind.pdf",
+        "kind.presentation",
+        "kind.spreadsheet",
+        "kind.word_pages",
+        "kind.plain_text",
+        "kind.text",
+        "kind.unix_executable",
+        "kind.video",
+        "kind.file"
+    ]
 }
 
 private extension SearchExecutor {

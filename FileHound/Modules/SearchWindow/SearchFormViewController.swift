@@ -254,6 +254,11 @@ final class SearchFormViewController: NSViewController {
             didCancelCurrentSearch = true
             workflowController.cancel()
         default:
+            guard rulesViewController.validationSummary.canSearch else {
+                render(state)
+                return
+            }
+
             let scopeItem = selectedScopeItem()
             let criteriaSnapshot = SearchCriteriaSnapshot(
                 scope: scopeItem.snapshot,
@@ -329,12 +334,15 @@ final class SearchFormViewController: NSViewController {
     }
 
     private func render(_ state: SearchWindowState) {
-        statusLabel.stringValue = state.statusText
-        statusLabel.setAccessibilityLabel(state.statusText)
+        let blockingMessage = state.phase.isSearching ? nil : rulesViewController.validationSummary.firstBlockingMessage
+        let statusText = blockingMessage ?? state.statusText
+        statusLabel.stringValue = statusText
+        statusLabel.setAccessibilityLabel(statusText)
         primaryButton.title = state.primaryActionTitle
         primaryButton.setAccessibilityLabel(state.primaryActionTitle)
         scopePopup.isEnabled = state.isEditingEnabled
         rulesViewController.setEnabled(state.isEditingEnabled)
+        primaryButton.isEnabled = state.phase.isSearching || rulesViewController.validationSummary.canSearch
 
         if state.showsActivityIndicator {
             activityIndicator.startAnimation(nil)
@@ -556,6 +564,10 @@ extension SearchFormViewController {
 
     var debugPrimaryActionTitle: String {
         primaryButton.title
+    }
+
+    var debugPrimaryActionEnabled: Bool {
+        primaryButton.isEnabled
     }
 
     var debugStatusText: String {
