@@ -64,11 +64,17 @@ targets:
         INFOPLIST_KEY_CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         INFOPLIST_KEY_NSMainStoryboardFile: ""
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        INFOPLIST_KEY_SUFeedURL: https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast.xml
+        INFOPLIST_KEY_SUPublicEDKey: EMkumAR7FRbjJ6T5LhBcK7yIcGnJAuAjU5RZFEm12JE=
         CODE_SIGN_ENTITLEMENTS: FileHound/FileHound.entitlements
       configs:
         Debug:
           SWIFT_VERSION: "5.10"
         Release:
+          CODE_SIGN_IDENTITY: "Developer ID Application"
+          CODE_SIGN_STYLE: Manual
+          DEVELOPMENT_TEAM: X6B6C6U6QV
+          ENABLE_HARDENED_RUNTIME: YES
           SWIFT_VERSION: "5.10"
   FileHoundHelper:
     type: tool
