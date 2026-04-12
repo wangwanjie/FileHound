@@ -1,5 +1,9 @@
-## ADDED Requirements
+# results-window-parity Specification
 
+## Purpose
+Define the expected FileHound results-window behavior, including reusable result windows, shared projection controls across views, visible result actions, and grid caption alignment as preview size changes.
+
+## Requirements
 ### Requirement: The app SHALL manage reusable results windows per search session
 
 The system SHALL reuse an existing results window for repeat searches from the same find-window session, updating the title, matched count, and items in place. The system SHALL honor the results-window tie preference when deciding whether repeated searches remain bound to the originating find window.
@@ -47,3 +51,15 @@ The system SHALL expose Finder/FAF-style result actions across all result views,
 #### Scenario: Confirm destructive deletion
 - **WHEN** the user invokes `Delete Immediately` on one or more selected items
 - **THEN** the app asks for confirmation before deletion and removes only successfully deleted items from the results list
+
+### Requirement: The app SHALL keep grid result captions centered under previews
+
+The system SHALL keep each grid result item's filename block horizontally centered with its preview icon when the user changes preview size. The system SHALL preserve the current two-line title limit and middle-truncation behavior while applying the updated grid alignment.
+
+#### Scenario: Increase preview size without shifting the caption off center
+- **WHEN** the user increases the grid preview size from the default value to a larger supported value
+- **THEN** each grid item keeps its filename block horizontally centered with the preview icon
+
+#### Scenario: Reduce preview size without changing title behavior
+- **WHEN** the user decreases the grid preview size to a smaller supported value
+- **THEN** each grid item still keeps its filename block horizontally centered with the preview icon and continues to display at most two truncated-middle lines
