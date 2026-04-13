@@ -19,6 +19,7 @@
 		1535D5C84FBDD6F6CD75682C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50D0A48861A21373DC250CB7 /* AppDelegate.swift */; };
 		158DE26136088830700C4995 /* PrivilegedSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32DD8B5150B2D2CDFD773081 /* PrivilegedSearchService.swift */; };
 		15BD03BFFD227D635E7AA7B4 /* SearchScopeMenuProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BB88468F1A26A314D003D52 /* SearchScopeMenuProvider.swift */; };
+		16B15B80153A745636011027 /* Pods_FileHound_FileHoundTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AEF23A31F810F34C41B29404 /* Pods_FileHound_FileHoundTests.framework */; };
 		16CA3F229B52E33585E757A2 /* SearchRulesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5B21AD7D10D05F4D85F5D47 /* SearchRulesViewController.swift */; };
 		16FDAA1B39724DF0AD900BDA /* ApplicationMain.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */; };
 		1A2D0376E1837A39DC29FEC4 /* PermissionGuidanceCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7BE0110117689866110862 /* PermissionGuidanceCoordinator.swift */; };
@@ -29,6 +30,7 @@
 		208E15466A0C2AC5FFEFDECB /* MainMenuBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8522D7E034ED4F1A73AF9973 /* MainMenuBuilderTests.swift */; };
 		238F68EF239D995C2C51D80E /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 584CCAD5BE12E3035F5B2176 /* SnapKit */; };
 		269DAED1181F0FCBC54DD419 /* SearchWorkflowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88A161A88E599130B23D1E6 /* SearchWorkflowController.swift */; };
+		271A34E57CE31E04A73EF7D0 /* Pods_FileHound_FileHoundUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0CE5D32443E3B121373FCBFE /* Pods_FileHound_FileHoundUITests.framework */; };
 		28224DE2379AC287D86D9E6D /* SearchPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D32D718007D2229668D82AD /* SearchPlan.swift */; };
 		2B71E0321D58964F4C665115 /* PreferencesUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8F0FD441B29CD521E53CED /* PreferencesUITests.swift */; };
 		2D128AB05FDAF7A8811DFC54 /* SearchFormViewControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4AC53F7D77E27183F2A499D /* SearchFormViewControllerTests.swift */; };
@@ -39,19 +41,19 @@
 		35A3317F84BA6C3F5FF23684 /* AppearanceColorSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6A121A4E6A1105305198EFD /* AppearanceColorSupport.swift */; };
 		36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */; };
 		3946F29B4B84621D2F6BE417 /* SearchResultsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */; };
-		3E92746DF0617355057EF9AC /* Pods_FileHound_FileHoundTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1BA33282B0BC4900CE67008B /* Pods_FileHound_FileHoundTests.framework */; };
 		428D4E5D78D69EA9964D2ACF /* SearchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233D1EF55ED9F49A465459E7 /* SearchSession.swift */; };
 		4309F8EC64407FFB19666442 /* ResultsCollectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 855EA193285798E342FB972C /* ResultsCollectionViewController.swift */; };
 		46F07F58DC8ACEBB3694580F /* SearchRulesViewControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0177C83798F58018384BEDB /* SearchRulesViewControllerTests.swift */; };
 		4857AE7C26F654592004E118 /* LaunchShortcutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A3BC9BB58B71900F2ED1C97 /* LaunchShortcutController.swift */; };
 		48F3B1B01B1A11CE248E9CCD /* L10n.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B9771C1E6520696B0AAD015 /* L10n.swift */; };
-		4980C7DE3B26B5248A14E89E /* Pods_FileHound.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A242892C12C5C1E33E70ABDF /* Pods_FileHound.framework */; };
+		4AB07FCB541E0509B4C28D8F /* Pods_FileHound.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 902DE0EED9BB8CDFAB73A3A8 /* Pods_FileHound.framework */; };
 		5123919786F94F343B4708D0 /* SearchResultsViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5EACD935E77E99649BFDC5B /* SearchResultsViewModelTests.swift */; };
 		51E9BF1E14AB16AC5FF40BB1 /* SearchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */; };
 		58A5122192D8539E712F999C /* SearchWindowLayoutCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F04F93E1D39E7114FD98880 /* SearchWindowLayoutCoordinator.swift */; };
 		5A0754BDC36864A027E81076 /* SearchResultsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39503E86A4D81047DC45CD4C /* SearchResultsWindowController.swift */; };
 		5A4A6E58B1DF0A6A7FC49AD2 /* SearchResultsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */; };
 		62B299E43ADC8B00363B7077 /* PreferencesRootViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 029B810EDA9C8176911E99EA /* PreferencesRootViewController.swift */; };
+		69FC296BB11DCF6D097EFE81 /* UpdateManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59AC97DE963F09E25872755B /* UpdateManagerTests.swift */; };
 		6A7C04BCA40CEE6B137A7D92 /* UpdatePreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08D1FEB9F6E319784E4A322D /* UpdatePreferencesViewController.swift */; };
 		6EAB89A4876D72C806522689 /* KeyboardShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DC7744B0FA7C0629AAEE2E6 /* KeyboardShortcut.swift */; };
 		6EFD5A142141FD250BEB9668 /* ResultFileOperationServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84F097509AD0CFC0CDF9B45F /* ResultFileOperationServiceTests.swift */; };
@@ -82,7 +84,6 @@
 		A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */; };
 		AAAA1EE5284E5D1AD64DC05C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DA6779D3010941E92766274 /* Assets.xcassets */; };
 		AC79C06D10655273F8AF1D08 /* SpecialFoldersEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD9291422BAAFCFBAADB107 /* SpecialFoldersEditorViewController.swift */; };
-		B1D9D3C381A9DDEC8437A6CE /* Pods_FileHound_FileHoundUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DEDCB1AC4E777AF3C21586FF /* Pods_FileHound_FileHoundUITests.framework */; };
 		B7A6103622BDA33DA33318EE /* HelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114A3CC8BCFC1AC1D0B8B973 /* HelperProtocol.swift */; };
 		B9F059D453897817F9DA4D50 /* ResultIconProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7089B32DEE8A312B22D5C2 /* ResultIconProviderTests.swift */; };
 		BAD1F0FCE5B04312E65A2FDB /* PermissionStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D626C293047FE0C90F28E82C /* PermissionStateTests.swift */; };
@@ -148,20 +149,19 @@
 		0A3BC9BB58B71900F2ED1C97 /* LaunchShortcutController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchShortcutController.swift; sourceTree = "<group>"; };
 		0A4CBA719314F461F4E4C31D /* DirectoryWalkerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalkerTests.swift; sourceTree = "<group>"; };
 		0BB88468F1A26A314D003D52 /* SearchScopeMenuProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchScopeMenuProvider.swift; sourceTree = "<group>"; };
+		0CE5D32443E3B121373FCBFE /* Pods_FileHound_FileHoundUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound_FileHoundUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		10D566A160E55F5079F322E5 /* AppShellUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellUITests.swift; sourceTree = "<group>"; };
 		114A3CC8BCFC1AC1D0B8B973 /* HelperProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperProtocol.swift; sourceTree = "<group>"; };
-		12E6282B9DD78708E57CCD86 /* Pods-FileHound-FileHoundUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundUITests.debug.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundUITests/Pods-FileHound-FileHoundUITests.debug.xcconfig"; sourceTree = "<group>"; };
 		19FCD700568C35533CBD8B23 /* SearchWindowStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowStateTests.swift; sourceTree = "<group>"; };
 		1A7BE0110117689866110862 /* PermissionGuidanceCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionGuidanceCoordinator.swift; sourceTree = "<group>"; };
+		1AC4257AA5246C35A8AF8E6F /* Pods-FileHound.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound.debug.xcconfig"; path = "Target Support Files/Pods-FileHound/Pods-FileHound.debug.xcconfig"; sourceTree = "<group>"; };
 		1ADF6F5A640F0F628BC18813 /* PermissionsPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionsPreferencesViewController.swift; sourceTree = "<group>"; };
-		1BA33282B0BC4900CE67008B /* Pods_FileHound_FileHoundTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound_FileHoundTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1BE359726FFEB6F956F16595 /* SearchFormViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFormViewController.swift; sourceTree = "<group>"; };
 		1CF5B941185AE10322A03C74 /* ThemeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeController.swift; sourceTree = "<group>"; };
 		1F04F93E1D39E7114FD98880 /* SearchWindowLayoutCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowLayoutCoordinator.swift; sourceTree = "<group>"; };
 		1F61A1AE930878566E682BD9 /* SearchRuleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRuleListView.swift; sourceTree = "<group>"; };
 		20CBCE4E22AC571CAA07D753 /* QueryCompilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryCompilerTests.swift; sourceTree = "<group>"; };
 		233D1EF55ED9F49A465459E7 /* SearchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSession.swift; sourceTree = "<group>"; };
-		2457211D516D882969BF9074 /* Pods-FileHound-FileHoundUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundUITests.release.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundUITests/Pods-FileHound-FileHoundUITests.release.xcconfig"; sourceTree = "<group>"; };
 		2506011B8A2D8F049951A148 /* ContentMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentMatcher.swift; sourceTree = "<group>"; };
 		2CA427745EC383BE7EA2C6F3 /* SearchParityStores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchParityStores.swift; sourceTree = "<group>"; };
 		2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowController.swift; sourceTree = "<group>"; };
@@ -176,7 +176,6 @@
 		3DEA9F492802D3E305395461 /* DirectoryWalker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalker.swift; sourceTree = "<group>"; };
 		3E091BC05621A3E82813A75C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		45361F864EB065A548118D1F /* SavedSearchSidebarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchSidebarViewController.swift; sourceTree = "<group>"; };
-		459BC33CEF212098F8AE5EB6 /* Pods-FileHound-FileHoundTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundTests.release.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundTests/Pods-FileHound-FileHoundTests.release.xcconfig"; sourceTree = "<group>"; };
 		46809C2941B27B2E25C7D615 /* FileHoundHelper */ = {isa = PBXFileReference; includeInIndex = 0; path = FileHoundHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		48ADE2FFF952A0EBD95D7F29 /* SearchResultItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultItem.swift; sourceTree = "<group>"; };
 		49334770FFAFF93E6513802B /* SearchPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPreferencesViewController.swift; sourceTree = "<group>"; };
@@ -187,6 +186,7 @@
 		50D0A48861A21373DC250CB7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryFixtureTree.swift; sourceTree = "<group>"; };
 		596890AB594A7F997825FDE5 /* UpdatePreferencesSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatePreferencesSmokeTests.swift; sourceTree = "<group>"; };
+		59AC97DE963F09E25872755B /* UpdateManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManagerTests.swift; sourceTree = "<group>"; };
 		5DC7744B0FA7C0629AAEE2E6 /* KeyboardShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcut.swift; sourceTree = "<group>"; };
 		6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewModel.swift; sourceTree = "<group>"; };
 		6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -201,24 +201,28 @@
 		8A90F4E78DA7D4D5DC395DF7 /* SearchPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlanBuilder.swift; sourceTree = "<group>"; };
 		8B16D8505E7337ECBED39880 /* ResultsOutlineViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsOutlineViewController.swift; sourceTree = "<group>"; };
 		8C6BE97DC869DC42969BBB06 /* PreferencesLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesLayout.swift; sourceTree = "<group>"; };
+		8C9FE294257029D929331F6A /* Pods-FileHound.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound.release.xcconfig"; path = "Target Support Files/Pods-FileHound/Pods-FileHound.release.xcconfig"; sourceTree = "<group>"; };
 		8D32D718007D2229668D82AD /* SearchPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlan.swift; sourceTree = "<group>"; };
+		8DCE29B9309F10ABC852701C /* Pods-FileHound-FileHoundTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundTests.release.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundTests/Pods-FileHound-FileHoundTests.release.xcconfig"; sourceTree = "<group>"; };
+		902DE0EED9BB8CDFAB73A3A8 /* Pods_FileHound.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9321A16EC7D73D1038FF8FD6 /* AppLaunchHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLaunchHelper.swift; sourceTree = "<group>"; };
 		932D57336FC454C25222E272 /* LocalFilesystemProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFilesystemProvider.swift; sourceTree = "<group>"; };
 		947EF1E39D1E6484403DD72A /* SearchSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSessionTests.swift; sourceTree = "<group>"; };
 		9585CB09468947BFC142EB18 /* GeneralPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPreferencesViewController.swift; sourceTree = "<group>"; };
 		9B9771C1E6520696B0AAD015 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
 		A07E5D6ECFA65C552FB2051D /* PreviewPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewPanelViewController.swift; sourceTree = "<group>"; };
-		A242892C12C5C1E33E70ABDF /* Pods_FileHound.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A29D14E4FEF5F4E78A4F564E /* SpotlightSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightSearchService.swift; sourceTree = "<group>"; };
 		A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsUITests.swift; sourceTree = "<group>"; };
 		AC8D31003CBA719AB8444DB2 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
-		B475490E2AC41297F61B1EFC /* Pods-FileHound.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound.release.xcconfig"; path = "Target Support Files/Pods-FileHound/Pods-FileHound.release.xcconfig"; sourceTree = "<group>"; };
+		AEF23A31F810F34C41B29404 /* Pods_FileHound_FileHoundTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound_FileHoundTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		B4AC53F7D77E27183F2A499D /* SearchFormViewControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchFormViewControllerTests.swift; sourceTree = "<group>"; };
 		B5B21AD7D10D05F4D85F5D47 /* SearchRulesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRulesViewController.swift; sourceTree = "<group>"; };
 		BB7089B32DEE8A312B22D5C2 /* ResultIconProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultIconProviderTests.swift; sourceTree = "<group>"; };
+		BD2F55DBB01EB31F0E8ADE61 /* Pods-FileHound-FileHoundUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundUITests.release.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundUITests/Pods-FileHound-FileHoundUITests.release.xcconfig"; sourceTree = "<group>"; };
 		BE309A5CE1A213F8626DABDB /* FileHoundUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITests.swift; sourceTree = "<group>"; };
 		C476006DD653E74808614BEC /* SearchWindowControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowControllerTests.swift; sourceTree = "<group>"; };
 		C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetadataEvaluator.swift; sourceTree = "<group>"; };
+		C531B7112D4B0319EF3D661D /* Pods-FileHound-FileHoundTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundTests.debug.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundTests/Pods-FileHound-FileHoundTests.debug.xcconfig"; sourceTree = "<group>"; };
 		C5CC26E668D8A3B91B90FDF2 /* LocalizationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationUITests.swift; sourceTree = "<group>"; };
 		C6CEA2B0762B8DC52E1DC205 /* SearchScopeMenuProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchScopeMenuProviderTests.swift; sourceTree = "<group>"; };
 		C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundUITestsLaunchTests.swift; sourceTree = "<group>"; };
@@ -241,15 +245,13 @@
 		D9EA05707ACFAB8C572E3BDD /* ResultIconProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultIconProvider.swift; sourceTree = "<group>"; };
 		DA3D157D407F8B7DE5570350 /* ResultActionControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultActionControllerTests.swift; sourceTree = "<group>"; };
 		DAA0235942EA6D1409ADA604 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
-		DD07F4048A55A7E4DCD750FD /* Pods-FileHound.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound.debug.xcconfig"; path = "Target Support Files/Pods-FileHound/Pods-FileHound.debug.xcconfig"; sourceTree = "<group>"; };
 		DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMain.swift; sourceTree = "<group>"; };
-		DEDCB1AC4E777AF3C21586FF /* Pods_FileHound_FileHoundUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound_FileHoundUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundTests.swift; sourceTree = "<group>"; };
 		E2A02BB6DDC828B9534A1EAA /* FileHoundTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2C175C06FAD30D5B80800BD /* SearchParityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchParityModels.swift; sourceTree = "<group>"; };
+		E57F65A74564AC912B3586AC /* Pods-FileHound-FileHoundUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundUITests.debug.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundUITests/Pods-FileHound-FileHoundUITests.debug.xcconfig"; sourceTree = "<group>"; };
 		E5EACD935E77E99649BFDC5B /* SearchResultsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewModelTests.swift; sourceTree = "<group>"; };
 		E6A121A4E6A1105305198EFD /* AppearanceColorSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceColorSupport.swift; sourceTree = "<group>"; };
-		E730790880488DE407F81C85 /* Pods-FileHound-FileHoundTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundTests.debug.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundTests/Pods-FileHound-FileHoundTests.debug.xcconfig"; sourceTree = "<group>"; };
 		EF96ADC2E3E5E8ED55138108 /* SearchHistoryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryUITests.swift; sourceTree = "<group>"; };
 		F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewController.swift; sourceTree = "<group>"; };
 		F57D52D99A5F7F37A000BE9A /* FilesystemAccessProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesystemAccessProviding.swift; sourceTree = "<group>"; };
@@ -268,23 +270,23 @@
 				238F68EF239D995C2C51D80E /* SnapKit in Frameworks */,
 				06DAFD96E2CAB50331F3F50A /* MMKV in Frameworks */,
 				9FB8739586460F0198CA6538 /* Sparkle in Frameworks */,
-				4980C7DE3B26B5248A14E89E /* Pods_FileHound.framework in Frameworks */,
+				4AB07FCB541E0509B4C28D8F /* Pods_FileHound.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		069C7B11A3304E42F23F950D /* Frameworks */ = {
+		5E341DA903E09A37D3834524 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3E92746DF0617355057EF9AC /* Pods_FileHound_FileHoundTests.framework in Frameworks */,
+				271A34E57CE31E04A73EF7D0 /* Pods_FileHound_FileHoundUITests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		11DEC2998CBFB7F98CBA952C /* Frameworks */ = {
+		D31CB56B58EA3B957BBC1EC2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B1D9D3C381A9DDEC8437A6CE /* Pods_FileHound_FileHoundUITests.framework in Frameworks */,
+				16B15B80153A745636011027 /* Pods_FileHound_FileHoundTests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -340,8 +342,8 @@
 				58429E7656E52FEAB5A0A009 /* FileHoundTests */,
 				10A3CFF253DC76FA10922249 /* FileHoundUITests */,
 				AEFC66A99582AA7A7028D392 /* Products */,
-				53609E47DF5534337A9E5279 /* Pods */,
-				6F4D685597C32237F5CF5C11 /* Frameworks */,
+				90808CCB5ACE2D11D123FEA8 /* Pods */,
+				7E342BA6AA2F181FBC92DAD8 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -461,20 +463,6 @@
 			path = Permissions;
 			sourceTree = "<group>";
 		};
-		53609E47DF5534337A9E5279 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				DD07F4048A55A7E4DCD750FD /* Pods-FileHound.debug.xcconfig */,
-				B475490E2AC41297F61B1EFC /* Pods-FileHound.release.xcconfig */,
-				E730790880488DE407F81C85 /* Pods-FileHound-FileHoundTests.debug.xcconfig */,
-				459BC33CEF212098F8AE5EB6 /* Pods-FileHound-FileHoundTests.release.xcconfig */,
-				12E6282B9DD78708E57CCD86 /* Pods-FileHound-FileHoundUITests.debug.xcconfig */,
-				2457211D516D882969BF9074 /* Pods-FileHound-FileHoundUITests.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		58429E7656E52FEAB5A0A009 /* FileHoundTests */ = {
 			isa = PBXGroup;
 			children = (
@@ -538,16 +526,6 @@
 			path = SearchResults;
 			sourceTree = "<group>";
 		};
-		6F4D685597C32237F5CF5C11 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				A242892C12C5C1E33E70ABDF /* Pods_FileHound.framework */,
-				1BA33282B0BC4900CE67008B /* Pods_FileHound_FileHoundTests.framework */,
-				DEDCB1AC4E777AF3C21586FF /* Pods_FileHound_FileHoundUITests.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		74E09AA0147CEE3EB4EF038B /* Storage */ = {
 			isa = PBXGroup;
 			children = (
@@ -563,6 +541,7 @@
 			isa = PBXGroup;
 			children = (
 				8522D7E034ED4F1A73AF9973 /* MainMenuBuilderTests.swift */,
+				59AC97DE963F09E25872755B /* UpdateManagerTests.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -585,6 +564,16 @@
 				D86C1152C112901AD34F8CC6 /* LocalizationController.swift */,
 			);
 			path = Localization;
+			sourceTree = "<group>";
+		};
+		7E342BA6AA2F181FBC92DAD8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				902DE0EED9BB8CDFAB73A3A8 /* Pods_FileHound.framework */,
+				AEF23A31F810F34C41B29404 /* Pods_FileHound_FileHoundTests.framework */,
+				0CE5D32443E3B121373FCBFE /* Pods_FileHound_FileHoundUITests.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		800064C933912F6DCC500BEE /* Appearance */ = {
@@ -629,6 +618,20 @@
 				45361F864EB065A548118D1F /* SavedSearchSidebarViewController.swift */,
 			);
 			path = SavedSearches;
+			sourceTree = "<group>";
+		};
+		90808CCB5ACE2D11D123FEA8 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				1AC4257AA5246C35A8AF8E6F /* Pods-FileHound.debug.xcconfig */,
+				8C9FE294257029D929331F6A /* Pods-FileHound.release.xcconfig */,
+				C531B7112D4B0319EF3D661D /* Pods-FileHound-FileHoundTests.debug.xcconfig */,
+				8DCE29B9309F10ABC852701C /* Pods-FileHound-FileHoundTests.release.xcconfig */,
+				E57F65A74564AC912B3586AC /* Pods-FileHound-FileHoundUITests.debug.xcconfig */,
+				BD2F55DBB01EB31F0E8ADE61 /* Pods-FileHound-FileHoundUITests.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		91517DEF450C583D0501AE5C /* Shortcut */ = {
@@ -808,9 +811,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5EA85937E6E45C81F554C484 /* Build configuration list for PBXNativeTarget "FileHoundUITests" */;
 			buildPhases = (
-				37D78322F029FD2E1BFAF080 /* [CP] Check Pods Manifest.lock */,
+				106EDC8B647506511881D358 /* [CP] Check Pods Manifest.lock */,
 				BA52D8914754499FCCAACA65 /* Sources */,
-				11DEC2998CBFB7F98CBA952C /* Frameworks */,
+				5E341DA903E09A37D3834524 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -841,7 +844,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D9B9D42FB7B7C070CFFA773A /* Build configuration list for PBXNativeTarget "FileHound" */;
 			buildPhases = (
-				0F25529991744B90C149D417 /* [CP] Check Pods Manifest.lock */,
+				18F10E1EE861ADDCF9118CFD /* [CP] Check Pods Manifest.lock */,
 				846A8D0CFE63ABC2B011839B /* Sources */,
 				0AEC4BB50083566EA3F77845 /* Resources */,
 				034EC23490189917FB7A4FBB /* Frameworks */,
@@ -864,9 +867,9 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 041AF0153475EEF854F6FF01 /* Build configuration list for PBXNativeTarget "FileHoundTests" */;
 			buildPhases = (
-				E7869972F61944FFA3620CEE /* [CP] Check Pods Manifest.lock */,
+				D42474B5E4D5C04834D45276 /* [CP] Check Pods Manifest.lock */,
 				F6CA86F58A750C629AD51B06 /* Sources */,
-				069C7B11A3304E42F23F950D /* Frameworks */,
+				D31CB56B58EA3B957BBC1EC2 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -934,29 +937,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		0F25529991744B90C149D417 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-FileHound-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		37D78322F029FD2E1BFAF080 /* [CP] Check Pods Manifest.lock */ = {
+		106EDC8B647506511881D358 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -978,7 +959,29 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		E7869972F61944FFA3620CEE /* [CP] Check Pods Manifest.lock */ = {
+		18F10E1EE861ADDCF9118CFD /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-FileHound-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		D42474B5E4D5C04834D45276 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -1130,6 +1133,7 @@
 				14C9F987009086FA1E2F3535 /* SearchWindowLayoutCoordinatorTests.swift in Sources */,
 				F4B2F21A80B3DF5243602530 /* SearchWindowStateTests.swift in Sources */,
 				F0DCE3DD4C2DE1E0A2CE3C64 /* TemporaryFixtureTree.swift in Sources */,
+				69FC296BB11DCF6D097EFE81 /* UpdateManagerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1164,7 +1168,7 @@
 /* Begin XCBuildConfiguration section */
 		20B2F0EDFB05F372A9F1AEDB /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 2457211D516D882969BF9074 /* Pods-FileHound-FileHoundUITests.release.xcconfig */;
+			baseConfigurationReference = BD2F55DBB01EB31F0E8ADE61 /* Pods-FileHound-FileHoundUITests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1183,7 +1187,7 @@
 		};
 		23536EEED3B393418C9BB104 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 459BC33CEF212098F8AE5EB6 /* Pods-FileHound-FileHoundTests.release.xcconfig */;
+			baseConfigurationReference = 8DCE29B9309F10ABC852701C /* Pods-FileHound-FileHoundTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1202,7 +1206,7 @@
 		};
 		2C64174E238E2843B7A98A61 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 12E6282B9DD78708E57CCD86 /* Pods-FileHound-FileHoundUITests.debug.xcconfig */;
+			baseConfigurationReference = E57F65A74564AC912B3586AC /* Pods-FileHound-FileHoundUITests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1221,7 +1225,7 @@
 		};
 		35E1FD3CF4163599C11F08EA /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E730790880488DE407F81C85 /* Pods-FileHound-FileHoundTests.debug.xcconfig */;
+			baseConfigurationReference = C531B7112D4B0319EF3D661D /* Pods-FileHound-FileHoundTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1303,7 +1307,7 @@
 		};
 		597730BBF00251E341258912 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B475490E2AC41297F61B1EFC /* Pods-FileHound.release.xcconfig */;
+			baseConfigurationReference = 8C9FE294257029D929331F6A /* Pods-FileHound.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = FileHound/FileHound.entitlements;
@@ -1422,7 +1426,7 @@
 		};
 		C51E38BE40D484B68E6061A5 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = DD07F4048A55A7E4DCD750FD /* Pods-FileHound.debug.xcconfig */;
+			baseConfigurationReference = 1AC4257AA5246C35A8AF8E6F /* Pods-FileHound.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = FileHound/FileHound.entitlements;
