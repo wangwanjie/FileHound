@@ -359,7 +359,7 @@ struct SearchRuleRelativeDateValue: Equatable, Sendable {
 struct SearchRuleSelection: Codable, Equatable, Sendable {
     var field: SearchRuleField = .name
     var `operator`: SearchRuleOperator = .contains
-    var value: String = ".lookin"
+    var value: String = ""
 }
 
 struct SearchRuleFieldDefinition: Sendable {

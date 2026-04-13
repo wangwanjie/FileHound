@@ -16,8 +16,6 @@ final class SearchRuleListView: NSView {
         wantsLayer = true
         layer?.cornerRadius = 16
         layer?.borderWidth = 1
-        layer?.borderColor = NSColor.separatorColor.cgColor
-        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.65).cgColor
 
         stackView.orientation = .vertical
         stackView.spacing = 10
@@ -50,6 +48,8 @@ final class SearchRuleListView: NSView {
         stackView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
         }
+
+        applyAppearance()
     }
 
     var preferredContentHeight: CGFloat {
@@ -76,6 +76,17 @@ final class SearchRuleListView: NSView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyAppearance()
+    }
+
+    private func applyAppearance(resolvedAgainst appearance: NSAppearance? = nil) {
+        let resolvedAppearance = appearance ?? effectiveAppearance
+        layer?.borderColor = NSColor.fhHairline(for: resolvedAppearance).fhResolvedCGColor(for: resolvedAppearance)
+        layer?.backgroundColor = NSColor.fhPanelSurface(for: resolvedAppearance, alpha: 0.92).fhResolvedCGColor(for: resolvedAppearance)
+    }
 }
 
 #if DEBUG
@@ -86,6 +97,13 @@ extension SearchRuleListView {
 
     var debugDocumentContentHeight: CGFloat {
         contentView.frame.height
+    }
+
+    func debugBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        let appearance = NSAppearance(named: appearanceName)
+            ?? NSApp?.effectiveAppearance
+            ?? NSAppearance(named: .aqua)!
+        return NSColor.fhPanelSurface(for: appearance, alpha: 0.92).fhResolvedHex(for: appearanceName)
     }
 }
 #endif

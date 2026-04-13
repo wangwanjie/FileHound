@@ -66,7 +66,6 @@ final class ResultsToolbarView: NSView {
         topBar.addArrangedSubview(filterGroup)
 
         wantsLayer = true
-        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.92).cgColor
 
         addSubview(topBar)
         addSubview(secondaryBar)
@@ -105,11 +104,17 @@ final class ResultsToolbarView: NSView {
         }
 
         apply(mode: .grid)
+        applyBackgroundAppearance()
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyBackgroundAppearance()
     }
 
     func apply(mode: SearchResultsViewModel.Mode) {
@@ -190,7 +195,23 @@ final class ResultsToolbarView: NSView {
             return "Path"
         }
     }
+
+    private func applyBackgroundAppearance(resolvedAgainst appearance: NSAppearance? = nil) {
+        let resolvedAppearance = appearance ?? effectiveAppearance
+        layer?.backgroundColor = NSColor.fhPanelSurface(for: resolvedAppearance, alpha: 0.94).fhResolvedCGColor(for: resolvedAppearance)
+    }
 }
+
+#if DEBUG
+extension ResultsToolbarView {
+    func debugBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        let appearance = NSAppearance(named: appearanceName)
+            ?? NSApp?.effectiveAppearance
+            ?? NSAppearance(named: .aqua)!
+        return NSColor.fhPanelSurface(for: appearance, alpha: 0.94).fhResolvedHex(for: appearanceName)
+    }
+}
+#endif
 
 private extension Collection {
     subscript(safe index: Index) -> Element? {

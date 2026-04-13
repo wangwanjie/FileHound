@@ -126,4 +126,15 @@ struct SearchRulesViewControllerTests {
         #expect(rowHeights.allSatisfy { $0 >= 40 })
         #expect(listView.debugDocumentContentHeight > listView.debugVisibleContentHeight)
     }
+
+    @MainActor
+    @Test
+    func ruleListBackgroundRefreshesAcrossAppearances() {
+        let listView = SearchRuleListView()
+
+        let light = listView.debugBackgroundHex(for: .aqua)
+        let dark = listView.debugBackgroundHex(for: .darkAqua)
+
+        #expect(light != dark)
+    }
 }

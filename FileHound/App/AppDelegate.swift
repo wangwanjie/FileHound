@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowController: NSWindowController?
     private var searchWindowController: SearchWindowController?
     private lazy var preferencesWindowController = PreferencesWindowController()
+    private lazy var launchShortcutController: LaunchShortcutControlling = LaunchShortcutController.shared
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -20,6 +21,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         resetSettingsForUITestingIfNeeded()
         prepareUITestFixturesIfNeeded()
         bindAppSettings()
+        launchShortcutController.configure { [weak self] in
+            self?.presentSearchWindow(nil)
+        }
         NSApp.mainMenu = MainMenuBuilder(target: self).build()
 
         if ProcessInfo.processInfo.arguments.contains("--open-preferences-on-launch") {
@@ -40,17 +44,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let controller = SearchWindowController()
-        searchWindowController = controller
-        controller.showWindow(nil)
-        NSApp.activate(ignoringOtherApps: true)
-        windowController = controller
+        presentSearchWindow(nil)
         applyCurrentTheme()
 
         if ProcessInfo.processInfo.arguments.contains("--open-seeded-saved-search-on-launch"),
            let savedSearch = SavedSearchStore.shared.all().first(where: { $0.name == "UI Fixture Saved Search" }),
            let criteria = savedSearch.criteria {
-            controller.apply(searchSessionSnapshot: SearchSessionSnapshot(
+            searchWindowController?.apply(searchSessionSnapshot: SearchSessionSnapshot(
                 criteria: criteria,
                 presentationState: savedSearch.presentationState
             ))
@@ -69,6 +69,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func openPreferences(_ sender: Any?) {
         preferencesWindowController.show(sender: sender)
         preferencesWindowController.window?.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
+        applyCurrentTheme()
+    }
+
+    @objc
+    func presentSearchWindow(_ sender: Any?) {
+        let controller: SearchWindowController
+        if let existing = searchWindowController {
+            controller = existing
+        } else {
+            controller = SearchWindowController()
+            searchWindowController = controller
+        }
+
+        controller.showWindow(sender)
+        controller.window?.makeKeyAndOrderFront(sender)
+        windowController = controller
         NSApp.activate(ignoringOtherApps: true)
         applyCurrentTheme()
     }

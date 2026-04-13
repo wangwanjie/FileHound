@@ -12,6 +12,7 @@ final class AppearancePreferencesViewController: NSViewController {
     private let dimColorButton = NSButton(title: "", target: nil, action: nil)
     private let dimColorPreview = NSBox()
     private let resetButton = NSButton(title: "", target: nil, action: nil)
+    private let dimColorPanel = NSColorPanel.shared
 
     init(
         settings: AppSettings = .shared,
@@ -57,9 +58,9 @@ final class AppearancePreferencesViewController: NSViewController {
 
         dimColorPreview.boxType = .custom
         dimColorPreview.cornerRadius = 6
-        dimColorPreview.borderColor = .separatorColor
+        dimColorPreview.borderWidth = 1
         dimColorButton.target = self
-        dimColorButton.action = #selector(cycleDimColor)
+        dimColorButton.action = #selector(showDimColorPanel)
         resetButton.target = self
         resetButton.action = #selector(resetDefaults)
 
@@ -100,11 +101,17 @@ final class AppearancePreferencesViewController: NSViewController {
     }
 
     @objc
-    private func cycleDimColor() {
-        let palette = ["#A0A7B3", "#8894A7", "#6E7E91"]
-        let next = palette.first { $0 != settings.dimColorHex } ?? palette[0]
-        settings.dimColorHex = next
-        dimColorPreview.fillColor = NSColor(hexString: next) ?? .quaternaryLabelColor
+    private func showDimColorPanel() {
+        dimColorPanel.setTarget(self)
+        dimColorPanel.setAction(#selector(dimColorChanged(_:)))
+        dimColorPanel.isContinuous = true
+        dimColorPanel.color = NSColor(hexString: settings.dimColorHex) ?? .quaternaryLabelColor
+        dimColorPanel.orderFront(nil)
+    }
+
+    @objc
+    private func dimColorChanged(_ sender: NSColorPanel) {
+        applyDimColor(sender.color)
     }
 
     @objc
@@ -143,7 +150,18 @@ final class AppearancePreferencesViewController: NSViewController {
         languagePopup.selectItem(at: AppLanguage.allCases.firstIndex(of: localizationController.currentLanguage) ?? 0)
         fontSizeField.stringValue = String(settings.resultsFontSize)
         fontSizeStepper.integerValue = settings.resultsFontSize
+        dimColorPreview.borderColor = .separatorColor
         dimColorPreview.fillColor = NSColor(hexString: settings.dimColorHex) ?? .quaternaryLabelColor
+    }
+
+    private func applyDimColor(_ color: NSColor) {
+        let normalized = color.usingColorSpace(.deviceRGB) ?? color
+        guard let hex = normalized.hexString else {
+            return
+        }
+
+        settings.dimColorHex = hex
+        dimColorPreview.fillColor = normalized
     }
 }
 
@@ -178,6 +196,14 @@ extension AppearancePreferencesViewController {
     var debugDimColorHex: String {
         settings.dimColorHex
     }
+
+    var debugDimColorPreviewHex: String {
+        dimColorPreview.fillColor.hexString ?? ""
+    }
+
+    func debugApplyDimColor(_ color: NSColor) {
+        applyDimColor(color)
+    }
 }
 #endif
 
@@ -191,5 +217,13 @@ private extension NSColor {
             blue: CGFloat(value & 0xFF) / 255,
             alpha: 1
         )
+    }
+
+    var hexString: String? {
+        let color = usingColorSpace(.deviceRGB) ?? self
+        let red = Int(round(color.redComponent * 255))
+        let green = Int(round(color.greenComponent * 255))
+        let blue = Int(round(color.blueComponent * 255))
+        return String(format: "#%02X%02X%02X", red, green, blue)
     }
 }

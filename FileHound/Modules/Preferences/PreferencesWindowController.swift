@@ -72,8 +72,6 @@ final class PreferencesSectionView: NSView {
         cardView.wantsLayer = true
         cardView.layer?.cornerRadius = 14
         cardView.layer?.borderWidth = 1
-        cardView.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.65).cgColor
-        cardView.layer?.backgroundColor = NSColor.controlBackgroundColor.withAlphaComponent(0.72).cgColor
 
         addSubview(titleLabel)
         addSubview(subtitleLabel)
@@ -94,6 +92,8 @@ final class PreferencesSectionView: NSView {
         contentGuide.snp.makeConstraints { make in
             make.edges.equalToSuperview().inset(18)
         }
+
+        applyCardAppearance()
     }
 
     @available(*, unavailable)
@@ -101,9 +101,27 @@ final class PreferencesSectionView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyCardAppearance()
+    }
+
+    private func applyCardAppearance(resolvedAgainst appearance: NSAppearance? = nil) {
+        let resolvedAppearance = appearance ?? effectiveAppearance
+        cardView.layer?.borderColor = NSColor.fhHairline(for: resolvedAppearance, alpha: 0.8).fhResolvedCGColor(for: resolvedAppearance)
+        cardView.layer?.backgroundColor = NSColor.fhCardSurface(for: resolvedAppearance, alpha: 0.94).fhResolvedCGColor(for: resolvedAppearance)
+    }
+
     #if DEBUG
     var debugHasCardBackground: Bool {
         cardView.layer?.cornerRadius == 14 && cardView.layer?.backgroundColor != nil
+    }
+
+    func debugCardBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        let appearance = NSAppearance(named: appearanceName)
+            ?? NSApp?.effectiveAppearance
+            ?? NSAppearance(named: .aqua)!
+        return NSColor.fhCardSurface(for: appearance, alpha: 0.94).fhResolvedHex(for: appearanceName)
     }
     #endif
 }

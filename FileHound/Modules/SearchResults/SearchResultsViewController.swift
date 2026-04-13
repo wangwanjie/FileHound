@@ -34,12 +34,12 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     override func loadView() {
-        let rootView = NSView()
+        let rootView = AppearanceAwareView()
         rootView.setAccessibilityIdentifier("SearchResultsRootView")
         rootView.setAccessibilityElement(true)
-
-        rootView.wantsLayer = true
-        rootView.layer?.backgroundColor = NSColor(calibratedWhite: 0.14, alpha: 1).cgColor
+        rootView.backgroundColorProvider = { appearance in
+            .fhWindowSurface(for: appearance)
+        }
 
         addChild(gridController)
         addChild(tableController)
@@ -827,6 +827,21 @@ extension SearchResultsViewController {
     var debugSortTitles: [String] {
         toolbarView.sortByPopup.itemTitles
     }
+
+    func debugRootBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        let appearance = NSAppearance(named: appearanceName)
+            ?? NSApp?.effectiveAppearance
+            ?? NSAppearance(named: .aqua)!
+        return NSColor.fhWindowSurface(for: appearance).fhResolvedHex(for: appearanceName)
+    }
+
+    func debugToolbarBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        toolbarView.debugBackgroundHex(for: appearanceName)
+    }
+
+    func debugStatusBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        statusBarView.debugBackgroundHex(for: appearanceName)
+    }
 }
 #endif
 
@@ -855,9 +870,7 @@ private final class ResultsStatusBarView: NSView {
         super.init(frame: frameRect)
 
         wantsLayer = true
-        layer?.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.94).cgColor
         let borderLayer = CALayer()
-        borderLayer.backgroundColor = NSColor.separatorColor.cgColor
         layer?.addSublayer(borderLayer)
 
         pathStackView.orientation = .horizontal
@@ -881,11 +894,18 @@ private final class ResultsStatusBarView: NSView {
             make.centerY.equalToSuperview()
             make.leading.greaterThanOrEqualTo(pathStackView.snp.trailing).offset(12)
         }
+
+        applyAppearance()
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        applyAppearance()
     }
 
     override func layout() {
@@ -948,6 +968,21 @@ private final class ResultsStatusBarView: NSView {
             return (title: component, path: currentPath)
         }
     }
+
+    private func applyAppearance(resolvedAgainst appearance: NSAppearance? = nil) {
+        let resolvedAppearance = appearance ?? effectiveAppearance
+        layer?.backgroundColor = NSColor.fhPanelSurface(for: resolvedAppearance, alpha: 0.96).fhResolvedCGColor(for: resolvedAppearance)
+        layer?.sublayers?.first?.backgroundColor = NSColor.fhHairline(for: resolvedAppearance).fhResolvedCGColor(for: resolvedAppearance)
+    }
+
+    #if DEBUG
+    func debugBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        let appearance = NSAppearance(named: appearanceName)
+            ?? NSApp?.effectiveAppearance
+            ?? NSAppearance(named: .aqua)!
+        return NSColor.fhPanelSurface(for: appearance, alpha: 0.96).fhResolvedHex(for: appearanceName)
+    }
+    #endif
 }
 
 private final class ResultsPathComponentButton: NSButton {
@@ -1051,13 +1086,18 @@ private final class ResultsFadeView: NSView {
             gradientLayer = CAGradientLayer()
             gradientLayer.startPoint = CGPoint(x: 0, y: 0.5)
             gradientLayer.endPoint = CGPoint(x: 1, y: 0.5)
-            gradientLayer.colors = [
-                NSColor.windowBackgroundColor.withAlphaComponent(0).cgColor,
-                NSColor.windowBackgroundColor.cgColor
-            ]
             self.layer = gradientLayer
         }
+        gradientLayer.colors = [
+            NSColor.fhPanelSurface(for: effectiveAppearance, alpha: 0).fhResolvedCGColor(for: effectiveAppearance),
+            NSColor.fhPanelSurface(for: effectiveAppearance).fhResolvedCGColor(for: effectiveAppearance)
+        ]
         gradientLayer.frame = bounds
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsLayout = true
     }
 }
 

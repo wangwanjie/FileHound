@@ -3,7 +3,8 @@ import SnapKit
 
 final class GeneralPreferencesViewController: NSViewController {
     private let settings: AppSettings
-    private let hotKeyField = NSTextField()
+    private let launchShortcutController: LaunchShortcutControlling
+    private let hotKeyField = ShortcutRecorderField()
     private let finderOnlyButton = NSButton(radioButtonWithTitle: "", target: nil, action: nil)
     private let globalButton = NSButton(radioButtonWithTitle: "", target: nil, action: nil)
     private let openRecentButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
@@ -11,8 +12,12 @@ final class GeneralPreferencesViewController: NSViewController {
     private let tieResultsWindowButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let quitWhenClosedButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
 
-    init(settings: AppSettings = .shared) {
+    init(
+        settings: AppSettings = .shared,
+        launchShortcutController: LaunchShortcutControlling = LaunchShortcutController.shared
+    ) {
         self.settings = settings
+        self.launchShortcutController = launchShortcutController
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -28,8 +33,7 @@ final class GeneralPreferencesViewController: NSViewController {
         )
 
         hotKeyField.placeholderString = L10n.string("preferences.general.hot_key.placeholder")
-        hotKeyField.alignment = .left
-        hotKeyField.stringValue = settings.launchShortcut
+        hotKeyField.shortcut = KeyboardShortcut(serialized: settings.launchShortcut)
         hotKeyField.target = self
         hotKeyField.action = #selector(launchShortcutChanged)
         finderOnlyButton.title = L10n.string("preferences.general.activation.finder_only")
@@ -79,6 +83,11 @@ final class GeneralPreferencesViewController: NSViewController {
         rows.spacing = 14
         rows.alignment = .leading
 
+        hotKeyField.snp.makeConstraints { make in
+            make.width.equalTo(190)
+            make.height.equalTo(32)
+        }
+
         rootView.addSubview(rows)
         rows.snp.makeConstraints { make in
             make.edges.equalTo(rootView.contentGuide)
@@ -89,12 +98,14 @@ final class GeneralPreferencesViewController: NSViewController {
 
     @objc
     private func launchShortcutChanged() {
-        settings.launchShortcut = hotKeyField.stringValue
+        settings.launchShortcut = hotKeyField.shortcut?.serialized ?? ""
+        launchShortcutController.reload()
     }
 
     @objc
     private func activationModeChanged(_ sender: NSButton) {
         settings.activationMode = sender === finderOnlyButton ? .finderOnly : .global
+        launchShortcutController.reload()
     }
 
     @objc
@@ -118,3 +129,20 @@ final class GeneralPreferencesViewController: NSViewController {
         settings.quitWhenAllWindowsAreClosed = quitWhenClosedButton.state == .on
     }
 }
+
+#if DEBUG
+extension GeneralPreferencesViewController {
+    func debugRecordShortcut(_ shortcut: KeyboardShortcut) {
+        hotKeyField.shortcut = shortcut
+        launchShortcutChanged()
+    }
+
+    var debugDisplayedLaunchShortcut: String {
+        hotKeyField.debugDisplayedString
+    }
+
+    var debugHotKeyControlHeight: CGFloat {
+        hotKeyField.fittingSize.height
+    }
+}
+#endif

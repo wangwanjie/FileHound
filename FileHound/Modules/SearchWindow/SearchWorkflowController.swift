@@ -139,7 +139,7 @@ final class SearchWorkflowController {
         [
             SearchResultItem(path: "/tmp/report.txt", matchReason: "内容命中", previewSnippet: "report"),
             SearchResultItem(path: "/tmp/archive.txt", matchReason: "名称命中", previewSnippet: "archive"),
-            SearchResultItem(path: "/tmp/report.lookin", matchReason: "名称命中", previewSnippet: "lookin")
+            SearchResultItem(path: "/tmp/report", matchReason: "名称命中", previewSnippet: "lookin")
         ]
     }
 }

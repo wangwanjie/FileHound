@@ -41,11 +41,15 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         tableView.quickLookHandler = { [weak self] in
             self?.quickLookRequested()
         }
+        tableView.appearanceDidChangeHandler = { [weak self] in
+            self?.applyAppearance()
+        }
 
         scrollView.documentView = tableView
         scrollView.hasVerticalScroller = true
         view = scrollView
 
+        applyAppearance()
         applySort(field: .name, order: .ascending)
     }
 
@@ -172,14 +176,24 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
             return nil
         }
     }
+
+    private func applyAppearance() {
+        tableView.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.96)
+    }
 }
 
 private final class ContextMenuTableView: NSTableView {
     var menuProvider: ((NSEvent) -> NSMenu?)?
     var quickLookHandler: (() -> Void)?
+    var appearanceDidChangeHandler: (() -> Void)?
 
     override func menu(for event: NSEvent) -> NSMenu? {
         menuProvider?(event)
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        appearanceDidChangeHandler?()
     }
 
     override func keyDown(with event: NSEvent) {

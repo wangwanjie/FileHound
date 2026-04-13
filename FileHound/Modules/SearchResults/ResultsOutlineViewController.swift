@@ -46,11 +46,15 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         outlineView.quickLookHandler = { [weak self] in
             self?.quickLookRequested()
         }
+        outlineView.appearanceDidChangeHandler = { [weak self] in
+            self?.applyAppearance()
+        }
 
         scrollView.documentView = outlineView
         scrollView.hasVerticalScroller = true
         view = scrollView
 
+        applyAppearance()
         applySort(field: .name, order: .ascending)
     }
 
@@ -527,6 +531,10 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         }
     }
 
+    private func applyAppearance() {
+        outlineView.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.96)
+    }
+
     private static let modificationDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -538,9 +546,15 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
 private final class ContextMenuOutlineView: NSOutlineView {
     var menuProvider: ((NSEvent) -> NSMenu?)?
     var quickLookHandler: (() -> Void)?
+    var appearanceDidChangeHandler: (() -> Void)?
 
     override func menu(for event: NSEvent) -> NSMenu? {
         menuProvider?(event)
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        appearanceDidChangeHandler?()
     }
 
     override func keyDown(with event: NSEvent) {
@@ -670,6 +684,7 @@ private final class ResultOutlineCellView: NSTableCellView {
             }
         }
     }
+
 }
 
 private final class ResultOutlineTextField: NSTextField {

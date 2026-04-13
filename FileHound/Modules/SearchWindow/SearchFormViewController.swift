@@ -59,9 +59,8 @@ final class SearchFormViewController: NSViewController {
     }
 
     override func loadView() {
-        let rootView = NSView()
-        rootView.wantsLayer = true
-        rootView.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        let rootView = AppearanceAwareView()
+        rootView.backgroundColorProvider = { _ in .windowBackgroundColor }
 
         titleLabel.font = .systemFont(ofSize: 20, weight: .medium)
         whereLabel.font = .systemFont(ofSize: 18, weight: .regular)
@@ -605,6 +604,10 @@ extension SearchFormViewController {
 
     var debugCurrentSearchSessionSnapshot: SearchSessionSnapshot {
         currentSearchSessionSnapshot()
+    }
+
+    func debugRootBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        NSColor.windowBackgroundColor.fhResolvedHex(for: appearanceName)
     }
 }
 #endif

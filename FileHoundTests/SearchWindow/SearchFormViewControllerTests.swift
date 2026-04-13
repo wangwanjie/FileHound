@@ -232,4 +232,16 @@ struct SearchFormViewControllerTests {
 
         #expect(controller.debugPrimaryActionTitle == L10n.string("search_window.action.find"))
     }
+
+    @MainActor
+    @Test
+    func windowBackgroundRefreshesAcrossAppearances() {
+        let controller = SearchFormViewController()
+        _ = controller.view
+
+        let light = controller.debugRootBackgroundHex(for: .aqua)
+        let dark = controller.debugRootBackgroundHex(for: .darkAqua)
+
+        #expect(light != dark)
+    }
 }

@@ -389,7 +389,7 @@ private final class SearchRuleEditorView: NSView {
 
         valueField.target = self
         valueField.action = #selector(valueChanged)
-        valueField.stringValue = ".lookin"
+        valueField.stringValue = ""
 
         addSubview(addButton)
         addSubview(removeButton)

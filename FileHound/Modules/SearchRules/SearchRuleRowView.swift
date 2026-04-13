@@ -37,7 +37,7 @@ final class SearchRuleRowView: NSView {
         relativeAmountField.setAccessibilityIdentifier("SearchRuleRelativeAmountField")
         relativeUnitPopup.setAccessibilityIdentifier("SearchRuleRelativeUnitPopup")
 
-        configureTextField(valueField, defaultValue: ".lookin")
+        configureTextField(valueField, defaultValue: "")
         configureTextField(relativeAmountField, defaultValue: "")
         relativeAmountField.alignment = .right
         relativeAmountField.placeholderString = L10n.string("search_rule.placeholder.amount")

@@ -49,6 +49,31 @@ final class PreferencesUITests: XCTestCase {
         XCTAssertEqual(checkboxValue(secondCheckbox), "1")
     }
 
+    @MainActor
+    func testSpecialFoldersWindowShowsListControls() throws {
+        let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
+        app.launchArguments = [
+            "--uitesting",
+            "--open-preferences-on-launch",
+            "--open-search-preferences-on-launch"
+        ]
+        app.launch()
+
+        let preferencesWindow = app.windows["偏好设置"]
+        XCTAssertTrue(preferencesWindow.waitForExistence(timeout: 3))
+
+        let triggerButton = preferencesWindow.buttons["SearchPreferenceSpecialFoldersButton"]
+        XCTAssertTrue(triggerButton.waitForExistence(timeout: 2))
+        triggerButton.click()
+
+        let specialFoldersWindow = app.windows["特殊文件夹"]
+        XCTAssertTrue(specialFoldersWindow.waitForExistence(timeout: 3))
+        XCTAssertTrue(specialFoldersWindow.buttons["SpecialFoldersAddButton"].waitForExistence(timeout: 2))
+        XCTAssertTrue(specialFoldersWindow.buttons["SpecialFoldersRemoveButton"].exists)
+        XCTAssertTrue(specialFoldersWindow.tables["SpecialFoldersTable"].exists)
+    }
+
     private func checkboxValue(_ checkbox: XCUIElement) -> String {
         String(describing: checkbox.value ?? "")
     }

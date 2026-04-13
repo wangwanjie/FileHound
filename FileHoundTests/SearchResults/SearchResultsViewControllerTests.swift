@@ -238,4 +238,22 @@ struct SearchResultsViewControllerTests {
         #expect(outlineController.debugExpandedTitles.contains("demo"))
         #expect(outlineController.debugExpandedTitles.contains("assets"))
     }
+
+    @MainActor
+    @Test
+    func resultsBackgroundsRefreshAcrossAppearances() {
+        let controller = SearchResultsViewController(viewModel: SearchResultsViewModel())
+        _ = controller.view
+
+        let lightRoot = controller.debugRootBackgroundHex(for: .aqua)
+        let darkRoot = controller.debugRootBackgroundHex(for: .darkAqua)
+        let lightToolbar = controller.debugToolbarBackgroundHex(for: .aqua)
+        let darkToolbar = controller.debugToolbarBackgroundHex(for: .darkAqua)
+        let lightStatus = controller.debugStatusBackgroundHex(for: .aqua)
+        let darkStatus = controller.debugStatusBackgroundHex(for: .darkAqua)
+
+        #expect(lightRoot != darkRoot)
+        #expect(lightToolbar != darkToolbar)
+        #expect(lightStatus != darkStatus)
+    }
 }

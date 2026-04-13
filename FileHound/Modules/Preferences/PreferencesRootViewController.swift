@@ -38,7 +38,10 @@ final class PreferencesRootViewController: NSViewController {
     }
 
     override func loadView() {
-        let rootView = NSView()
+        let rootView = AppearanceAwareView()
+        rootView.backgroundColorProvider = { appearance in
+            .fhWindowSurface(for: appearance)
+        }
 
         segmentedControl.setAccessibilityIdentifier("PreferencesSegments")
         segmentedControl.setAccessibilityLabel("PreferencesSegments")
@@ -117,6 +120,13 @@ final class PreferencesRootViewController: NSViewController {
 extension PreferencesRootViewController {
     var debugActiveSectionHasCardBackground: Bool {
         (contentControllers[segmentedControl.selectedSegment].view as? PreferencesSectionView)?.debugHasCardBackground == true
+    }
+
+    func debugRootBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
+        let appearance = NSAppearance(named: appearanceName)
+            ?? NSApp?.effectiveAppearance
+            ?? NSAppearance(named: .aqua)!
+        return NSColor.fhWindowSurface(for: appearance).fhResolvedHex(for: appearanceName)
     }
 }
 #endif
