@@ -548,7 +548,7 @@ final class SearchFormViewController: NSViewController {
         case .idle(let matchCount):
             state = .init(phase: .editing(matchCount: matchCount))
         case .editing:
-            break
+            render(state)
         case .searching:
             break
         }
@@ -583,6 +583,10 @@ extension SearchFormViewController {
 
     var debugCurrentSelections: [SearchRuleSelection] {
         rulesViewController.currentSelections
+    }
+
+    func debugApplySelectionsThroughRulesEditor(_ selections: [SearchRuleSelection]) {
+        rulesViewController.applySelections(selections)
     }
 
     func debugOpenResultsWindow(

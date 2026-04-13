@@ -5,9 +5,18 @@ import Testing
 struct SearchFormViewControllerTests {
     @MainActor
     @Test
-    func primaryActionEntersSearchingStateImmediately() {
+    func primaryActionEntersSearchingStateWhenRulesAreValid() {
         let controller = SearchFormViewController()
         _ = controller.view
+
+        controller.applySearchSessionSnapshot(
+            SearchSessionSnapshot(
+                criteria: SearchCriteriaSnapshot(
+                    scope: controller.debugCurrentSearchSessionSnapshot.criteria.scope,
+                    rules: [SearchRuleSelection(field: .name, operator: .contains, value: "report")]
+                )
+            )
+        )
 
         controller.debugTriggerPrimaryAction()
 
@@ -231,6 +240,48 @@ struct SearchFormViewControllerTests {
         controller.debugTriggerPrimaryAction()
 
         #expect(controller.debugPrimaryActionTitle == L10n.string("search_window.action.find"))
+    }
+
+    @MainActor
+    @Test
+    func emptyRequiredRulesDisableFindAndKeepEditingState() {
+        let controller = SearchFormViewController()
+        _ = controller.view
+
+        controller.applySearchSessionSnapshot(
+            SearchSessionSnapshot(
+                criteria: SearchCriteriaSnapshot(
+                    scope: controller.debugCurrentSearchSessionSnapshot.criteria.scope,
+                    rules: [SearchRuleSelection(field: .name, operator: .contains, value: "")]
+                )
+            )
+        )
+
+        #expect(controller.debugPrimaryActionEnabled == false)
+        #expect(controller.debugStatusText == L10n.string("search_rule.validation.value_required"))
+
+        controller.debugTriggerPrimaryAction()
+
+        #expect(controller.debugPrimaryActionTitle == L10n.string("search_window.action.find"))
+    }
+
+    @MainActor
+    @Test
+    func fixingRequiredRuleValueReEnablesFindButtonImmediately() {
+        let controller = SearchFormViewController()
+        _ = controller.view
+
+        controller.debugApplySelectionsThroughRulesEditor([
+            SearchRuleSelection(field: .name, operator: .contains, value: "")
+        ])
+        #expect(controller.debugPrimaryActionEnabled == false)
+
+        controller.debugApplySelectionsThroughRulesEditor([
+            SearchRuleSelection(field: .name, operator: .contains, value: "report")
+        ])
+
+        #expect(controller.debugPrimaryActionEnabled == true)
+        #expect(controller.debugStatusText == L10n.format("search_window.status.items_found", 0))
     }
 
     @MainActor
