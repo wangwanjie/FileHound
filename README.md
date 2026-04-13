@@ -40,7 +40,7 @@ rm -f FileHound.xcodeproj/project.xcworkspace/xcuserdata/"$USER".xcuserdatad/Use
 ```bash
 ./Scripts/build_dmg.sh
 ./Scripts/publish_github_release.sh
-./Scripts/generate_appcast.sh --archive build/dmg/FileHound_v1.0.0_1.dmg
+./Scripts/generate_appcast.sh --archive build/dmg/FileHound_v1.1.0_2.dmg
 ```
 
 说明：
