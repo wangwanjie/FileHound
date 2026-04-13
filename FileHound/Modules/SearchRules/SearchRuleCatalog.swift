@@ -541,7 +541,11 @@ struct SearchRuleValidator: Sendable {
             }
         case .none:
             break
-        case .text, .number, .toggle:
+        case .text, .number:
+            guard selection.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+                return .invalid(messageKey: "search_rule.validation.value_required")
+            }
+        case .toggle:
             break
         }
 

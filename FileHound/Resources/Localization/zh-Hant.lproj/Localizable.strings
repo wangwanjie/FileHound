@@ -177,6 +177,7 @@
 "search_rule.relative.month" = "月";
 "search_rule.unsupported.pending" = "暫不支援，等待開放";
 "search_rule.validation.kind_not_any" = "Kind 不能使用 is not any";
+"search_rule.validation.value_required" = "請為這個條件輸入內容";
 "search_rule.validation.relative_date_amount_required" = "請為最近時間填寫正整數";
 "search_rule.validation.relative_date_unit_required" = "請為最近時間選擇單位";
 "search_rule.validation.date_required" = "請輸入有效日期";

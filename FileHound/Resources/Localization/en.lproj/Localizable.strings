@@ -177,6 +177,7 @@
 "search_rule.relative.month" = "months";
 "search_rule.unsupported.pending" = "Not supported yet. Waiting for a future release.";
 "search_rule.validation.kind_not_any" = "Kind cannot use is not any.";
+"search_rule.validation.value_required" = "Enter a value for this rule.";
 "search_rule.validation.relative_date_amount_required" = "Enter a positive number for the relative date.";
 "search_rule.validation.relative_date_unit_required" = "Choose a unit for the relative date.";
 "search_rule.validation.date_required" = "Enter a valid date.";

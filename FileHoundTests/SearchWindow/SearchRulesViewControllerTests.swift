@@ -111,6 +111,34 @@ struct SearchRulesViewControllerTests {
 
     @MainActor
     @Test
+    func emptyRequiredTextRuleBlocksSearch() {
+        let controller = SearchRulesViewController()
+        _ = controller.view
+
+        controller.applySelections([
+            SearchRuleSelection(field: .name, operator: .contains, value: "")
+        ])
+
+        #expect(controller.debugCanSearch == false)
+        #expect(controller.debugBlockingMessage == L10n.string("search_rule.validation.value_required"))
+    }
+
+    @MainActor
+    @Test
+    func emptyRequiredNumberRuleBlocksSearch() {
+        let controller = SearchRulesViewController()
+        _ = controller.view
+
+        controller.applySelections([
+            SearchRuleSelection(field: .limitAmount, operator: .isGreaterThan, value: "")
+        ])
+
+        #expect(controller.debugCanSearch == false)
+        #expect(controller.debugBlockingMessage == L10n.string("search_rule.validation.value_required"))
+    }
+
+    @MainActor
+    @Test
     func scrollingRuleListKeepsRowHeightsAndExpandsDocumentView() {
         let controller = SearchRulesViewController()
         let listView = try! #require(controller.view as? SearchRuleListView)
