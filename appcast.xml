@@ -3,8 +3,18 @@
     <channel>
         <title>FileHound</title>
         <item>
+            <title>1.1.0</title>
+            <pubDate>Mon, 13 Apr 2026 16:36:25 +0800</pubDate>
+            <link>https://github.com/wangwanjie/FileHound/releases/tag/v1.1.0</link>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/wangwanjie/FileHound/releases/download/v1.1.0/FileHound_v1.1.0_2.dmg" length="4949151" type="application/octet-stream" />
+            <description />
+        </item>
+        <item>
             <title>1.0.0</title>
-            <pubDate>Sun, 12 Apr 2026 23:36:08 +0800</pubDate>
+            <pubDate>Mon, 13 Apr 2026 16:36:25 +0800</pubDate>
             <link>https://github.com/wangwanjie/FileHound/releases/tag/v1.0.0</link>
             <sparkle:version>1</sparkle:version>
             <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
