@@ -11,7 +11,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DEFAULT_DMG_DIR="$ROOT_DIR/build/dmg"
 PBXPROJ="$ROOT_DIR/FileHound.xcodeproj/project.pbxproj"
 
-DMG_PATH=""
+DMG_PATHS=()
 REPO=""
 TAG=""
 TITLE=""
@@ -25,12 +25,12 @@ TARGET_COMMITISH=""
 usage() {
     cat <<'EOF'
 用法:
-  ./Scripts/publish_github_release.sh [--dmg PATH] [--repo OWNER/REPO] [--tag TAG]
+  ./Scripts/publish_github_release.sh [--dmg PATH ...] [--repo OWNER/REPO] [--tag TAG]
                                      [--title TITLE] [--notes TEXT | --notes-file FILE | --generate-notes]
                                      [--draft] [--prerelease]
 
 选项:
-  --dmg PATH          指定要上传的 DMG。默认选择 build/dmg/ 下最新的 FileHound_v*.dmg
+  --dmg PATH          指定要上传的 DMG，可重复传入多个架构资产；默认选择 build/dmg/ 下最新的 FileHound_v*.dmg
   --repo OWNER/REPO   指定 GitHub 仓库，例如 wangwanjie/FileHound
   --tag TAG           指定 release tag，默认根据版本号推导为 v<version>
   --title TITLE       指定 release 标题，默认 FileHound v<version>
@@ -48,7 +48,7 @@ usage() {
   3. 已存在可上传的版本化 DMG，或显式传入 --dmg
 
 下一步:
-  发布完成后，请再手动执行 ./Scripts/generate_appcast.sh 生成并更新 appcast.xml
+  发布完成后，请再分别执行 ./Scripts/generate_appcast.sh --arch arm64 / x86_64 生成并更新对应 feed
 EOF
 }
 
@@ -180,7 +180,7 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --dmg)
             [[ -n "${2:-}" && "${2:-}" != --* ]] || fail "--dmg 需要指定文件路径"
-            DMG_PATH="$2"
+            DMG_PATHS+=("$2")
             shift 2
             ;;
         --repo)
@@ -255,13 +255,19 @@ if [[ -z "$TARGET_COMMITISH" ]]; then
     TARGET_COMMITISH="$(git rev-parse HEAD)"
 fi
 
-if [[ -n "$DMG_PATH" ]]; then
-    DMG_PATH="$(resolve_path "$DMG_PATH")"
+if [[ ${#DMG_PATHS[@]} -gt 0 ]]; then
+    for i in "${!DMG_PATHS[@]}"; do
+        DMG_PATHS[$i]="$(resolve_path "${DMG_PATHS[$i]}")"
+    done
 else
-    DMG_PATH="$(find_latest_dmg)"
+    latest_dmg="$(find_latest_dmg)"
+    [[ -n "$latest_dmg" ]] || fail "未找到可上传的 DMG，请先执行 ./Scripts/build_dmg.sh"
+    DMG_PATHS+=("$latest_dmg")
 fi
 
-[[ -n "$DMG_PATH" && -f "$DMG_PATH" ]] || fail "未找到可上传的 DMG，请先执行 ./Scripts/build_dmg.sh"
+for dmg_path in "${DMG_PATHS[@]}"; do
+    [[ -f "$dmg_path" ]] || fail "未找到文件: $dmg_path"
+done
 
 if [[ -n "$NOTES_FILE" ]]; then
     NOTES_FILE="$(resolve_path "$NOTES_FILE")"
@@ -273,11 +279,18 @@ fi
 
 [[ "$REPO" =~ ^[^/]+/[^/]+$ ]] || fail "--repo 必须是 OWNER/REPO 格式"
 
-VERSION="$(infer_version_from_dmg "$DMG_PATH" || true)"
+VERSION="$(infer_version_from_dmg "${DMG_PATHS[0]}" || true)"
 if [[ -z "$VERSION" ]]; then
     VERSION="$(read_marketing_version)"
 fi
 [[ -n "$VERSION" ]] || fail "无法从 DMG 名称或工程配置推断版本号"
+
+for dmg_path in "${DMG_PATHS[@]}"; do
+    dmg_version="$(infer_version_from_dmg "$dmg_path" || true)"
+    if [[ -n "$dmg_version" && "$dmg_version" != "$VERSION" ]]; then
+        fail "所有上传资产必须属于同一版本，发现 $dmg_path 的版本为 $dmg_version"
+    fi
+done
 
 if [[ -z "$TAG" ]]; then
     TAG="v$VERSION"
@@ -291,7 +304,9 @@ echo "仓库: $REPO"
 echo "Tag: $TAG"
 echo "标题: $TITLE"
 echo "Target: $TARGET_COMMITISH"
-echo "DMG: $DMG_PATH"
+for dmg_path in "${DMG_PATHS[@]}"; do
+    echo "DMG: $dmg_path"
+done
 
 if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
     echo "Release 已存在，先更新元信息，再覆盖上传同名 DMG..."
@@ -305,10 +320,12 @@ if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
         edit_args+=(--prerelease)
     fi
     gh "${edit_args[@]}"
-    gh release upload "$TAG" "$DMG_PATH" -R "$REPO" --clobber
+    gh release upload "$TAG" "${DMG_PATHS[@]}" -R "$REPO" --clobber
 else
     echo "Release 不存在，创建并上传 DMG..."
-    create_args=(release create "$TAG" "$DMG_PATH" -R "$REPO" --title "$TITLE" --target "$TARGET_COMMITISH")
+    create_args=(release create "$TAG")
+    create_args+=("${DMG_PATHS[@]}")
+    create_args+=(-R "$REPO" --title "$TITLE" --target "$TARGET_COMMITISH")
     build_notes_args
     create_args+=("${NOTES_ARGS[@]}")
     if [[ "$DRAFT" == true ]]; then
@@ -321,4 +338,6 @@ else
 fi
 
 echo "发布完成: https://github.com/$REPO/releases/tag/$TAG"
-echo "下一步请执行: ./Scripts/generate_appcast.sh --archive \"$DMG_PATH\" --repo \"$REPO\""
+echo "下一步请分别执行:"
+echo "  ./Scripts/generate_appcast.sh --arch arm64 --archive <arm64-dmg> --repo \"$REPO\""
+echo "  ./Scripts/generate_appcast.sh --arch x86_64 --archive <x86_64-dmg> --repo \"$REPO\""

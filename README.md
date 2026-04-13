@@ -38,18 +38,23 @@ rm -f FileHound.xcodeproj/project.xcworkspace/xcuserdata/"$USER".xcuserdatad/Use
 ## 打包
 
 ```bash
-./Scripts/build_dmg.sh
-./Scripts/publish_github_release.sh
-./Scripts/generate_appcast.sh --archive build/dmg/FileHound_v1.1.0_2.dmg
+./Scripts/build_dmg.sh --arch arm64
+./Scripts/build_dmg.sh --arch x86_64
+./Scripts/publish_github_release.sh \
+  --dmg build/dmg/FileHound_v1.1.0_2_arm64.dmg \
+  --dmg build/dmg/FileHound_v1.1.0_2_x86_64.dmg
+./Scripts/generate_appcast.sh --arch arm64 --archive build/dmg/FileHound_v1.1.0_2_arm64.dmg
+./Scripts/generate_appcast.sh --arch x86_64 --archive build/dmg/FileHound_v1.1.0_2_x86_64.dmg
 ```
 
 说明：
 
-- `./Scripts/build_dmg.sh` 默认从 `FileHound.xcworkspace` 归档 `Release`，并执行 notarize + staple
-- 如需仅本地测试 DMG，可使用 `./Scripts/build_dmg.sh --no-notarize`
-- `./Scripts/publish_github_release.sh` 会把版本化 DMG 上传到 GitHub Release `v<版本号>`
-- `./Scripts/generate_appcast.sh` 会把 DMG 归档到 `build/appcast-archives/` 并重新生成仓库根目录的 `appcast.xml`
-- 发布后仍需把更新后的 `appcast.xml` 提交并推送到默认分支
+- `./Scripts/build_dmg.sh` 必须显式传入 `--arch arm64` 或 `--arch x86_64`，默认从 `FileHound.xcworkspace` 归档对应架构的 `Release`，并执行 notarize + staple
+- 如需仅本地测试 DMG，可使用 `./Scripts/build_dmg.sh --arch <arch> --no-notarize`
+- `./Scripts/publish_github_release.sh` 支持重复传入 `--dmg`，将同一版本的多架构 DMG 一次上传到 GitHub Release `v<版本号>`
+- `./Scripts/generate_appcast.sh` 必须显式传入 `--arch`，会把对应架构的 DMG 归档到 `build/appcast-archives/<arch>/`，并生成仓库根目录的 `appcast-<arch>.xml`
+- 发布后仍需把更新后的 `appcast-arm64.xml` 和 `appcast-x86_64.xml` 提交并推送到默认分支
+- 已安装旧 `1.0` 且缺失有效 Sparkle 元数据的机器，可能仍需要先手动升级一次，之后才会进入新的自动更新链路
 
 发布前置条件：
 
@@ -64,5 +69,6 @@ rm -f FileHound.xcodeproj/project.xcworkspace/xcuserdata/"$USER".xcuserdatad/Use
 当前 Sparkle feed 地址为：
 
 ```text
-https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast.xml
+arm64:   https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast-arm64.xml
+x86_64:  https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast-x86_64.xml
 ```
