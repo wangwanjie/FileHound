@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 根据本地归档的 DMG 生成 Sparkle appcast.xml，
+# 根据本地归档的 DMG 生成分架构 Sparkle appcast，
 # 并将 enclosure URL 改写为 GitHub Releases 资产地址。
 #
 
@@ -8,29 +8,32 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-DEFAULT_ARCHIVES_DIR="$ROOT_DIR/build/appcast-archives"
-DEFAULT_OUTPUT_PATH="$ROOT_DIR/appcast.xml"
+DEFAULT_ARCHIVES_ROOT="$ROOT_DIR/build/appcast-archives"
 DEFAULT_ACCOUNT="cn.vanjay.FileHound.sparkle"
 
+ARCH=""
 ARCHIVE_PATH=""
-ARCHIVES_DIR="$DEFAULT_ARCHIVES_DIR"
-OUTPUT_PATH="$DEFAULT_OUTPUT_PATH"
+ARCHIVES_DIR=""
+OUTPUT_PATH=""
 REPO=""
 ACCOUNT="$DEFAULT_ACCOUNT"
 NOTES=""
 NOTES_FILE=""
+ARCHIVES_DIR_EXPLICIT=false
+OUTPUT_PATH_EXPLICIT=false
 
 usage() {
     cat <<'EOF'
 用法:
-  ./Scripts/generate_appcast.sh [--archive PATH] [--archives-dir DIR] [--output PATH]
+  ./Scripts/generate_appcast.sh --arch arm64|x86_64 [--archive PATH] [--archives-dir DIR] [--output PATH]
                                 [--repo OWNER/REPO] [--account ACCOUNT]
                                 [--notes TEXT | --notes-file FILE]
 
 选项:
+  --arch ARCH         指定目标架构，必须是 arm64 或 x86_64
   --archive PATH       将当前版本 DMG 复制到本地归档目录后再生成 appcast
-  --archives-dir DIR   DMG 归档目录，默认 build/appcast-archives
-  --output PATH        appcast.xml 输出路径，默认仓库根目录
+  --archives-dir DIR   DMG 归档目录，默认 build/appcast-archives/<arch>
+  --output PATH        appcast 输出路径，默认仓库根目录的 appcast-<arch>.xml
   --repo OWNER/REPO    GitHub 仓库，例如 wangwanjie/FileHound
   --account ACCOUNT    Sparkle EdDSA Keychain account，默认 cn.vanjay.FileHound.sparkle
   --notes TEXT         为当前 archive 写入同名 .md 发布说明
@@ -52,6 +55,28 @@ fail() {
 require_command() {
     local command_name="$1"
     command -v "$command_name" >/dev/null 2>&1 || fail "未找到命令 $command_name"
+}
+
+validate_arch() {
+    case "$ARCH" in
+        arm64|x86_64)
+            ;;
+        *)
+            fail "--arch 必须是 arm64 或 x86_64"
+            ;;
+    esac
+}
+
+infer_arch_from_dmg() {
+    local dmg_name
+    dmg_name="$(basename "$1")"
+
+    if [[ "$dmg_name" =~ _((arm64|x86_64))\.dmg$ ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+        return 0
+    fi
+
+    return 1
 }
 
 resolve_path() {
@@ -143,6 +168,11 @@ copy_release_notes() {
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --arch)
+            [[ -n "${2:-}" && "${2:-}" != --* ]] || fail "--arch 需要指定 arm64 或 x86_64"
+            ARCH="$2"
+            shift 2
+            ;;
         --archive)
             [[ -n "${2:-}" && "${2:-}" != --* ]] || fail "--archive 需要指定 DMG 路径"
             ARCHIVE_PATH="$2"
@@ -151,11 +181,13 @@ while [[ $# -gt 0 ]]; do
         --archives-dir)
             [[ -n "${2:-}" && "${2:-}" != --* ]] || fail "--archives-dir 需要指定目录"
             ARCHIVES_DIR="$2"
+            ARCHIVES_DIR_EXPLICIT=true
             shift 2
             ;;
         --output)
             [[ -n "${2:-}" && "${2:-}" != --* ]] || fail "--output 需要指定输出路径"
             OUTPUT_PATH="$2"
+            OUTPUT_PATH_EXPLICIT=true
             shift 2
             ;;
         --repo)
@@ -189,6 +221,16 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+validate_arch
+
+if [[ "$ARCHIVES_DIR_EXPLICIT" == false ]]; then
+    ARCHIVES_DIR="$DEFAULT_ARCHIVES_ROOT/$ARCH"
+fi
+
+if [[ "$OUTPUT_PATH_EXPLICIT" == false ]]; then
+    OUTPUT_PATH="$ROOT_DIR/appcast-${ARCH}.xml"
+fi
+
 if [[ -n "$NOTES" && -n "$NOTES_FILE" ]]; then
     fail "--notes 和 --notes-file 只能二选一"
 fi
@@ -202,6 +244,8 @@ OUTPUT_PATH="${OUTPUT_PATH/#\~/$HOME}"
 
 if [[ -n "$ARCHIVE_PATH" ]]; then
     ARCHIVE_PATH="$(resolve_path "$ARCHIVE_PATH")"
+    archive_arch="$(infer_arch_from_dmg "$ARCHIVE_PATH" || true)"
+    [[ "$archive_arch" == "$ARCH" ]] || fail "归档 DMG 架构与 --arch 不一致：$ARCHIVE_PATH"
 fi
 
 if [[ -n "$NOTES_FILE" ]]; then
@@ -221,6 +265,7 @@ if ! "$SPARKLE_BIN_DIR/generate_keys" --account "$ACCOUNT" -p >/dev/null 2>&1; t
 fi
 
 mkdir -p "$ARCHIVES_DIR"
+mkdir -p "$(dirname "$OUTPUT_PATH")"
 
 if [[ -n "$ARCHIVE_PATH" ]]; then
     archive_dest="$ARCHIVES_DIR/$(basename "$ARCHIVE_PATH")"
@@ -235,6 +280,11 @@ shopt -u nullglob
 if [[ ${#archives[@]} -eq 0 ]]; then
     fail "$ARCHIVES_DIR 中没有可用于生成 appcast 的 DMG"
 fi
+
+for archive_path in "${archives[@]}"; do
+    archive_arch="$(infer_arch_from_dmg "$archive_path" || true)"
+    [[ "$archive_arch" == "$ARCH" ]] || fail "发现与当前架构不匹配的 DMG：$archive_path"
+done
 
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/filehound-appcast.XXXXXX")"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -465,3 +515,4 @@ PY
 
 echo "已生成 appcast: $OUTPUT_PATH"
 echo "归档目录: $ARCHIVES_DIR"
+grep -q 'sparkle:edSignature=' "$OUTPUT_PATH" || fail "生成后的 appcast 缺少 sparkle:edSignature，签名字段未保留"
