@@ -101,7 +101,7 @@ struct UpdateManagerTests {
 
         manager.configureForLaunch()
 
-        #expect(driver.startCalls == 1)
+        #expect(driver.startCalls == 0)
         #expect(driver.appliedPolicies == [.dailyAutomatic])
         #expect(driver.appliedAutoDownloadFlags == [true])
     }

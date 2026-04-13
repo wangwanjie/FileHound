@@ -50,6 +50,15 @@ final class MainMenuBuilder {
         preferencesItem.target = target
         appMenu.addItem(preferencesItem)
 
+        let checkForUpdatesItem = NSMenuItem(
+            title: L10n.string("menu.check_for_updates"),
+            action: #selector(AppDelegate.checkForUpdates(_:)),
+            keyEquivalent: ""
+        )
+        checkForUpdatesItem.target = target
+        checkForUpdatesItem.isEnabled = UpdateManager.shared.canCheckForUpdates
+        appMenu.addItem(checkForUpdatesItem)
+
         if settings.openRecentSearchMenu {
             let recentMenuItem = NSMenuItem(title: "Open Recent Search", action: nil, keyEquivalent: "")
             recentMenuItem.submenu = buildRecentSearchMenu()

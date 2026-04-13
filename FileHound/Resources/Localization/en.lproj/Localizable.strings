@@ -12,6 +12,7 @@
 "menu.paste" = "Paste";
 "menu.select_all" = "Select All";
 "menu.preferences" = "Preferences…";
+"menu.check_for_updates" = "Check for Updates…";
 "menu.quit" = "Quit FileHound";
 "preferences.window.title" = "Preferences";
 "preferences.tab.general" = "General";

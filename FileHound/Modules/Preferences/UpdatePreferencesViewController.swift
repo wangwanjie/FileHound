@@ -45,7 +45,7 @@ final class UpdatePreferencesViewController: NSViewController {
         checkNowButton.target = updateManager
         checkNowButton.action = #selector(UpdateManager.checkForUpdates(_:))
         checkNowButton.isEnabled = updateManager.canCheckForUpdates
-        checkNowButton.toolTip = updateManager.canCheckForUpdates ? nil : L10n.string("preferences.update.feed_missing")
+        checkNowButton.toolTip = updateManager.unavailableReason
 
         resetButton.title = L10n.string("preferences.reset_defaults")
         resetButton.target = self

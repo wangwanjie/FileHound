@@ -124,6 +124,19 @@ struct MainMenuBuilderTests {
 
         #expect(appMenu.items.contains { $0.title == "Open Recent Search" } == false)
     }
+
+    @MainActor
+    @Test
+    func appMenuIncludesCheckForUpdatesCommand() throws {
+        let menu = MainMenuBuilder().build()
+        let appMenu = try #require(menu.item(at: 0)?.submenu)
+        let expectedTitle = L10n.string("menu.check_for_updates")
+        let expectedAction = #selector(AppDelegate.checkForUpdates(_:))
+
+        #expect(appMenu.items.contains { item in
+            item.title == expectedTitle && item.action == expectedAction
+        })
+    }
 }
 
 private struct LegacySavedSearchMenuFixture: Codable {

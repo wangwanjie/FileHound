@@ -39,16 +39,20 @@ struct UpdateBundleInfo {
 final class UpdateManager: NSObject {
     static let shared = UpdateManager()
 
-    private let settings: AppSettings
+    private let settingsProvider: () -> AppSettings
     private let bundleInfo: UpdateBundleInfo
     private let sparkleDriver: SparkleUpdateDriving
 
     init(
-        settings: AppSettings = .shared,
+        settings: AppSettings? = nil,
         bundleInfo: UpdateBundleInfo = .main,
         sparkleDriver: SparkleUpdateDriving = UpdateManager.makeDefaultSparkleDriver()
     ) {
-        self.settings = settings
+        if let settings {
+            self.settingsProvider = { settings }
+        } else {
+            self.settingsProvider = { AppSettings.shared }
+        }
         self.bundleInfo = bundleInfo
         self.sparkleDriver = sparkleDriver
         super.init()
@@ -85,7 +89,6 @@ final class UpdateManager: NSObject {
     }
 
     func configureForLaunch() {
-        sparkleDriver.startUpdaterIfNeeded()
         sparkleDriver.apply(
             policy: settings.updateCheckPolicy,
             automaticallyDownloadsUpdates: settings.autoDownloadUpdates
@@ -106,6 +109,10 @@ final class UpdateManager: NSObject {
 }
 
 private extension UpdateManager {
+    var settings: AppSettings {
+        settingsProvider()
+    }
+
     static func makeDefaultSparkleDriver() -> SparkleUpdateDriving {
         #if SPARKLE_ENABLED
         SparkleDriver()

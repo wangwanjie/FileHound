@@ -12,6 +12,7 @@
 "menu.paste" = "粘贴";
 "menu.select_all" = "全选";
 "menu.preferences" = "设置…";
+"menu.check_for_updates" = "检查更新…";
 "menu.quit" = "退出 FileHound";
 "preferences.window.title" = "偏好设置";
 "preferences.tab.general" = "通用";

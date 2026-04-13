@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var searchWindowController: SearchWindowController?
     private lazy var preferencesWindowController = PreferencesWindowController()
     private lazy var launchShortcutController: LaunchShortcutControlling = LaunchShortcutController.shared
+    private lazy var updateManager: UpdateManager = .shared
     private var cancellables: Set<AnyCancellable> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -24,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         launchShortcutController.configure { [weak self] in
             self?.presentSearchWindow(nil)
         }
+        updateManager.configureForLaunch()
         NSApp.mainMenu = MainMenuBuilder(target: self).build()
 
         if ProcessInfo.processInfo.arguments.contains("--open-preferences-on-launch") {
@@ -60,8 +62,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             openPreferences(nil)
         }
 
-        if UpdateManager.shared.shouldCheckOnLaunch() {
-            UpdateManager.shared.checkForUpdates(nil)
+        if updateManager.shouldCheckOnLaunch() {
+            updateManager.checkForUpdates(nil)
         }
     }
 
@@ -88,6 +90,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowController = controller
         NSApp.activate(ignoringOtherApps: true)
         applyCurrentTheme()
+    }
+
+    @objc
+    func checkForUpdates(_ sender: Any?) {
+        updateManager.checkForUpdates(sender)
     }
 
     @objc
