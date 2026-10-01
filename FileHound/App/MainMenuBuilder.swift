@@ -105,6 +105,13 @@ final class MainMenuBuilder {
         )
         saveSearchItem.target = target
         fileMenu.addItem(saveSearchItem)
+        fileMenu.addItem(
+            NSMenuItem(
+                title: L10n.string("menu.search_again"),
+                action: #selector(SearchResultsWindowController.refreshSearchResults(_:)),
+                keyEquivalent: "r"
+            )
+        )
         fileMenu.addItem(.separator())
         fileMenu.addItem(
             NSMenuItem(

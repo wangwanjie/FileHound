@@ -1,10 +1,9 @@
 import AppKit
 
-final class SearchResultsWindowController: NSWindowController {
+final class SearchResultsWindowController: NSWindowController, NSMenuItemValidation {
     private let resultsViewController: SearchResultsViewController
     private let viewModel: SearchResultsViewModel
     private let refreshHandler: (() -> Void)?
-    private var activationObserver: NSObjectProtocol?
 
     init(
         viewModel: SearchResultsViewModel,
@@ -25,16 +24,6 @@ final class SearchResultsWindowController: NSWindowController {
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.isReleasedWhenClosed = false
         super.init(window: window)
-        activationObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didBecomeActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self, self.window?.isVisible == true else {
-                return
-            }
-            self.refreshHandler?()
-        }
     }
 
     @available(*, unavailable)
@@ -42,10 +31,21 @@ final class SearchResultsWindowController: NSWindowController {
         fatalError("init(coder:) has not been implemented")
     }
 
-    deinit {
-        if let activationObserver {
-            NotificationCenter.default.removeObserver(activationObserver)
+    /// 菜单「重新搜索」（⌘R）：按上次的条件重新执行搜索
+    @objc func refreshSearchResults(_ sender: Any?) {
+        refreshHandler?()
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(refreshSearchResults(_:)) {
+            return refreshHandler != nil
         }
+        return true
+    }
+
+    var expandsFoldersWhenShowingResults: Bool {
+        get { resultsViewController.expandsFoldersWhenShowingResults }
+        set { resultsViewController.expandsFoldersWhenShowingResults = newValue }
     }
 
     func update(title: String, items: [SearchResultItem]) {

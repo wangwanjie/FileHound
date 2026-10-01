@@ -422,6 +422,7 @@ final class SearchFormViewController: NSViewController {
                let presentationState = lastSubmittedSessionSnapshot?.presentationState {
                 existing.apply(presentationState: presentationState)
             }
+            existing.expandsFoldersWhenShowingResults = settings.expandFoldersWhenShowingResults
             existing.update(title: title, items: items)
             existing.showWindow(nil)
             didOpenResultsForCurrentSearch = true

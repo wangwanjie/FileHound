@@ -114,6 +114,17 @@ struct MainMenuBuilderTests {
 
     @MainActor
     @Test
+    func fileMenuIncludesSearchAgainShortcut() throws {
+        let menu = MainMenuBuilder().build()
+        let fileMenu = try #require(menu.item(at: 2)?.submenu)
+        let item = try #require(fileMenu.items.first { $0.action == #selector(SearchResultsWindowController.refreshSearchResults(_:)) })
+
+        #expect(item.keyEquivalent == "r")
+        #expect(item.target == nil)
+    }
+
+    @MainActor
+    @Test
     func omitsRecentSearchSubmenuWhenDisabled() {
         let storage = InMemoryKeyValueStore()
         let settings = AppSettings(storage: storage)

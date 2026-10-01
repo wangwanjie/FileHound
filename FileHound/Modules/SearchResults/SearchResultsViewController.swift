@@ -5,7 +5,11 @@ import SnapKit
 
 final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSource, QLPreviewPanelDelegate {
     private let viewModel: SearchResultsViewModel
-    private let expandsFoldersWhenShowingResults: Bool
+    var expandsFoldersWhenShowingResults: Bool {
+        didSet {
+            treeController.expandsFoldersOnReload = expandsFoldersWhenShowingResults
+        }
+    }
     private let gridController = ResultsCollectionViewController()
     private let tableController = ResultsTableViewController()
     private let treeController = ResultsOutlineViewController()

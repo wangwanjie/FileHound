@@ -3,6 +3,7 @@
 "menu.file" = "文件";
 "menu.window" = "窗口";
 "menu.close" = "关闭";
+"menu.search_again" = "重新搜索";
 "menu.minimize" = "最小化";
 "menu.zoom" = "缩放";
 "menu.undo" = "撤销";

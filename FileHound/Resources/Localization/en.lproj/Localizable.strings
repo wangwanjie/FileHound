@@ -3,6 +3,7 @@
 "menu.file" = "File";
 "menu.window" = "Window";
 "menu.close" = "Close";
+"menu.search_again" = "Search Again";
 "menu.minimize" = "Minimize";
 "menu.zoom" = "Zoom";
 "menu.undo" = "Undo";
