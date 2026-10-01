@@ -17,12 +17,17 @@ final class SearchHistoryStore {
     }
 
     func record(_ entry: RecentSearchRecord) throws {
-        var entries = all()
+        // 同一组条件只保留最新一次，避免重复搜索占满菜单
+        var entries = all().filter { $0.criteria != entry.criteria }
         entries.insert(entry, at: 0)
         if entries.count > limit {
             entries = Array(entries.prefix(limit))
         }
         try storage.setCodable(entries, forKey: key)
+    }
+
+    func removeAll() throws {
+        try storage.setCodable([RecentSearchRecord](), forKey: key)
     }
 }
 

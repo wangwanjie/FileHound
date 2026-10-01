@@ -16,6 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var launchShortcutController: LaunchShortcutControlling = LaunchShortcutController.shared
     private lazy var updateManager: UpdateManager = .shared
     private var cancellables: Set<AnyCancellable> = []
+    /// 菜单构建器同时是最近 / 已存储搜索子菜单的 delegate，需要强引用
+    private var mainMenuBuilder: MainMenuBuilder?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MMKVKeyValueStore.initializeStore()
@@ -26,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.presentSearchWindow(nil)
         }
         updateManager.configureForLaunch()
-        NSApp.mainMenu = MainMenuBuilder(target: self).build()
+        rebuildMainMenu()
 
         if ProcessInfo.processInfo.arguments.contains("--open-preferences-on-launch") {
             let initialSegment: Int
@@ -154,11 +156,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let alert = NSAlert()
-        alert.messageText = "Save Search"
-        alert.informativeText = "Enter a name for this search."
+        alert.messageText = L10n.string("save_search.title")
+        alert.informativeText = L10n.string("save_search.message")
         alert.alertStyle = .informational
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: L10n.string("common.save"))
+        alert.addButton(withTitle: L10n.string("common.cancel"))
 
         let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
         textField.stringValue = snapshot.criteria.querySummary
@@ -178,7 +180,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             criteria: snapshot.criteria,
             presentationState: snapshot.presentationState
         )
-        NSApp.mainMenu = MainMenuBuilder(target: self).build()
+        rebuildMainMenu()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -301,8 +303,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func rebuildMainMenu() {
+        let builder = MainMenuBuilder(target: self)
+        mainMenuBuilder = builder
+        NSApp.mainMenu = builder.build()
+    }
+
     private func reloadLocalizedInterface() {
-        NSApp.mainMenu = MainMenuBuilder(target: self).build()
+        rebuildMainMenu()
         searchWindowController?.reloadLocalizedContent()
         preferencesWindowController.reloadLocalizedContent()
         applyCurrentTheme()

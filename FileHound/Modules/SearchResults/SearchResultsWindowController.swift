@@ -36,9 +36,30 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
         refreshHandler?()
     }
 
+    @objc func showResultsAsIcons(_ sender: Any?) {
+        viewModel.mode = .grid
+    }
+
+    @objc func showResultsAsList(_ sender: Any?) {
+        viewModel.mode = .table
+    }
+
+    @objc func showResultsAsTree(_ sender: Any?) {
+        viewModel.mode = .tree
+    }
+
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        if menuItem.action == #selector(refreshSearchResults(_:)) {
+        switch menuItem.action {
+        case #selector(refreshSearchResults(_:)):
             return refreshHandler != nil
+        case #selector(showResultsAsIcons(_:)):
+            menuItem.state = viewModel.mode == .grid ? .on : .off
+        case #selector(showResultsAsList(_:)):
+            menuItem.state = viewModel.mode == .table ? .on : .off
+        case #selector(showResultsAsTree(_:)):
+            menuItem.state = viewModel.mode == .tree ? .on : .off
+        default:
+            break
         }
         return true
     }
