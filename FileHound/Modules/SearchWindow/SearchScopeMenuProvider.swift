@@ -75,19 +75,18 @@ struct SearchScopeMenuItem: Equatable, Sendable {
     }
 
     private var presetIcon: NSImage? {
-        switch title {
-        case L10n.string("search_scope.startup_volume"):
+        switch SearchScopePreset(rawValue: scopeDescription) {
+        case .startupVolume:
             return NSWorkspace.shared.icon(forFile: "/")
-        case L10n.string("search_scope.all_disks"):
+        case .allDisks:
             return NSImage(systemSymbolName: "internaldrive.2", accessibilityDescription: nil)
-        case L10n.string("search_scope.local_disks"):
+        case .localDisks:
             return NSImage(systemSymbolName: "internaldrive", accessibilityDescription: nil)
-        case L10n.string("search_scope.network_volumes"):
+        case .networkVolumes:
             return NSImage(systemSymbolName: "globe", accessibilityDescription: nil)
-        default:
-            if title.hasPrefix(L10n.string("search_scope.finder_selection_prefix")) {
-                return NSWorkspace.shared.icon(forFile: "/System/Library/CoreServices/Finder.app")
-            }
+        case .finderSelection:
+            return NSWorkspace.shared.icon(forFile: "/System/Library/CoreServices/Finder.app")
+        case nil:
             return NSImage(systemSymbolName: "folder.fill", accessibilityDescription: nil)
         }
     }
@@ -110,31 +109,31 @@ struct SearchScopeMenuProvider {
             SearchScopeMenuItem(
                 title: L10n.string("search_scope.startup_volume"),
                 representedPath: "/",
-                scopeDescription: "Macintosh HD",
+                scopeDescription: SearchScopePreset.startupVolume.rawValue,
                 sourceKind: .preset
             ),
             SearchScopeMenuItem(
                 title: L10n.string("search_scope.all_disks"),
                 representedPath: "/",
-                scopeDescription: "All Disks",
+                scopeDescription: SearchScopePreset.allDisks.rawValue,
                 sourceKind: .preset
             ),
             SearchScopeMenuItem(
                 title: L10n.string("search_scope.local_disks"),
                 representedPath: "/",
-                scopeDescription: "Local Disks",
+                scopeDescription: SearchScopePreset.localDisks.rawValue,
                 sourceKind: .preset
             ),
             SearchScopeMenuItem(
                 title: L10n.string("search_scope.network_volumes"),
                 representedPath: "/Volumes",
-                scopeDescription: "Network Volumes",
+                scopeDescription: SearchScopePreset.networkVolumes.rawValue,
                 sourceKind: .preset
             ),
             SearchScopeMenuItem(
-                title: finderSelectionTitle(),
-                representedPath: NSHomeDirectory(),
-                scopeDescription: "Finder Selection",
+                title: L10n.string("search_scope.finder_selection"),
+                representedPath: nil,
+                scopeDescription: SearchScopePreset.finderSelection.rawValue,
                 sourceKind: .preset
             ),
             SearchScopeMenuItem(
@@ -213,14 +212,6 @@ struct SearchScopeMenuProvider {
         case .preset:
             return scope.title
         }
-    }
-
-    private func finderSelectionTitle() -> String {
-        let downloadsPath = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first?.lastPathComponent
-        guard let downloadsPath, downloadsPath.isEmpty == false else {
-            return L10n.string("search_scope.finder_selection")
-        }
-        return L10n.format("search_scope.finder_selection_named", downloadsPath)
     }
 
     private func assignShortcutIndices(to sections: [SearchScopeMenuSection]) -> [SearchScopeMenuSection] {

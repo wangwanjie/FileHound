@@ -2,13 +2,29 @@ import Foundation
 
 struct SearchRequest: Sendable {
     let scopeDescription: String
-    let rootPath: String
+    let rootPaths: [String]
+    /// 遍历时整棵跳过的路径（例如从 "/" 搜索时的 /Volumes、/System/Volumes）
+    let excludedPaths: [String]
     let rules: [SearchRuleSelection]
 
-    init(scopeDescription: String, rootPath: String, rules: [SearchRuleSelection]) {
+    var rootPath: String {
+        rootPaths.first ?? "/"
+    }
+
+    init(
+        scopeDescription: String,
+        rootPaths: [String],
+        excludedPaths: [String] = [],
+        rules: [SearchRuleSelection]
+    ) {
         self.scopeDescription = scopeDescription
-        self.rootPath = rootPath
+        self.rootPaths = rootPaths
+        self.excludedPaths = excludedPaths
         self.rules = rules.isEmpty ? [SearchRuleSelection()] : rules
+    }
+
+    init(scopeDescription: String, rootPath: String, rules: [SearchRuleSelection]) {
+        self.init(scopeDescription: scopeDescription, rootPaths: [rootPath], rules: rules)
     }
 
     init(scopeDescription: String, rootPath: String, query: SearchRuleSelection) {

@@ -95,8 +95,6 @@
 "search_scope.local_disks" = "在本地磁盘中";
 "search_scope.network_volumes" = "在网络卷宗中";
 "search_scope.finder_selection" = "在 Finder 选中项中";
-"search_scope.finder_selection_named" = "在 Finder 选中项中（%@）";
-"search_scope.finder_selection_prefix" = "在 Finder 选中项中";
 "search_scope.inside_folder" = "在文件夹内...";
 "search_scope.inside_named_folder" = "在 %@ 内";
 "search_scope.on_volume" = "在 %@ 上";

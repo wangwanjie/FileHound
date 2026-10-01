@@ -95,8 +95,6 @@
 "search_scope.local_disks" = "on local disks";
 "search_scope.network_volumes" = "on network volumes";
 "search_scope.finder_selection" = "in Finder selection";
-"search_scope.finder_selection_named" = "in Finder selection (%@)";
-"search_scope.finder_selection_prefix" = "in Finder selection";
 "search_scope.inside_folder" = "inside folder...";
 "search_scope.inside_named_folder" = "inside %@";
 "search_scope.on_volume" = "on %@";

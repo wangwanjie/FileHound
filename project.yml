@@ -64,6 +64,7 @@ targets:
         INFOPLIST_KEY_CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         INFOPLIST_KEY_NSMainStoryboardFile: ""
         INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        INFOPLIST_KEY_NSAppleEventsUsageDescription: "FileHound reads the current Finder selection to search inside it, and asks Finder to show file info."
         INFOPLIST_KEY_SUFeedURL: https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast.xml
         INFOPLIST_KEY_SUPublicEDKey: EMkumAR7FRbjJ6T5LhBcK7yIcGnJAuAjU5RZFEm12JE=
         CODE_SIGN_ENTITLEMENTS: FileHound/FileHound.entitlements

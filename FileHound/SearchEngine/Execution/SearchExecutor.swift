@@ -58,14 +58,11 @@ struct SearchExecutor: Sendable {
         onProgress: (@Sendable (SearchExecutionProgress) -> Void)? = nil
     ) -> SearchExecutionResult {
         let title = request.queryTitle
-        let specialFolderPlanning = specialFolderPlanner.plan(
-            rootPath: request.rootPath,
-            configuration: specialFoldersStore.load()
-        )
+        let specialFolderPlanning = mergedSpecialFolderPlanning(for: request.rootPaths)
         let behavior = SearchRuleExecutionBehavior(rules: request.rules)
         let highlight = highlightMetadata(for: request.rules)
         let plan = SearchPlan(
-            rootPaths: [request.rootPath],
+            rootPaths: request.rootPaths,
             rootGroup: .all([]),
             excludedPathFragments: [],
             providerKind: .local,
@@ -117,10 +114,15 @@ struct SearchExecutor: Sendable {
                     return behavior.hasReachedLimit(items.count) ? .stop : .continue
                 }
 
-                let descendControl: DirectoryWalkControl =
-                    behavior.shouldDescend(into: entry, rootPath: request.rootPath) ? .continue : .skipDescendants
+                guard Self.isExcluded(entry.path, by: request.excludedPaths) == false else {
+                    return .skipDescendants
+                }
 
-                guard behavior.allows(entry: entry, rootPath: request.rootPath) else {
+                let rootPath = Self.rootPath(containing: entry.path, in: request.rootPaths)
+                let descendControl: DirectoryWalkControl =
+                    behavior.shouldDescend(into: entry, rootPath: rootPath) ? .continue : .skipDescendants
+
+                guard behavior.allows(entry: entry, rootPath: rootPath) else {
                     return descendControl
                 }
 
@@ -160,8 +162,12 @@ struct SearchExecutor: Sendable {
         behavior: SearchRuleExecutionBehavior,
         highlight: (kind: SearchResultHighlightKind, query: String)?
     ) -> [SearchResultItem]? {
-        guard let paths = try? spotlightSearchService.search(rootPath: request.rootPath, rules: request.rules) else {
-            return nil
+        var paths: [String] = []
+        for rootPath in request.rootPaths {
+            guard let rootPaths = try? spotlightSearchService.search(rootPath: rootPath, rules: request.rules) else {
+                return nil
+            }
+            paths += rootPaths
         }
 
         let uniquePaths = Array(Set(paths)).sorted()
@@ -171,7 +177,8 @@ struct SearchExecutor: Sendable {
         let preview = request.rules.first?.value ?? ""
 
         return uniquePaths.compactMap { path in
-            guard specialFolderPlanning.allows(path: path) else {
+            guard specialFolderPlanning.allows(path: path),
+                  Self.isExcluded(path, by: request.excludedPaths) == false else {
                 return nil
             }
 
@@ -186,7 +193,7 @@ struct SearchExecutor: Sendable {
                 isHidden: URL(fileURLWithPath: path).lastPathComponent.hasPrefix(".")
             )
 
-            guard behavior.allows(entry: entry, rootPath: request.rootPath) else {
+            guard behavior.allows(entry: entry, rootPath: Self.rootPath(containing: path, in: request.rootPaths)) else {
                 return nil
             }
 
@@ -205,6 +212,31 @@ struct SearchExecutor: Sendable {
                 return nil
             }
         }
+    }
+
+    private func mergedSpecialFolderPlanning(for rootPaths: [String]) -> SpecialFolderPlanningResult {
+        let configuration = specialFoldersStore.load()
+        let plans = rootPaths.map { specialFolderPlanner.plan(rootPath: $0, configuration: configuration) }
+        return SpecialFolderPlanningResult(
+            includedPathRoots: plans.reduce(into: Set<String>()) { $0.formUnion($1.includedPathRoots) },
+            specialFolderExclusions: plans.reduce(into: Set<String>()) { $0.formUnion($1.specialFolderExclusions) },
+            slowSearchPaths: plans.reduce(into: Set<String>()) { $0.formUnion($1.slowSearchPaths) }
+        )
+    }
+
+    /// 多根搜索时，条目的深度、包内容判断都相对于包含它的最深根目录
+    static func rootPath(containing path: String, in rootPaths: [String]) -> String {
+        rootPaths
+            .filter { isSameOrDescendant(path, of: $0) }
+            .max { $0.count < $1.count } ?? rootPaths.first ?? "/"
+    }
+
+    static func isExcluded(_ path: String, by excludedPaths: [String]) -> Bool {
+        excludedPaths.contains { isSameOrDescendant(path, of: $0) }
+    }
+
+    private static func isSameOrDescendant(_ path: String, of ancestor: String) -> Bool {
+        path == ancestor || path.hasPrefix(ancestor.hasSuffix("/") ? ancestor : ancestor + "/")
     }
 
     private func matches(

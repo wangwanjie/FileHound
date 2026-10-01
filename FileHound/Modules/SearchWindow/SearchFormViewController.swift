@@ -14,6 +14,7 @@ final class SearchFormViewController: NSViewController {
     private let whereLabel = NSTextField(labelWithString: "")
     private let workflowController: SearchWorkflowController
     private var scopeProvider: SearchScopeMenuProvider
+    private let scopeResolver: SearchScopeResolver
     private let recentLocationStore: RecentLocationStore
     private let searchHistoryStore: SearchHistoryStore
     private let searchSessionStore: SearchSessionStore
@@ -39,6 +40,7 @@ final class SearchFormViewController: NSViewController {
     init(
         workflowController: SearchWorkflowController = SearchWorkflowController(),
         scopeProvider: SearchScopeMenuProvider = SearchScopeMenuProvider(),
+        scopeResolver: SearchScopeResolver = SearchScopeResolver(),
         recentLocationStore: RecentLocationStore = .shared,
         searchHistoryStore: SearchHistoryStore = .shared,
         searchSessionStore: SearchSessionStore = .shared,
@@ -46,6 +48,7 @@ final class SearchFormViewController: NSViewController {
     ) {
         self.workflowController = workflowController
         self.scopeProvider = scopeProvider
+        self.scopeResolver = scopeResolver
         self.recentLocationStore = recentLocationStore
         self.searchHistoryStore = searchHistoryStore
         self.searchSessionStore = searchSessionStore
@@ -263,9 +266,11 @@ final class SearchFormViewController: NSViewController {
                 scope: scopeItem.snapshot,
                 rules: rulesViewController.currentSelections
             )
+            let resolvedScope = scopeResolver.resolve(scopeItem.snapshot)
             let request = SearchRequest(
                 scopeDescription: scopeItem.scopeDescription,
-                rootPath: scopeItem.representedPath ?? "/",
+                rootPaths: resolvedScope.rootPaths,
+                excludedPaths: resolvedScope.excludedPaths,
                 rules: rulesViewController.currentSelections
             )
             lastSearchRequest = request
