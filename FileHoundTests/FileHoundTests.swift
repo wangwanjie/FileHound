@@ -27,11 +27,12 @@ struct SearchRuleCatalogTests {
     }
 
     @Test
-    func unsupportedFieldsStayVisibleButBlocked() {
-        let comments = SearchRuleField.comments.definition
-
-        #expect(comments.isSupported == false)
-        #expect(comments.blockingMessageKey == "search_rule.unsupported.pending")
+    func everyFieldIsSupported() {
+        for field in SearchRuleField.allCases {
+            #expect(field.definition.isSupported, "\(field) should be searchable")
+            #expect(field.definition.blockingMessageKey == nil)
+        }
+        #expect(SearchRuleField.script.definition.operators.map(\.op) == [.containsPhrase, .matchesRegex, .doesNotMatchRegex])
     }
 }
 
@@ -47,12 +48,10 @@ struct SearchRuleValidationTests {
     }
 
     @Test
-    func unsupportedFieldStaysUnsupported() {
+    func commentsAndScriptRulesValidate() {
         let validator = SearchRuleValidator()
-        let result = validator.validate(
-            SearchRuleSelection(field: .comments, operator: .containsPhrase, value: "note")
-        )
 
-        #expect(result == .unsupported(messageKey: "search_rule.unsupported.pending"))
+        #expect(validator.validate(SearchRuleSelection(field: .comments, operator: .containsPhrase, value: "note")) == .valid)
+        #expect(validator.validate(SearchRuleSelection(field: .script, operator: .matchesRegex, value: "tell .*")) == .valid)
     }
 }

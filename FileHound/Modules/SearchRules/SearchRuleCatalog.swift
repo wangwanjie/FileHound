@@ -127,17 +127,15 @@ enum SearchRuleField: String, CaseIterable, Codable, Sendable {
             )
         case .comments:
             return SearchRuleFieldDefinition(
-                operators: SearchRuleOperatorDefinition.unsupported(defaultTextOperators),
+                operators: defaultTextOperators.map { SearchRuleOperatorDefinition(op: $0) },
                 valueEditor: .text,
-                placeholder: L10n.string("search_rule.placeholder.comment"),
-                blockingMessageKey: "search_rule.unsupported.pending"
+                placeholder: L10n.string("search_rule.placeholder.comment")
             )
         case .script:
             return SearchRuleFieldDefinition(
-                operators: SearchRuleOperatorDefinition.unsupported([.containsPhrase, .matchesRegex, .doesNotMatchRegex]),
+                operators: [.containsPhrase, .matchesRegex, .doesNotMatchRegex].map { SearchRuleOperatorDefinition(op: $0) },
                 valueEditor: .text,
-                placeholder: L10n.string("search_rule.placeholder.script_text"),
-                blockingMessageKey: "search_rule.unsupported.pending"
+                placeholder: L10n.string("search_rule.placeholder.script_text")
             )
         default:
             return SearchRuleFieldDefinition(

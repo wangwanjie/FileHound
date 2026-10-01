@@ -169,3 +169,63 @@ private struct EmptyProvider: FilesystemAccessProviding {
     }
     func contentsOfFile(atPath path: String) throws -> Data { Data() }
 }
+
+struct CommentAndScriptRuleTests {
+    private func run(_ rules: [SearchRuleSelection], in fixture: TemporaryFixtureTree) -> [String] {
+        let executor = SearchExecutor(
+            walker: DirectoryWalker(),
+            provider: LocalFilesystemProvider(),
+            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] })
+        )
+        let result = executor.execute(
+            request: SearchRequest(scopeDescription: "Root", rootPath: fixture.path, rules: rules),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        )
+        return result.items.map { String($0.path.dropFirst(fixture.path.count + 1)) }.sorted()
+    }
+
+    private func setFinderComment(_ comment: String, atPath path: String) throws {
+        let data = try PropertyListSerialization.data(fromPropertyList: comment, format: .binary, options: 0)
+        let status = data.withUnsafeBytes { buffer in
+            setxattr(path, FinderCommentReader.extendedAttributeName, buffer.baseAddress, data.count, 0, 0)
+        }
+        #expect(status == 0)
+    }
+
+    @Test
+    func commentsRuleMatchesFinderComments() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("invoice.pdf", contents: "a")
+            try builder.file("photo.jpg", contents: "b")
+        }
+        try setFinderComment("Paid in March", atPath: fixture.rootURL.appendingPathComponent("invoice.pdf").path)
+
+        #expect(FinderCommentReader.comment(atPath: fixture.rootURL.appendingPathComponent("invoice.pdf").path) == "Paid in March")
+        #expect(run([SearchRuleSelection(field: .comments, operator: .contains, value: "paid")], in: fixture) == ["invoice.pdf"])
+        #expect(run([
+            SearchRuleSelection(field: .comments, operator: .doesNotContain, value: "paid"),
+            SearchRuleSelection(field: .name, operator: .contains, value: ".")
+        ], in: fixture) == ["photo.jpg"])
+    }
+
+    @Test
+    func scriptRuleMatchesTextScriptSources() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("deploy.sh", contents: "#!/bin/sh\nrsync -av build/ server:/srv\n")
+            try builder.file("run", contents: "#!/usr/bin/env python3\nimport rsync\n")
+            try builder.file("notes.txt", contents: "rsync is great")
+        }
+
+        #expect(run([SearchRuleSelection(field: .script, operator: .containsPhrase, value: "rsync")], in: fixture) == ["deploy.sh", "run"])
+        #expect(run([SearchRuleSelection(field: .script, operator: .matchesRegex, value: "import\\s+rsync")], in: fixture) == ["run"])
+        #expect(run([SearchRuleSelection(field: .script, operator: .doesNotMatchRegex, value: "python")], in: fixture) == ["deploy.sh"])
+    }
+
+    @Test
+    func compiledScriptsAreDecompiled() {
+        let reader = ScriptSourceReader(decompile: { path in path.hasSuffix(".scpt") ? "tell application \"Finder\" to activate" : nil })
+        let source = reader.source(atPath: "/tmp/a.scpt", isDirectory: false, fileSize: 10, readContents: { _ in Data() })
+        #expect(source == "tell application \"Finder\" to activate")
+        #expect(reader.source(atPath: "/tmp/a.txt", isDirectory: false, fileSize: 3, readContents: { _ in Data("abc".utf8) }) == nil)
+    }
+}

@@ -26,6 +26,7 @@ struct SearchExecutor: Sendable {
     private let nowProvider: @Sendable () -> Date
     private let metadataEvaluator = MetadataEvaluator()
     private let contentMatcher = ContentMatcher()
+    private let scriptSourceReader = ScriptSourceReader()
 
     init(
         walker: DirectoryWalker = DirectoryWalker(),
@@ -278,7 +279,7 @@ struct SearchExecutor: Sendable {
             let resourceValues = try? URL(fileURLWithPath: entry.path).resourceValues(forKeys: [.tagNamesKey])
             return matchAnyComponent(resourceValues?.tagNames ?? [], using: rule, behavior: behavior)
         case .comments:
-            return false
+            return matchString(FinderCommentReader.comment(atPath: entry.path) ?? "", using: rule, behavior: behavior)
         case .path:
             return matchString(entry.path, using: rule, behavior: behavior)
         case .folderNames:
@@ -300,7 +301,16 @@ struct SearchExecutor: Sendable {
                 caseSensitive: behavior.caseSensitive
             )
         case .script:
-            return false
+            let source = scriptSourceReader.source(
+                atPath: entry.path,
+                isDirectory: entry.isDirectory,
+                fileSize: (attributes[.size] as? NSNumber)?.int64Value,
+                readContents: provider.contentsOfFile(atPath:)
+            )
+            guard let source else {
+                return false
+            }
+            return matchString(source, using: rule, behavior: behavior)
         case .caseSensitive, .diacriticsSensitive, .invisibleItems, .packageContents, .trashedContents, .limitFolderDepth, .limitAmount:
             return true
         }

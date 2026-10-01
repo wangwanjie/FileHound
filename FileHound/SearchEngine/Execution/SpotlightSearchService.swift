@@ -69,6 +69,8 @@ struct SpotlightSearchService: Sendable {
         case .extensionName:
             let normalizedValue = trimmedValue.trimmingCharacters(in: CharacterSet(charactersIn: "."))
             return predicate(for: "kMDItemFSName", value: ".\(normalizedValue)", operator: rule.operator, treatAsSuffix: true)
+        case .comments:
+            return predicate(for: "kMDItemFinderComment", value: trimmedValue, operator: rule.operator)
         case .textContent:
             return freeTextQuery(for: trimmedValue, operator: rule.operator)
         default:

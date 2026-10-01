@@ -92,11 +92,11 @@ struct SearchRulesViewControllerTests {
 
     @MainActor
     @Test
-    func unsupportedFieldsAreDisabledAndInvalidRulesExposeBlockingSummary() {
+    func implementedFieldsAreEnabledAndInvalidRulesExposeBlockingSummary() {
         let row = SearchRuleRowView()
         let commentsIndex = try! #require(SearchRuleField.allCases.firstIndex(of: .comments))
         let commentsItem = try! #require(row.fieldPopup.item(at: commentsIndex))
-        #expect(commentsItem.isEnabled == false)
+        #expect(commentsItem.isEnabled)
 
         let controller = SearchRulesViewController()
         _ = controller.view
