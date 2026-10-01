@@ -155,13 +155,12 @@ final class AppearancePreferencesViewController: NSViewController {
     }
 
     private func applyDimColor(_ color: NSColor) {
-        let normalized = color.usingColorSpace(.deviceRGB) ?? color
-        guard let hex = normalized.hexString else {
+        guard let hex = color.hexString else {
             return
         }
 
         settings.dimColorHex = hex
-        dimColorPreview.fillColor = normalized
+        dimColorPreview.fillColor = NSColor(hexString: hex) ?? color
     }
 }
 
@@ -220,7 +219,15 @@ private extension NSColor {
     }
 
     var hexString: String? {
-        let color = usingColorSpace(.deviceRGB) ?? self
+        // 已是 RGB 颜色时直接取分量，避免跨色彩空间转换导致十六进制值漂移
+        let color: NSColor
+        if type == .componentBased, colorSpace.colorSpaceModel == .rgb {
+            color = self
+        } else if let converted = usingColorSpace(.sRGB) {
+            color = converted
+        } else {
+            return nil
+        }
         let red = Int(round(color.redComponent * 255))
         let green = Int(round(color.greenComponent * 255))
         let blue = Int(round(color.blueComponent * 255))
