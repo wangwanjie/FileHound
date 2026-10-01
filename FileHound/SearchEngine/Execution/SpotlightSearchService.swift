@@ -151,21 +151,56 @@ struct SpotlightSearchService: Sendable {
 
         let outputPipe = Pipe()
         process.standardOutput = outputPipe
-        process.standardError = Pipe()
+        process.standardError = FileHandle.nullDevice
+
+        // 边运行边读取输出，避免结果超过管道缓冲区后 mdfind 阻塞在写入上
+        let buffer = ProcessOutputBuffer()
+        outputPipe.fileHandleForReading.readabilityHandler = { handle in
+            buffer.append(handle.availableData)
+        }
+        let exited = DispatchSemaphore(value: 0)
+        process.terminationHandler = { _ in exited.signal() }
 
         try process.run()
-        process.waitUntilExit()
+        while exited.wait(timeout: .now() + .milliseconds(50)) == .timedOut {
+            if Task.isCancelled {
+                process.terminate()
+            }
+        }
+        outputPipe.fileHandleForReading.readabilityHandler = nil
+        buffer.append(outputPipe.fileHandleForReading.readDataToEndOfFile())
 
+        if Task.isCancelled {
+            throw CancellationError()
+        }
         guard process.terminationStatus == 0 else {
             throw SpotlightSearchError.queryFailed(status: process.terminationStatus)
         }
 
-        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(decoding: data, as: UTF8.self)
-        return output
+        return String(decoding: buffer.data, as: UTF8.self)
             .split(separator: "\n")
             .map(String.init)
             .filter { $0.isEmpty == false }
+    }
+}
+
+private final class ProcessOutputBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage = Data()
+
+    var data: Data {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+
+    func append(_ chunk: Data) {
+        guard chunk.isEmpty == false else {
+            return
+        }
+        lock.lock()
+        storage.append(chunk)
+        lock.unlock()
     }
 }
 

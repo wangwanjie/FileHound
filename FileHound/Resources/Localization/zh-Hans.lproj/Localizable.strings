@@ -183,6 +183,11 @@
 "search_rule.validation.relative_date_unit_required" = "请为最近时间选择单位";
 "search_rule.validation.date_required" = "请输入有效日期";
 "search_rule.validation.selection_required" = "请选择一个可用选项";
+"search_rule.validation.size_invalid" = "请输入大小，例如 500、10 KB、2.5 MB 或 1 GB";
+"search_rule.validation.integer_invalid" = "请输入大于等于 0 的整数";
+"search_result.match_reason.name" = "名称命中";
+"search_result.match_reason.folder" = "文件夹命中";
+"search_result.match_reason.extension" = "扩展名命中";
 "search_rule.kind.any" = "任意";
 "search_rule.kind.alias_or_symlink" = "别名或符号链接";
 "search_rule.kind.applescript" = "AppleScript";

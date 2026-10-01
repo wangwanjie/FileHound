@@ -96,6 +96,7 @@ struct SearchExecutor: Sendable {
            let spotlightItems = executeSpotlightSearchIfPossible(
                 request: request,
                 specialFolderPlanning: specialFolderPlanning,
+                behavior: behavior,
                 highlight: highlight
            ) {
             for item in spotlightItems where behavior.allows(item: item) {
@@ -116,8 +117,11 @@ struct SearchExecutor: Sendable {
                     return behavior.hasReachedLimit(items.count) ? .stop : .continue
                 }
 
+                let descendControl: DirectoryWalkControl =
+                    behavior.shouldDescend(into: entry, rootPath: request.rootPath) ? .continue : .skipDescendants
+
                 guard behavior.allows(entry: entry, rootPath: request.rootPath) else {
-                    return .continue
+                    return descendControl
                 }
 
                 do {
@@ -125,7 +129,7 @@ struct SearchExecutor: Sendable {
                     guard try request.rules.allSatisfy({
                         try matches(entry: entry, attributes: attributes, rule: $0, behavior: behavior)
                     }) else {
-                        return .continue
+                        return descendControl
                     }
 
                     let item = try makeResultItem(
@@ -135,12 +139,12 @@ struct SearchExecutor: Sendable {
                         highlight: highlight
                     )
                     guard behavior.allows(item: item) else {
-                        return .continue
+                        return descendControl
                     }
                     _ = appendResult(item)
-                    return behavior.hasReachedLimit(items.count) ? .stop : .continue
+                    return behavior.hasReachedLimit(items.count) ? .stop : descendControl
                 } catch {
-                    return .continue
+                    return descendControl
                 }
             }
 
@@ -153,6 +157,7 @@ struct SearchExecutor: Sendable {
     private func executeSpotlightSearchIfPossible(
         request: SearchRequest,
         specialFolderPlanning: SpecialFolderPlanningResult,
+        behavior: SearchRuleExecutionBehavior,
         highlight: (kind: SearchResultHighlightKind, query: String)?
     ) -> [SearchResultItem]? {
         guard let paths = try? spotlightSearchService.search(rootPath: request.rootPath, rules: request.rules) else {
@@ -160,6 +165,9 @@ struct SearchExecutor: Sendable {
         }
 
         let uniquePaths = Array(Set(paths)).sorted()
+        guard Task.isCancelled == false else {
+            return nil
+        }
         let preview = request.rules.first?.value ?? ""
 
         return uniquePaths.compactMap { path in
@@ -178,8 +186,20 @@ struct SearchExecutor: Sendable {
                 isHidden: URL(fileURLWithPath: path).lastPathComponent.hasPrefix(".")
             )
 
+            guard behavior.allows(entry: entry, rootPath: request.rootPath) else {
+                return nil
+            }
+
             do {
                 let attributes = try provider.attributesOfItem(atPath: path)
+                // Spotlight 查询是不区分大小写的近似结果，这里按完整规则复核；
+                // 文本内容由 Spotlight 索引判定（可覆盖 PDF 等非纯文本格式），不再重复读取文件
+                guard try request.rules.allSatisfy({ rule in
+                    if rule.field == .textContent { return true }
+                    return try matches(entry: entry, attributes: attributes, rule: rule, behavior: behavior)
+                }) else {
+                    return nil
+                }
                 return try makeResultItem(for: entry, attributes: attributes, preview: preview, highlight: highlight)
             } catch {
                 return nil
@@ -224,13 +244,17 @@ struct SearchExecutor: Sendable {
             return compareKind(entry: entry, attributes: attributes, using: rule)
         case .tag:
             let resourceValues = try? URL(fileURLWithPath: entry.path).resourceValues(forKeys: [.tagNamesKey])
-            return matchString((resourceValues?.tagNames ?? []).joined(separator: ", "), using: rule, behavior: behavior)
+            return matchAnyComponent(resourceValues?.tagNames ?? [], using: rule, behavior: behavior)
         case .comments:
             return false
         case .path:
             return matchString(entry.path, using: rule, behavior: behavior)
         case .folderNames:
-            return matchString((entry.path as NSString).deletingLastPathComponent, using: rule, behavior: behavior)
+            let folderNames = URL(fileURLWithPath: entry.path)
+                .deletingLastPathComponent()
+                .pathComponents
+                .filter { $0 != "/" }
+            return matchAnyComponent(folderNames, using: rule, behavior: behavior)
         case .textContent:
             guard entry.isDirectory == false else {
                 return false
@@ -273,7 +297,8 @@ struct SearchExecutor: Sendable {
         let kind = fileKindResolver.displayTitle(for: entry.path, isDirectory: entry.isDirectory, attributes: attributes)
         return SearchResultItem(
             path: entry.path,
-            matchReason: highlight.map(matchReason(for:)) ?? (entry.isDirectory ? "文件夹命中" : "名称命中"),
+            matchReason: highlight.map(matchReason(for:))
+                ?? L10n.string(entry.isDirectory ? "search_result.match_reason.folder" : "search_result.match_reason.name"),
             previewSnippet: preview,
             highlightKind: highlight?.kind,
             highlightQuery: highlight?.query,
@@ -320,9 +345,9 @@ struct SearchExecutor: Sendable {
     private func matchReason(for highlight: (kind: SearchResultHighlightKind, query: String)) -> String {
         switch highlight.kind {
         case .name:
-            return "名称命中"
+            return L10n.string("search_result.match_reason.name")
         case .extensionName:
-            return "扩展名命中"
+            return L10n.string("search_result.match_reason.extension")
         }
     }
 
@@ -335,8 +360,10 @@ struct SearchExecutor: Sendable {
         let options = behavior.stringCompareOptions
 
         switch rule.operator {
-        case .contains, .containsPhrase:
+        case .contains:
             return candidate.range(of: value, options: options) != nil
+        case .containsPhrase:
+            return matchWholeWords(candidate, phrase: value, behavior: behavior)
         case .beginsWith:
             return candidate.range(of: value, options: options.union(.anchored)) != nil
         case .endsWith:
@@ -348,7 +375,7 @@ struct SearchExecutor: Sendable {
         case .doesNotContain:
             return candidate.range(of: value, options: options) == nil
         case .containsWords:
-            return splitTerms(from: value).allSatisfy { candidate.range(of: $0, options: options) != nil }
+            return splitTerms(from: value).allSatisfy { matchWholeWords(candidate, phrase: $0, behavior: behavior) }
         case .matchesPattern:
             return matchRegex(candidate, pattern: wildcardPattern(from: value), caseSensitive: behavior.caseSensitive)
         case .containsAnyOf:
@@ -368,6 +395,52 @@ struct SearchExecutor: Sendable {
         case .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
             return false
         }
+    }
+
+    /// 多值字段（标签、各级文件夹名）：肯定类运算符任一值命中即可，否定类运算符要求所有值都不命中
+    private func matchAnyComponent(
+        _ components: [String],
+        using rule: SearchRuleSelection,
+        behavior: SearchRuleExecutionBehavior
+    ) -> Bool {
+        let positiveOperator: SearchRuleOperator?
+        switch rule.operator {
+        case .isNot:
+            positiveOperator = .isExactly
+        case .doesNotContain:
+            positiveOperator = .contains
+        case .doesNotMatchRegex:
+            positiveOperator = .matchesRegex
+        default:
+            positiveOperator = nil
+        }
+
+        guard let positiveOperator else {
+            return components.contains { matchString($0, using: rule, behavior: behavior) }
+        }
+
+        var positiveRule = rule
+        positiveRule.operator = positiveOperator
+        return components.contains { matchString($0, using: positiveRule, behavior: behavior) } == false
+    }
+
+    /// 以单词边界匹配短语，避免 “port” 命中 “report”
+    private func matchWholeWords(
+        _ candidate: String,
+        phrase: String,
+        behavior: SearchRuleExecutionBehavior
+    ) -> Bool {
+        let foldingOptions: String.CompareOptions = behavior.diacriticsSensitive ? [] : [.diacriticInsensitive]
+        let foldedCandidate = candidate.folding(options: foldingOptions, locale: nil)
+        let foldedPhrase = phrase.folding(options: foldingOptions, locale: nil)
+        let words = foldedPhrase.split(whereSeparator: \.isWhitespace).map {
+            NSRegularExpression.escapedPattern(for: String($0))
+        }
+        guard words.isEmpty == false else {
+            return false
+        }
+        let pattern = "(?<![\\p{L}\\p{N}_])" + words.joined(separator: "\\s+") + "(?![\\p{L}\\p{N}_])"
+        return matchRegex(foldedCandidate, pattern: pattern, caseSensitive: behavior.caseSensitive)
     }
 
     private func compareKind(
@@ -488,32 +561,7 @@ struct SearchExecutor: Sendable {
     }
 
     private func parseNumber(from value: String) -> Int64? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard trimmed.isEmpty == false else {
-            return nil
-        }
-
-        let numberPart = trimmed.prefix { $0.isNumber || $0 == "." }
-        guard let numericValue = Double(numberPart) else {
-            return nil
-        }
-
-        let unitPart = trimmed.dropFirst(numberPart.count)
-        let multiplier: Double
-        switch unitPart {
-        case "kb":
-            multiplier = 1_024
-        case "mb":
-            multiplier = 1_048_576
-        case "gb":
-            multiplier = 1_073_741_824
-        case "":
-            multiplier = 1
-        default:
-            return nil
-        }
-
-        return Int64(numericValue * multiplier)
+        SearchRuleNumberParser.parseByteCount(value)
     }
 
     private func parseDate(from value: String) -> Date? {
@@ -593,7 +641,10 @@ private struct SearchRuleExecutionBehavior {
     let includeInvisibleItems: Bool
     let includePackageContents: Bool
     let includeTrashedContents: Bool
-    let limitFolderDepth: Int?
+    /// 允许的最大相对深度（含），nil 表示不限
+    let maximumFolderDepth: Int?
+    /// 允许的最小相对深度（含），用于“深度大于 N”
+    let minimumFolderDepth: Int?
     let limitAmount: Int?
 
     init(rules: [SearchRuleSelection]) {
@@ -602,8 +653,26 @@ private struct SearchRuleExecutionBehavior {
         includeInvisibleItems = Self.booleanValue(for: .invisibleItems, in: rules) ?? true
         includePackageContents = Self.booleanValue(for: .packageContents, in: rules) ?? true
         includeTrashedContents = Self.booleanValue(for: .trashedContents, in: rules) ?? true
-        limitFolderDepth = Self.intValue(for: .limitFolderDepth, in: rules)
-        limitAmount = Self.intValue(for: .limitAmount, in: rules)
+        let depthRule = Self.intRule(for: .limitFolderDepth, in: rules)
+        switch depthRule?.operator {
+        case .isGreaterThan:
+            maximumFolderDepth = nil
+            minimumFolderDepth = depthRule.map { $0.value + 1 }
+        case .isLessThan:
+            maximumFolderDepth = depthRule.map { max($0.value - 1, 0) }
+            minimumFolderDepth = nil
+        default:
+            maximumFolderDepth = depthRule?.value
+            minimumFolderDepth = nil
+        }
+
+        let amountRule = Self.intRule(for: .limitAmount, in: rules)
+        switch amountRule?.operator {
+        case .isLessThan:
+            limitAmount = amountRule.map { max($0.value - 1, 0) }
+        default:
+            limitAmount = amountRule?.value
+        }
     }
 
     var stringCompareOptions: String.CompareOptions {
@@ -630,10 +699,32 @@ private struct SearchRuleExecutionBehavior {
             return false
         }
 
-        if let limitFolderDepth, limitFolderDepth >= 0, relativeDepth(of: entry.path, rootPath: rootPath) > limitFolderDepth {
+        let depth = relativeDepth(of: entry.path, rootPath: rootPath)
+        if let maximumFolderDepth, depth > maximumFolderDepth {
+            return false
+        }
+        if let minimumFolderDepth, depth < minimumFolderDepth {
             return false
         }
 
+        return true
+    }
+
+    /// 遍历时是否需要进入该目录：超出深度、被排除的包或废纸篓不再展开
+    func shouldDescend(into entry: DirectoryEntry, rootPath: String) -> Bool {
+        guard entry.isDirectory else {
+            return false
+        }
+        if let maximumFolderDepth, relativeDepth(of: entry.path, rootPath: rootPath) >= maximumFolderDepth {
+            return false
+        }
+        if includePackageContents == false,
+           SearchExecutor.isInsidePackageContents(entry.path + "/_", relativeTo: rootPath) {
+            return false
+        }
+        if includeTrashedContents == false, SearchExecutor.isTrashedPath(entry.path + "/") {
+            return false
+        }
         return true
     }
 
@@ -667,10 +758,16 @@ private struct SearchRuleExecutionBehavior {
         rules.last(where: { $0.field == field }).map { SearchRuleSelection.booleanValue(from: $0.value) }
     }
 
-    private static func intValue(for field: SearchRuleField, in rules: [SearchRuleSelection]) -> Int? {
-        rules.last(where: { $0.field == field }).flatMap {
-            Int($0.value.trimmingCharacters(in: .whitespacesAndNewlines))
+    private static func intRule(
+        for field: SearchRuleField,
+        in rules: [SearchRuleSelection]
+    ) -> (operator: SearchRuleOperator, value: Int)? {
+        guard let rule = rules.last(where: { $0.field == field }),
+              let value = Int(rule.value.trimmingCharacters(in: .whitespacesAndNewlines)),
+              value >= 0 else {
+            return nil
         }
+        return (rule.operator, value)
     }
 }
 

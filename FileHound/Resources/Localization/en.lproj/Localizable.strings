@@ -183,6 +183,11 @@
 "search_rule.validation.relative_date_unit_required" = "Choose a unit for the relative date.";
 "search_rule.validation.date_required" = "Enter a valid date.";
 "search_rule.validation.selection_required" = "Choose a supported option.";
+"search_rule.validation.size_invalid" = "Enter a size such as 500, 10 KB, 2.5 MB or 1 GB.";
+"search_rule.validation.integer_invalid" = "Enter a whole number of 0 or more.";
+"search_result.match_reason.name" = "Name match";
+"search_result.match_reason.folder" = "Folder match";
+"search_result.match_reason.extension" = "Extension match";
 "search_rule.kind.any" = "any";
 "search_rule.kind.alias_or_symlink" = "Alias or Symlink";
 "search_rule.kind.applescript" = "AppleScript";

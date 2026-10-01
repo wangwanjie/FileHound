@@ -2,6 +2,8 @@ import Foundation
 
 enum DirectoryWalkControl {
     case `continue`
+    /// 保留当前条目但不再进入其子目录
+    case skipDescendants
     case stop
 }
 
@@ -115,11 +117,12 @@ struct DirectoryWalker: Sendable {
                 continue
             }
 
-            if try visit(entry) == .stop {
+            let control = try visit(entry)
+            if control == .stop {
                 return false
             }
 
-            if isDirectory {
+            if isDirectory, control != .skipDescendants {
                 let didFinish = try walkDirectory(
                     atPath: childPath,
                     provider: provider,

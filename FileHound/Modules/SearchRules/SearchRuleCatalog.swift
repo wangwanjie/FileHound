@@ -541,15 +541,58 @@ struct SearchRuleValidator: Sendable {
             }
         case .none:
             break
-        case .text, .number:
+        case .text:
             guard selection.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
                 return .invalid(messageKey: "search_rule.validation.value_required")
+            }
+        case .number:
+            guard selection.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+                return .invalid(messageKey: "search_rule.validation.value_required")
+            }
+            if selection.field == .fileSize {
+                guard SearchRuleNumberParser.parseByteCount(selection.value) != nil else {
+                    return .invalid(messageKey: "search_rule.validation.size_invalid")
+                }
+            } else {
+                guard let count = Int(selection.value.trimmingCharacters(in: .whitespacesAndNewlines)), count >= 0 else {
+                    return .invalid(messageKey: "search_rule.validation.integer_invalid")
+                }
             }
         case .toggle:
             break
         }
 
         return .valid
+    }
+}
+
+enum SearchRuleNumberParser {
+    /// 解析文件大小，支持 “1024”、“10 KB”、“1.5mb”、“2G” 等写法，单位按 1024 进制
+    static func parseByteCount(_ value: String) -> Int64? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let numberPart = trimmed.prefix { $0.isNumber || $0 == "." || $0 == "," }
+        guard let numericValue = Double(numberPart.replacingOccurrences(of: ",", with: ".")), numericValue >= 0 else {
+            return nil
+        }
+
+        let unitPart = trimmed.dropFirst(numberPart.count).trimmingCharacters(in: .whitespaces)
+        let multiplier: Double
+        switch unitPart {
+        case "", "b", "byte", "bytes":
+            multiplier = 1
+        case "k", "kb", "kib":
+            multiplier = 1_024
+        case "m", "mb", "mib":
+            multiplier = 1_048_576
+        case "g", "gb", "gib":
+            multiplier = 1_073_741_824
+        case "t", "tb", "tib":
+            multiplier = 1_099_511_627_776
+        default:
+            return nil
+        }
+
+        return Int64(numericValue * multiplier)
     }
 }
 

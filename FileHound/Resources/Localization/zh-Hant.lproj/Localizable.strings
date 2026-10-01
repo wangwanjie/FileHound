@@ -183,6 +183,11 @@
 "search_rule.validation.relative_date_unit_required" = "請為最近時間選擇單位";
 "search_rule.validation.date_required" = "請輸入有效日期";
 "search_rule.validation.selection_required" = "請選擇一個可用選項";
+"search_rule.validation.size_invalid" = "請輸入大小，例如 500、10 KB、2.5 MB 或 1 GB";
+"search_rule.validation.integer_invalid" = "請輸入大於等於 0 的整數";
+"search_result.match_reason.name" = "名稱命中";
+"search_result.match_reason.folder" = "資料夾命中";
+"search_result.match_reason.extension" = "副檔名命中";
 "search_rule.kind.any" = "任意";
 "search_rule.kind.alias_or_symlink" = "別名或符號連結";
 "search_rule.kind.applescript" = "AppleScript";
