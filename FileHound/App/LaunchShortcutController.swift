@@ -12,47 +12,49 @@ protocol HotKeyRegistering: AnyObject {
     func unregister()
 }
 
-protocol ShortcutMonitoring: AnyObject {
-    func startMonitoring(handler: @escaping (KeyboardShortcut) -> Void)
-    func stopMonitoring()
+/// 观察最前端 App 切换；回调参数为新激活 App 的 bundle identifier
+protocol FrontmostApplicationObserving: AnyObject {
+    func startObserving(handler: @escaping (String?) -> Void)
+    func stopObserving()
 }
 
 final class LaunchShortcutController: LaunchShortcutControlling {
+    static let finderBundleIdentifier = "com.apple.finder"
     static let shared = LaunchShortcutController(settingsProvider: { AppSettings.shared })
 
     private let settingsProvider: () -> AppSettings
     private let hotKeyRegistrar: HotKeyRegistering
-    private let shortcutMonitor: ShortcutMonitoring
+    private let frontmostApplicationObserver: FrontmostApplicationObserving
     private let frontmostApplicationProvider: () -> String?
     private var action: (() -> Void)?
 
     init(
         settings: AppSettings,
         hotKeyRegistrar: HotKeyRegistering = CarbonHotKeyRegistrar(),
-        shortcutMonitor: ShortcutMonitoring = NSEventShortcutMonitor(),
+        frontmostApplicationObserver: FrontmostApplicationObserving = WorkspaceFrontmostApplicationObserver(),
         frontmostApplicationProvider: @escaping () -> String? = { NSWorkspace.shared.frontmostApplication?.bundleIdentifier }
     ) {
         self.settingsProvider = { settings }
         self.hotKeyRegistrar = hotKeyRegistrar
-        self.shortcutMonitor = shortcutMonitor
+        self.frontmostApplicationObserver = frontmostApplicationObserver
         self.frontmostApplicationProvider = frontmostApplicationProvider
     }
 
     private init(
         settingsProvider: @escaping () -> AppSettings,
         hotKeyRegistrar: HotKeyRegistering = CarbonHotKeyRegistrar(),
-        shortcutMonitor: ShortcutMonitoring = NSEventShortcutMonitor(),
+        frontmostApplicationObserver: FrontmostApplicationObserving = WorkspaceFrontmostApplicationObserver(),
         frontmostApplicationProvider: @escaping () -> String? = { NSWorkspace.shared.frontmostApplication?.bundleIdentifier }
     ) {
         self.settingsProvider = settingsProvider
         self.hotKeyRegistrar = hotKeyRegistrar
-        self.shortcutMonitor = shortcutMonitor
+        self.frontmostApplicationObserver = frontmostApplicationObserver
         self.frontmostApplicationProvider = frontmostApplicationProvider
     }
 
     deinit {
         hotKeyRegistrar.unregister()
-        shortcutMonitor.stopMonitoring()
+        frontmostApplicationObserver.stopObserving()
     }
 
     func configure(action: @escaping () -> Void) {
@@ -62,7 +64,7 @@ final class LaunchShortcutController: LaunchShortcutControlling {
 
     func reload() {
         hotKeyRegistrar.unregister()
-        shortcutMonitor.stopMonitoring()
+        frontmostApplicationObserver.stopObserving()
 
         let settings = settingsProvider()
 
@@ -76,17 +78,19 @@ final class LaunchShortcutController: LaunchShortcutControlling {
                 self?.action?()
             }
         case .finderOnly:
-            shortcutMonitor.startMonitoring { [weak self] observedShortcut in
-                guard
-                    let self,
-                    observedShortcut == shortcut,
-                    self.frontmostApplicationProvider() == "com.apple.finder"
-                else {
-                    return
+            // 全局事件监听需要辅助功能权限；改为仅在访达位于最前时注册 Carbon 热键，无需额外授权且不会把按键传给访达
+            let updateRegistration: (String?) -> Void = { [weak self] bundleIdentifier in
+                guard let self else { return }
+                if bundleIdentifier == Self.finderBundleIdentifier {
+                    _ = self.hotKeyRegistrar.register(shortcut: shortcut) { [weak self] in
+                        self?.action?()
+                    }
+                } else {
+                    self.hotKeyRegistrar.unregister()
                 }
-
-                self.action?()
             }
+            frontmostApplicationObserver.startObserving(handler: updateRegistration)
+            updateRegistration(frontmostApplicationProvider())
         }
     }
 }
@@ -158,24 +162,26 @@ private final class CarbonHotKeyRegistrar: HotKeyRegistering {
     }
 }
 
-private final class NSEventShortcutMonitor: ShortcutMonitoring {
-    private var monitorToken: Any?
+private final class WorkspaceFrontmostApplicationObserver: FrontmostApplicationObserving {
+    private var observerToken: NSObjectProtocol?
 
-    func startMonitoring(handler: @escaping (KeyboardShortcut) -> Void) {
-        stopMonitoring()
-        monitorToken = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
-            guard let shortcut = KeyboardShortcut.capture(from: event) else {
-                return
-            }
-            handler(shortcut)
+    func startObserving(handler: @escaping (String?) -> Void) {
+        stopObserving()
+        observerToken = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { notification in
+            let application = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            handler(application?.bundleIdentifier)
         }
     }
 
-    func stopMonitoring() {
-        if let monitorToken {
-            NSEvent.removeMonitor(monitorToken)
+    func stopObserving() {
+        if let observerToken {
+            NSWorkspace.shared.notificationCenter.removeObserver(observerToken)
         }
-        monitorToken = nil
+        observerToken = nil
     }
 }
 

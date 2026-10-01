@@ -118,7 +118,7 @@ struct GeneralPreferencesViewControllerTests {
         let shortcutController = LaunchShortcutController(
             settings: settings,
             hotKeyRegistrar: TestHotKeyRegistrar(),
-            shortcutMonitor: TestShortcutMonitor(),
+            frontmostApplicationObserver: TestFrontmostApplicationObserver(),
             frontmostApplicationProvider: { nil }
         )
         let controller = GeneralPreferencesViewController(
@@ -144,12 +144,12 @@ struct LaunchShortcutControllerTests {
         settings.launchShortcut = "cmd-shift-space"
         settings.activationMode = .global
         let registrar = TestHotKeyRegistrar()
-        let monitor = TestShortcutMonitor()
+        let observer = TestFrontmostApplicationObserver()
         var triggerCount = 0
         let controller = LaunchShortcutController(
             settings: settings,
             hotKeyRegistrar: registrar,
-            shortcutMonitor: monitor,
+            frontmostApplicationObserver: observer,
             frontmostApplicationProvider: { "com.apple.finder" }
         )
 
@@ -159,38 +159,45 @@ struct LaunchShortcutControllerTests {
         registrar.trigger()
 
         #expect(registrar.registeredShortcut == KeyboardShortcut(keyCode: 49, modifierFlags: [.command, .shift]))
-        #expect(monitor.isMonitoring == false)
+        #expect(observer.isObserving == false)
         #expect(triggerCount == 1)
     }
 
     @MainActor
     @Test
-    func finderOnlyShortcutUsesMonitorAndOnlyTriggersWhenFinderIsFrontmost() {
+    func finderOnlyShortcutRegistersHotKeyOnlyWhileFinderIsFrontmost() {
         let storage = InMemoryKeyValueStore()
         let settings = AppSettings(storage: storage)
         settings.launchShortcut = "cmd-shift-space"
         settings.activationMode = .finderOnly
         let registrar = TestHotKeyRegistrar()
-        let monitor = TestShortcutMonitor()
-        var frontmostBundleIdentifier = "com.apple.TextEdit"
+        let observer = TestFrontmostApplicationObserver()
         var triggerCount = 0
         let controller = LaunchShortcutController(
             settings: settings,
             hotKeyRegistrar: registrar,
-            shortcutMonitor: monitor,
-            frontmostApplicationProvider: { frontmostBundleIdentifier }
+            frontmostApplicationObserver: observer,
+            frontmostApplicationProvider: { "com.apple.TextEdit" }
         )
 
         controller.configure {
             triggerCount += 1
         }
-        monitor.send(.init(keyCode: 49, modifierFlags: [.command, .shift]))
-        frontmostBundleIdentifier = "com.apple.finder"
-        monitor.send(.init(keyCode: 49, modifierFlags: [.command, .shift]))
-
+        #expect(observer.isObserving == true)
         #expect(registrar.registeredShortcut == nil)
-        #expect(monitor.isMonitoring == true)
+
+        observer.activate("com.apple.finder")
+        #expect(registrar.registeredShortcut == KeyboardShortcut(keyCode: 49, modifierFlags: [.command, .shift]))
+        registrar.trigger()
         #expect(triggerCount == 1)
+
+        observer.activate("com.apple.Safari")
+        #expect(registrar.registeredShortcut == nil)
+
+        settings.activationMode = .global
+        controller.reload()
+        #expect(observer.isObserving == false)
+        #expect(registrar.registeredShortcut != nil)
     }
 }
 
@@ -453,24 +460,22 @@ private final class TestHotKeyRegistrar: HotKeyRegistering {
     }
 }
 
-private final class TestShortcutMonitor: ShortcutMonitoring {
-    private(set) var isMonitoring = false
-    private(set) var deliveredShortcuts: [KeyboardShortcut] = []
-    private var handler: ((KeyboardShortcut) -> Void)?
+private final class TestFrontmostApplicationObserver: FrontmostApplicationObserving {
+    private(set) var isObserving = false
+    private var handler: ((String?) -> Void)?
 
-    func startMonitoring(handler: @escaping (KeyboardShortcut) -> Void) {
-        isMonitoring = true
+    func startObserving(handler: @escaping (String?) -> Void) {
+        isObserving = true
         self.handler = handler
     }
 
-    func stopMonitoring() {
-        isMonitoring = false
+    func stopObserving() {
+        isObserving = false
         handler = nil
     }
 
-    func send(_ shortcut: KeyboardShortcut) {
-        deliveredShortcuts.append(shortcut)
-        handler?(shortcut)
+    func activate(_ bundleIdentifier: String?) {
+        handler?(bundleIdentifier)
     }
 }
 
