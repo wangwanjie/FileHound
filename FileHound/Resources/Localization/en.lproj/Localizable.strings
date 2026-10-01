@@ -86,7 +86,6 @@
 "preferences.search.special_folders.disposition.slow_search" = "Slow Search";
 "preferences.update.title" = "Updates";
 "preferences.update.subtitle" = "Automatic update settings";
-"preferences.update.check" = "Check for Updates";
 "preferences.update.check_policy" = "Check Policy";
 "preferences.update.policy.on_launch" = "On Launch";
 "preferences.update.policy.manual_only" = "Manual Only";
@@ -106,10 +105,6 @@
 "preferences.permissions.helper.not_installed" = "Not installed (searches run with your user permissions)";
 "preferences.permissions.open_settings" = "Open Full Disk Access Settings…";
 "preferences.permissions.refresh" = "Refresh";
-"preview.title" = "Preview";
-"sidebar.saved_searches" = "Saved Searches";
-"search_rules.title" = "Search Rules";
-"search_rules.sample" = "Name contains report";
 "results.mode.list" = "List";
 "results.mode.tree" = "Tree";
 "results.kind.folder" = "Folder";
@@ -130,7 +125,6 @@
 "results.menu.reveal_in_finder" = "Reveal in Finder";
 "results.menu.move_to_trash" = "Move to Trash";
 "results.menu.delete_immediately" = "Delete Immediately…";
-"results.menu.copy" = "Copy";
 "results.menu.copy_path" = "Copy Path";
 "results.menu.posix_path" = "POSIX Path";
 "results.menu.file_url" = "File URL";
@@ -237,7 +231,6 @@
 "search_rule.placeholder.file_name" = "File name";
 "search_rule.placeholder.extension" = "Extension";
 "search_rule.placeholder.name" = "Name";
-"search_rule.placeholder.kind" = "Kind";
 "search_rule.placeholder.tag" = "Tag";
 "search_rule.placeholder.comment" = "Comment";
 "search_rule.placeholder.content" = "Content";

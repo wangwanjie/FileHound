@@ -86,7 +86,6 @@
 "preferences.search.special_folders.disposition.slow_search" = "慢速搜索";
 "preferences.update.title" = "更新";
 "preferences.update.subtitle" = "自动更新与版本检查";
-"preferences.update.check" = "检查更新";
 "preferences.update.check_policy" = "检查策略";
 "preferences.update.policy.on_launch" = "启动时";
 "preferences.update.policy.manual_only" = "仅手动";
@@ -106,10 +105,6 @@
 "preferences.permissions.helper.not_installed" = "未安装（以当前用户权限搜索）";
 "preferences.permissions.open_settings" = "打开完全磁盘访问设置…";
 "preferences.permissions.refresh" = "刷新";
-"preview.title" = "预览";
-"sidebar.saved_searches" = "已保存搜索";
-"search_rules.title" = "搜索规则";
-"search_rules.sample" = "名称包含 report";
 "results.mode.list" = "列表视图";
 "results.mode.tree" = "树形视图";
 "results.kind.folder" = "文件夹";
@@ -130,7 +125,6 @@
 "results.menu.reveal_in_finder" = "在访达中显示";
 "results.menu.move_to_trash" = "移到废纸篓";
 "results.menu.delete_immediately" = "立即删除…";
-"results.menu.copy" = "拷贝";
 "results.menu.copy_path" = "拷贝路径";
 "results.menu.posix_path" = "POSIX 路径";
 "results.menu.file_url" = "文件 URL";
@@ -237,7 +231,6 @@
 "search_rule.placeholder.file_name" = "文件名";
 "search_rule.placeholder.extension" = "扩展名";
 "search_rule.placeholder.name" = "名称";
-"search_rule.placeholder.kind" = "种类";
 "search_rule.placeholder.tag" = "标签";
 "search_rule.placeholder.comment" = "注释";
 "search_rule.placeholder.content" = "内容";

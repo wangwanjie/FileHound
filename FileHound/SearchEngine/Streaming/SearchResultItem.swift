@@ -112,8 +112,3 @@ struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
         self.tags = tags
     }
 }
-
-struct SearchSessionSummary: Equatable, Sendable {
-    let results: [SearchResultItem]
-    let isCancelled: Bool
-}

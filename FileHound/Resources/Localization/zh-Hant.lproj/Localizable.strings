@@ -86,7 +86,6 @@
 "preferences.search.special_folders.disposition.slow_search" = "慢速搜尋";
 "preferences.update.title" = "更新";
 "preferences.update.subtitle" = "自動更新與版本檢查";
-"preferences.update.check" = "檢查更新";
 "preferences.update.check_policy" = "檢查策略";
 "preferences.update.policy.on_launch" = "啟動時";
 "preferences.update.policy.manual_only" = "僅手動";
@@ -106,10 +105,6 @@
 "preferences.permissions.helper.not_installed" = "未安裝（以目前使用者權限搜尋）";
 "preferences.permissions.open_settings" = "打開完整磁碟取用設定…";
 "preferences.permissions.refresh" = "重新整理";
-"preview.title" = "預覽";
-"sidebar.saved_searches" = "已儲存搜尋";
-"search_rules.title" = "搜尋規則";
-"search_rules.sample" = "名稱包含 report";
 "results.mode.list" = "列表檢視";
 "results.mode.tree" = "樹狀檢視";
 "results.kind.folder" = "資料夾";
@@ -130,7 +125,6 @@
 "results.menu.reveal_in_finder" = "在 Finder 中顯示";
 "results.menu.move_to_trash" = "丟到垃圾桶";
 "results.menu.delete_immediately" = "立即刪除…";
-"results.menu.copy" = "拷貝";
 "results.menu.copy_path" = "拷貝路徑";
 "results.menu.posix_path" = "POSIX 路徑";
 "results.menu.file_url" = "檔案 URL";
@@ -237,7 +231,6 @@
 "search_rule.placeholder.file_name" = "檔案名稱";
 "search_rule.placeholder.extension" = "副檔名";
 "search_rule.placeholder.name" = "名稱";
-"search_rule.placeholder.kind" = "種類";
 "search_rule.placeholder.tag" = "標籤";
 "search_rule.placeholder.comment" = "註解";
 "search_rule.placeholder.content" = "內容";

@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		01C23A58CC4B0DC37F755009 /* SearchHistoryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF96ADC2E3E5E8ED55138108 /* SearchHistoryUITests.swift */; };
 		034670B96146CB5BF127C1D5 /* SearchResultsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */; };
-		0377426476DD516227AE41A5 /* Pods_FileHound.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 59ABB79FF4840236BD4C9EDD /* Pods_FileHound.framework */; };
 		058E8A1647D3EF69BF3B17EB /* SearchResultsWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B798E73750D9B43ED6B7197F /* SearchResultsWindowControllerTests.swift */; };
 		05CD5E283916051DFB996ADB /* SearchRuleRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8BB3C940AFED69873C36D4C /* SearchRuleRowView.swift */; };
 		06DAFD96E2CAB50331F3F50A /* MMKV in Frameworks */ = {isa = PBXBuildFile; productRef = 63D15AD2E30CCCB256F247EA /* MMKV */; };
@@ -31,6 +30,7 @@
 		1FDB851FB5A3146B40F51679 /* SearchExecutorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6CEA3BFD591850EA5C1C9F2 /* SearchExecutorTests.swift */; };
 		208E15466A0C2AC5FFEFDECB /* MainMenuBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8522D7E034ED4F1A73AF9973 /* MainMenuBuilderTests.swift */; };
 		238F68EF239D995C2C51D80E /* SnapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 584CCAD5BE12E3035F5B2176 /* SnapKit */; };
+		23B931F50619DB365AFF2330 /* SpecialFolderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 591FC03E845FBC51CD2C7A4B /* SpecialFolderPlannerTests.swift */; };
 		269DAED1181F0FCBC54DD419 /* SearchWorkflowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C88A161A88E599130B23D1E6 /* SearchWorkflowController.swift */; };
 		28224DE2379AC287D86D9E6D /* SearchPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D32D718007D2229668D82AD /* SearchPlan.swift */; };
 		2B71E0321D58964F4C665115 /* PreferencesUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8F0FD441B29CD521E53CED /* PreferencesUITests.swift */; };
@@ -42,7 +42,6 @@
 		35A3317F84BA6C3F5FF23684 /* AppearanceColorSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6A121A4E6A1105305198EFD /* AppearanceColorSupport.swift */; };
 		36544ADC528FAC332BD3DECA /* MetadataEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C514D15DF8B734D7FEA095B4 /* MetadataEvaluator.swift */; };
 		3946F29B4B84621D2F6BE417 /* SearchResultsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */; };
-		428D4E5D78D69EA9964D2ACF /* SearchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233D1EF55ED9F49A465459E7 /* SearchSession.swift */; };
 		429BEE1917DF678F5C99FF71 /* ResultsAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1B9E8A3ED344995D2267B2 /* ResultsAppearance.swift */; };
 		4309F8EC64407FFB19666442 /* ResultsCollectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 855EA193285798E342FB972C /* ResultsCollectionViewController.swift */; };
 		46F07F58DC8ACEBB3694580F /* SearchRulesViewControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0177C83798F58018384BEDB /* SearchRulesViewControllerTests.swift */; };
@@ -62,18 +61,14 @@
 		6FE14513123D61F336DD79D5 /* SearchRuleCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F4F491B4F4B3D53B5C4545A /* SearchRuleCatalog.swift */; };
 		70045AA87A1A7E0BEE833CD6 /* AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7322A6060AB237975D245B4B /* AppLanguage.swift */; };
 		70EA556331A95FAB7C9F27DA /* ResultFileOperationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E1A3CC8A716D6CD9ADBAC6 /* ResultFileOperationService.swift */; };
-		744F1540320844BF333F57AB /* Pods_FileHound_FileHoundUITests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DFD78E2ED9AFF430A0181108 /* Pods_FileHound_FileHoundUITests.framework */; };
 		74E3BFF6B97B13B7D85190DF /* SearchRuleSemanticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1323D35EC5F5006DF70E37A /* SearchRuleSemanticsTests.swift */; };
 		74FD74B003C8200C40319E32 /* AppSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343AC6421FC7CCB5AFB8E318 /* AppSettingsTests.swift */; };
 		77DC0A202B28A249890CC0D9 /* ResultIconProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9EA05707ACFAB8C572E3BDD /* ResultIconProvider.swift */; };
 		78BE86A2358D98F5FC1BA92F /* ContentMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064118F67E84C3BFE346ADA0 /* ContentMatcherTests.swift */; };
 		79170FA8F16B08950E904401 /* DirectoryWalker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DEA9F492802D3E305395461 /* DirectoryWalker.swift */; };
-		854DE347F6790D52613118D3 /* SavedSearchSidebarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45361F864EB065A548118D1F /* SavedSearchSidebarViewController.swift */; };
 		87C28D2FA2DC6C1A03181F63 /* GeneralPreferencesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9585CB09468947BFC142EB18 /* GeneralPreferencesViewController.swift */; };
 		8CE1DCF22F9C93B1D82B2081 /* PrivilegedFilesystemProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4BDF8D17887B5A95D1FCA55 /* PrivilegedFilesystemProvider.swift */; };
 		8EE665277EF0D6F74041D50A /* SearchParityModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C175C06FAD30D5B80800BD /* SearchParityModels.swift */; };
-		8F5320698BDB794D0C5A5B46 /* SearchPlanBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AF9B28B9C80F9AF4EC8D02 /* SearchPlanBuilderTests.swift */; };
-		90AA3654390F4E3CA706F803 /* QueryCompiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB60A6B6F7A30E3D3E761051 /* QueryCompiler.swift */; };
 		932DD1C9211F418B3E60FAC5 /* PreferencesLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C6BE97DC869DC42969BBB06 /* PreferencesLayout.swift */; };
 		937430A1CDB7AC488DEC4692 /* SpotlightSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A29D14E4FEF5F4E78A4F564E /* SpotlightSearchService.swift */; };
 		98411901B9CAB5D62FA9BFF7 /* ResultsAppearanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 040142BC18D3423592096FE1 /* ResultsAppearanceTests.swift */; };
@@ -86,24 +81,21 @@
 		A28B691797BA0F0A0ABE9022 /* SearchWindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = C703F6487BA7CA2B57233671 /* SearchWindowState.swift */; };
 		A5835513CC29E9D11EA3EF61 /* FilesystemAccessProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = F57D52D99A5F7F37A000BE9A /* FilesystemAccessProviding.swift */; };
 		A70660DFFBD8945C749AB16E /* SearchExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34502D447312FDA2B69CD49E /* SearchExecutor.swift */; };
-		A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */; };
 		AAAA1EE5284E5D1AD64DC05C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4DA6779D3010941E92766274 /* Assets.xcassets */; };
 		AC79C06D10655273F8AF1D08 /* SpecialFoldersEditorViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DD9291422BAAFCFBAADB107 /* SpecialFoldersEditorViewController.swift */; };
+		AEF3540680CA56A608A80846 /* SpecialFolderPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 833C04187AA24939D320BC81 /* SpecialFolderPlanner.swift */; };
 		B7A6103622BDA33DA33318EE /* HelperProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114A3CC8BCFC1AC1D0B8B973 /* HelperProtocol.swift */; };
 		B9F059D453897817F9DA4D50 /* ResultIconProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7089B32DEE8A312B22D5C2 /* ResultIconProviderTests.swift */; };
 		BEA9AD6EECF33E73783AF005 /* SavedSearchStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01329F6D9901D50847ADEC14 /* SavedSearchStore.swift */; };
 		BEE3473A1D89066ADB6E630F /* ContentMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2506011B8A2D8F049951A148 /* ContentMatcher.swift */; };
 		C0ABAD9CFF0EEFF3831EB395 /* FileHoundUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6F692B2E4BE81E9A7C4304B /* FileHoundUITestsLaunchTests.swift */; };
-		C0EDA9822991AE15D7F82484 /* PreviewPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E5D6ECFA65C552FB2051D /* PreviewPanelViewController.swift */; };
 		C10653FEF1786FC50D11773E /* SearchScopeResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77F9870570C131C8B6B54976 /* SearchScopeResolverTests.swift */; };
 		C1E43AA7EC8F6DEAA4357E7D /* PreferencesWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF4DB5D6AEFC1E85627C3EB /* PreferencesWindowControllerTests.swift */; };
 		C4ED5E60CCF265F8170A9222 /* ResultActionControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA3D157D407F8B7DE5570350 /* ResultActionControllerTests.swift */; };
 		C5BAB602C99DC01CDE9896F9 /* DirectoryWalkerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4CBA719314F461F4E4C31D /* DirectoryWalkerTests.swift */; };
-		C64A00E7A36F221B4A8CE176 /* SearchPlanBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A90F4E78DA7D4D5DC395DF7 /* SearchPlanBuilder.swift */; };
 		CCB1EE6C2DA120DE63B529C0 /* PermissionGuidanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7BECE36B33F7242C71E7D6A /* PermissionGuidanceTests.swift */; };
 		CE3C07685BDC883DA79A03B5 /* ResultActionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F76A7EBF358E974D27DED6 /* ResultActionController.swift */; };
 		CF835D6E3C752F64878759CF /* SearchParityStores.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CA427745EC383BE7EA2C6F3 /* SearchParityStores.swift */; };
-		CFC72D5029BD64070970DF57 /* SearchSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 947EF1E39D1E6484403DD72A /* SearchSessionTests.swift */; };
 		D06C7406DE458B1DA964DC8A /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30BB21AE0D140F9289272CB6 /* AppTheme.swift */; };
 		D122775DD7A2B69E3F082423 /* QueryRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F1B749CECAB816AE0AD7C00 /* QueryRule.swift */; };
 		DA8125D86F6A7C61F6BE1A07 /* SearchResultsViewControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32CA18041104809FE06FCF60 /* SearchResultsViewControllerTests.swift */; };
@@ -114,7 +106,6 @@
 		DF8893E3E9D5AEE8CC673A53 /* SearchParityStoresTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F75BDACD86D33FE6FF076D2F /* SearchParityStoresTests.swift */; };
 		E53437E8B92F79B487406F1A /* ResultsToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01D0E12023A24D6916F290BC /* ResultsToolbarView.swift */; };
 		E77AA257BDCF1257C5719B0A /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC8D31003CBA719AB8444DB2 /* AppSettings.swift */; };
-		E880A721F079D51FDEFFF8E8 /* QueryCompilerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20CBCE4E22AC571CAA07D753 /* QueryCompilerTests.swift */; };
 		F06C32B7EB5B6883E9542C9F /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094CDD3713CE9D7CB4B742C6 /* UpdateManager.swift */; };
 		F0705A95DD80DC1A4A2C5014 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2F3811B89489632B5FC48056 /* Localizable.strings */; };
 		F0DCE3DD4C2DE1E0A2CE3C64 /* TemporaryFixtureTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = 564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */; };
@@ -122,7 +113,6 @@
 		F4B2F21A80B3DF5243602530 /* SearchWindowStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19FCD700568C35533CBD8B23 /* SearchWindowStateTests.swift */; };
 		F4F6D70C44CF17E7B653F2E8 /* ThemeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CF5B941185AE10322A03C74 /* ThemeController.swift */; };
 		F948C800F74BEBE3CC43D0CF /* ResultsOutlineViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B16D8505E7337ECBED39880 /* ResultsOutlineViewController.swift */; };
-		FB48EFCF0560DF23CAA38526 /* Pods_FileHound_FileHoundTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EF7536A57535FAAB6A7600C3 /* Pods_FileHound_FileHoundTests.framework */; };
 		FCABC41A1EED6A78A52EE62C /* SearchResultItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48ADE2FFF952A0EBD95D7F29 /* SearchResultItem.swift */; };
 		FDE0457D765F9D84A3AFF972 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B50F28DA50D9DD65115648E /* PreferencesWindowController.swift */; };
 /* End PBXBuildFile section */
@@ -145,7 +135,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSplitViewController.swift; sourceTree = "<group>"; };
 		01329F6D9901D50847ADEC14 /* SavedSearchStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchStore.swift; sourceTree = "<group>"; };
 		01D0E12023A24D6916F290BC /* ResultsToolbarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsToolbarView.swift; sourceTree = "<group>"; };
 		029B810EDA9C8176911E99EA /* PreferencesRootViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesRootViewController.swift; sourceTree = "<group>"; };
@@ -166,8 +155,6 @@
 		1CF5B941185AE10322A03C74 /* ThemeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeController.swift; sourceTree = "<group>"; };
 		1F04F93E1D39E7114FD98880 /* SearchWindowLayoutCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowLayoutCoordinator.swift; sourceTree = "<group>"; };
 		1F61A1AE930878566E682BD9 /* SearchRuleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRuleListView.swift; sourceTree = "<group>"; };
-		20CBCE4E22AC571CAA07D753 /* QueryCompilerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryCompilerTests.swift; sourceTree = "<group>"; };
-		233D1EF55ED9F49A465459E7 /* SearchSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSession.swift; sourceTree = "<group>"; };
 		2506011B8A2D8F049951A148 /* ContentMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentMatcher.swift; sourceTree = "<group>"; };
 		2CA427745EC383BE7EA2C6F3 /* SearchParityStores.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchParityStores.swift; sourceTree = "<group>"; };
 		2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowController.swift; sourceTree = "<group>"; };
@@ -181,23 +168,19 @@
 		3B50F28DA50D9DD65115648E /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
 		3DEA9F492802D3E305395461 /* DirectoryWalker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryWalker.swift; sourceTree = "<group>"; };
 		3E091BC05621A3E82813A75C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
-		45361F864EB065A548118D1F /* SavedSearchSidebarViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedSearchSidebarViewController.swift; sourceTree = "<group>"; };
 		46809C2941B27B2E25C7D615 /* FileHoundHelper */ = {isa = PBXFileReference; includeInIndex = 0; path = FileHoundHelper; sourceTree = BUILT_PRODUCTS_DIR; };
 		48ADE2FFF952A0EBD95D7F29 /* SearchResultItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultItem.swift; sourceTree = "<group>"; };
 		49334770FFAFF93E6513802B /* SearchPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPreferencesViewController.swift; sourceTree = "<group>"; };
 		49AB586E1391A8B5AD3F2B09 /* SearchWindowLayoutCoordinatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchWindowLayoutCoordinatorTests.swift; sourceTree = "<group>"; };
 		4D0A8AC22615E407458B0A73 /* ResultsTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsTableViewController.swift; sourceTree = "<group>"; };
 		4DA6779D3010941E92766274 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		4E00DD25D3883007E61A3F47 /* Pods-FileHound-FileHoundUITests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundUITests.release.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundUITests/Pods-FileHound-FileHoundUITests.release.xcconfig"; sourceTree = "<group>"; };
 		4E818B3D9455550E94E23AEB /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		4F6757FB4CA6D3B7DA0DD4A3 /* SearchScopeResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchScopeResolver.swift; sourceTree = "<group>"; };
 		50D0A48861A21373DC250CB7 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		542396E7651CDBA82200E8EE /* Pods-FileHound.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound.release.xcconfig"; path = "Target Support Files/Pods-FileHound/Pods-FileHound.release.xcconfig"; sourceTree = "<group>"; };
 		564B4FB292769D5B08EA2130 /* TemporaryFixtureTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemporaryFixtureTree.swift; sourceTree = "<group>"; };
+		591FC03E845FBC51CD2C7A4B /* SpecialFolderPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecialFolderPlannerTests.swift; sourceTree = "<group>"; };
 		596890AB594A7F997825FDE5 /* UpdatePreferencesSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdatePreferencesSmokeTests.swift; sourceTree = "<group>"; };
-		59ABB79FF4840236BD4C9EDD /* Pods_FileHound.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		59AC97DE963F09E25872755B /* UpdateManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManagerTests.swift; sourceTree = "<group>"; };
-		5BEF582FE6C3FA2A52E6555B /* Pods-FileHound-FileHoundUITests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundUITests.debug.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundUITests/Pods-FileHound-FileHoundUITests.debug.xcconfig"; sourceTree = "<group>"; };
 		5DC7744B0FA7C0629AAEE2E6 /* KeyboardShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardShortcut.swift; sourceTree = "<group>"; };
 		6B77AD9DE4A4358A03AE524C /* SearchResultsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewModel.swift; sourceTree = "<group>"; };
 		6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -207,20 +190,17 @@
 		7EF11B8D74E0AC0AED84A20D /* AppearancePreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearancePreferencesViewController.swift; sourceTree = "<group>"; };
 		7F4F491B4F4B3D53B5C4545A /* SearchRuleCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRuleCatalog.swift; sourceTree = "<group>"; };
 		80FC1323180DD19F12F91364 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		833C04187AA24939D320BC81 /* SpecialFolderPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpecialFolderPlanner.swift; sourceTree = "<group>"; };
 		84F097509AD0CFC0CDF9B45F /* ResultFileOperationServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultFileOperationServiceTests.swift; sourceTree = "<group>"; };
 		8522D7E034ED4F1A73AF9973 /* MainMenuBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainMenuBuilderTests.swift; sourceTree = "<group>"; };
 		855EA193285798E342FB972C /* ResultsCollectionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsCollectionViewController.swift; sourceTree = "<group>"; };
-		8A90F4E78DA7D4D5DC395DF7 /* SearchPlanBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlanBuilder.swift; sourceTree = "<group>"; };
 		8B16D8505E7337ECBED39880 /* ResultsOutlineViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsOutlineViewController.swift; sourceTree = "<group>"; };
 		8C6BE97DC869DC42969BBB06 /* PreferencesLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesLayout.swift; sourceTree = "<group>"; };
 		8D32D718007D2229668D82AD /* SearchPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlan.swift; sourceTree = "<group>"; };
 		9321A16EC7D73D1038FF8FD6 /* AppLaunchHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLaunchHelper.swift; sourceTree = "<group>"; };
 		932D57336FC454C25222E272 /* LocalFilesystemProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalFilesystemProvider.swift; sourceTree = "<group>"; };
-		947EF1E39D1E6484403DD72A /* SearchSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchSessionTests.swift; sourceTree = "<group>"; };
 		9585CB09468947BFC142EB18 /* GeneralPreferencesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralPreferencesViewController.swift; sourceTree = "<group>"; };
 		9B9771C1E6520696B0AAD015 /* L10n.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = L10n.swift; sourceTree = "<group>"; };
-		9CF5EF50C56424FEFACEF9CA /* Pods-FileHound.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound.debug.xcconfig"; path = "Target Support Files/Pods-FileHound/Pods-FileHound.debug.xcconfig"; sourceTree = "<group>"; };
-		A07E5D6ECFA65C552FB2051D /* PreviewPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewPanelViewController.swift; sourceTree = "<group>"; };
 		A29D14E4FEF5F4E78A4F564E /* SpotlightSearchService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightSearchService.swift; sourceTree = "<group>"; };
 		A4CACC6E4508D801242CFEE9 /* SearchResultsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsUITests.swift; sourceTree = "<group>"; };
 		AC8D31003CBA719AB8444DB2 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
@@ -257,23 +237,17 @@
 		DAA0235942EA6D1409ADA604 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		DEDA685C3750E248EE75FD16 /* ApplicationMain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationMain.swift; sourceTree = "<group>"; };
 		DF23B4AD79B6466B352CF452 /* FileHoundTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileHoundTests.swift; sourceTree = "<group>"; };
-		DFD78E2ED9AFF430A0181108 /* Pods_FileHound_FileHoundUITests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound_FileHoundUITests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		E1323D35EC5F5006DF70E37A /* SearchRuleSemanticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchRuleSemanticsTests.swift; sourceTree = "<group>"; };
 		E2A02BB6DDC828B9534A1EAA /* FileHoundTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FileHoundTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E2C175C06FAD30D5B80800BD /* SearchParityModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchParityModels.swift; sourceTree = "<group>"; };
-		E435C8AC4384EB6F9671FCE2 /* Pods-FileHound-FileHoundTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundTests.debug.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundTests/Pods-FileHound-FileHoundTests.debug.xcconfig"; sourceTree = "<group>"; };
-		E5CF23924621F41BE0E131A1 /* Pods-FileHound-FileHoundTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-FileHound-FileHoundTests.release.xcconfig"; path = "Target Support Files/Pods-FileHound-FileHoundTests/Pods-FileHound-FileHoundTests.release.xcconfig"; sourceTree = "<group>"; };
 		E5EACD935E77E99649BFDC5B /* SearchResultsViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewModelTests.swift; sourceTree = "<group>"; };
 		E6A121A4E6A1105305198EFD /* AppearanceColorSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceColorSupport.swift; sourceTree = "<group>"; };
-		EF7536A57535FAAB6A7600C3 /* Pods_FileHound_FileHoundTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_FileHound_FileHoundTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		EF96ADC2E3E5E8ED55138108 /* SearchHistoryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHistoryUITests.swift; sourceTree = "<group>"; };
 		F02D386164FDEBD4FCAFB0DC /* SearchResultsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchResultsViewController.swift; sourceTree = "<group>"; };
 		F57D52D99A5F7F37A000BE9A /* FilesystemAccessProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilesystemAccessProviding.swift; sourceTree = "<group>"; };
-		F5AF9B28B9C80F9AF4EC8D02 /* SearchPlanBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchPlanBuilderTests.swift; sourceTree = "<group>"; };
 		F75BDACD86D33FE6FF076D2F /* SearchParityStoresTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchParityStoresTests.swift; sourceTree = "<group>"; };
 		FA2951497A038EAC135D133D /* SearchQuery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchQuery.swift; sourceTree = "<group>"; };
 		FA8F0FD441B29CD521E53CED /* PreferencesUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesUITests.swift; sourceTree = "<group>"; };
-		FB60A6B6F7A30E3D3E761051 /* QueryCompiler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryCompiler.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -284,23 +258,6 @@
 				238F68EF239D995C2C51D80E /* SnapKit in Frameworks */,
 				06DAFD96E2CAB50331F3F50A /* MMKV in Frameworks */,
 				9FB8739586460F0198CA6538 /* Sparkle in Frameworks */,
-				0377426476DD516227AE41A5 /* Pods_FileHound.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		6EF07C5A64C2396D8A4DF7C3 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				FB48EFCF0560DF23CAA38526 /* Pods_FileHound_FileHoundTests.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		C6ABC501AB574AA6A273DDD3 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				744F1540320844BF333F57AB /* Pods_FileHound_FileHoundUITests.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -356,8 +313,6 @@
 				58429E7656E52FEAB5A0A009 /* FileHoundTests */,
 				10A3CFF253DC76FA10922249 /* FileHoundUITests */,
 				AEFC66A99582AA7A7028D392 /* Products */,
-				7847BA7C9BA89BF226CF6752 /* Pods */,
-				F46798EC239A8710560673FB /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -423,18 +378,9 @@
 			path = PermissionGuidance;
 			sourceTree = "<group>";
 		};
-		399BB6AE580961DF83E2B060 /* PreviewPanel */ = {
-			isa = PBXGroup;
-			children = (
-				A07E5D6ECFA65C552FB2051D /* PreviewPanelViewController.swift */,
-			);
-			path = PreviewPanel;
-			sourceTree = "<group>";
-		};
 		3D35D7502C2617D1F90FA859 /* Query */ = {
 			isa = PBXGroup;
 			children = (
-				FB60A6B6F7A30E3D3E761051 /* QueryCompiler.swift */,
 				6F1B749CECAB816AE0AD7C00 /* QueryRule.swift */,
 				FA2951497A038EAC135D133D /* SearchQuery.swift */,
 			);
@@ -489,12 +435,10 @@
 				5005C7ECD34940AAB557BB51 /* Permissions */,
 				C80326376253750275AA7EDC /* Planner */,
 				5EB5B9B221A59B016E983FAE /* Preferences */,
-				FC613EC44C06E986D90E8555 /* Query */,
 				4446FAFDD60AB5999B1FCB33 /* SearchEngine */,
 				6B5A449FC0214EA52DF5E098 /* SearchResults */,
 				4484D50F2F7F919A1FF746BE /* SearchWindow */,
 				01A49FF0BB5E2275C5373BFD /* Storage */,
-				B585F58FB8B2E15304DC7821 /* Streaming */,
 				4A4ED405830480B23282E081 /* Support */,
 				C7E47975749B124305D73569 /* Walker */,
 			);
@@ -522,8 +466,6 @@
 			children = (
 				3970DAD11423DA11050C3C04 /* PermissionGuidance */,
 				366F4BC39A721A1F53544B10 /* Preferences */,
-				399BB6AE580961DF83E2B060 /* PreviewPanel */,
-				8E9F671DE8C2542D0E00ADDD /* SavedSearches */,
 				385A21A9508989272D592907 /* SearchResults */,
 				83CC041810140174ABD00FA3 /* SearchRules */,
 				FB40DAD68A08E47E84633C61 /* SearchWindow */,
@@ -554,20 +496,6 @@
 				2CA427745EC383BE7EA2C6F3 /* SearchParityStores.swift */,
 			);
 			path = Storage;
-			sourceTree = "<group>";
-		};
-		7847BA7C9BA89BF226CF6752 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				9CF5EF50C56424FEFACEF9CA /* Pods-FileHound.debug.xcconfig */,
-				542396E7651CDBA82200E8EE /* Pods-FileHound.release.xcconfig */,
-				E435C8AC4384EB6F9671FCE2 /* Pods-FileHound-FileHoundTests.debug.xcconfig */,
-				E5CF23924621F41BE0E131A1 /* Pods-FileHound-FileHoundTests.release.xcconfig */,
-				5BEF582FE6C3FA2A52E6555B /* Pods-FileHound-FileHoundUITests.debug.xcconfig */,
-				4E00DD25D3883007E61A3F47 /* Pods-FileHound-FileHoundUITests.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		7B8622CD96E56F7D34B6D9F9 /* App */ = {
@@ -630,17 +558,9 @@
 			isa = PBXGroup;
 			children = (
 				8D32D718007D2229668D82AD /* SearchPlan.swift */,
-				8A90F4E78DA7D4D5DC395DF7 /* SearchPlanBuilder.swift */,
+				833C04187AA24939D320BC81 /* SpecialFolderPlanner.swift */,
 			);
 			path = Planner;
-			sourceTree = "<group>";
-		};
-		8E9F671DE8C2542D0E00ADDD /* SavedSearches */ = {
-			isa = PBXGroup;
-			children = (
-				45361F864EB065A548118D1F /* SavedSearchSidebarViewController.swift */,
-			);
-			path = SavedSearches;
 			sourceTree = "<group>";
 		};
 		91517DEF450C583D0501AE5C /* Shortcut */ = {
@@ -691,14 +611,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		B585F58FB8B2E15304DC7821 /* Streaming */ = {
-			isa = PBXGroup;
-			children = (
-				947EF1E39D1E6484403DD72A /* SearchSessionTests.swift */,
-			);
-			path = Streaming;
-			sourceTree = "<group>";
-		};
 		B7C4E44E3A98E0725E65272F /* Walker */ = {
 			isa = PBXGroup;
 			children = (
@@ -728,7 +640,7 @@
 		C80326376253750275AA7EDC /* Planner */ = {
 			isa = PBXGroup;
 			children = (
-				F5AF9B28B9C80F9AF4EC8D02 /* SearchPlanBuilderTests.swift */,
+				591FC03E845FBC51CD2C7A4B /* SpecialFolderPlannerTests.swift */,
 			);
 			path = Planner;
 			sourceTree = "<group>";
@@ -769,21 +681,10 @@
 			path = TestSupport;
 			sourceTree = "<group>";
 		};
-		F46798EC239A8710560673FB /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				59ABB79FF4840236BD4C9EDD /* Pods_FileHound.framework */,
-				EF7536A57535FAAB6A7600C3 /* Pods_FileHound_FileHoundTests.framework */,
-				DFD78E2ED9AFF430A0181108 /* Pods_FileHound_FileHoundUITests.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		FA600324BD04E5B91701F8B8 /* Streaming */ = {
 			isa = PBXGroup;
 			children = (
 				48ADE2FFF952A0EBD95D7F29 /* SearchResultItem.swift */,
-				233D1EF55ED9F49A465459E7 /* SearchSession.swift */,
 			);
 			path = Streaming;
 			sourceTree = "<group>";
@@ -794,7 +695,6 @@
 				1BE359726FFEB6F956F16595 /* SearchFormViewController.swift */,
 				0BB88468F1A26A314D003D52 /* SearchScopeMenuProvider.swift */,
 				4F6757FB4CA6D3B7DA0DD4A3 /* SearchScopeResolver.swift */,
-				00740F383C06B7C832EDFA76 /* SearchSplitViewController.swift */,
 				2CAA1D76B13C3322CBDBA4D8 /* SearchWindowController.swift */,
 				1F04F93E1D39E7114FD98880 /* SearchWindowLayoutCoordinator.swift */,
 				C703F6487BA7CA2B57233671 /* SearchWindowState.swift */,
@@ -817,14 +717,6 @@
 			path = SearchEngine;
 			sourceTree = "<group>";
 		};
-		FC613EC44C06E986D90E8555 /* Query */ = {
-			isa = PBXGroup;
-			children = (
-				20CBCE4E22AC571CAA07D753 /* QueryCompilerTests.swift */,
-			);
-			path = Query;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -832,9 +724,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5EA85937E6E45C81F554C484 /* Build configuration list for PBXNativeTarget "FileHoundUITests" */;
 			buildPhases = (
-				E013A904A5FE0F4795867EA2 /* [CP] Check Pods Manifest.lock */,
 				BA52D8914754499FCCAACA65 /* Sources */,
-				C6ABC501AB574AA6A273DDD3 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -842,6 +732,8 @@
 				B0633C88B18988B6266A875C /* PBXTargetDependency */,
 			);
 			name = FileHoundUITests;
+			packageProductDependencies = (
+			);
 			productName = FileHoundUITests;
 			productReference = 6B9C484ABE6BCEA178E1CC64 /* FileHoundUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -857,6 +749,8 @@
 			dependencies = (
 			);
 			name = FileHoundHelper;
+			packageProductDependencies = (
+			);
 			productName = FileHoundHelper;
 			productReference = 46809C2941B27B2E25C7D615 /* FileHoundHelper */;
 			productType = "com.apple.product-type.tool";
@@ -865,7 +759,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = D9B9D42FB7B7C070CFFA773A /* Build configuration list for PBXNativeTarget "FileHound" */;
 			buildPhases = (
-				6DD7297F63A9913052FCB948 /* [CP] Check Pods Manifest.lock */,
 				846A8D0CFE63ABC2B011839B /* Sources */,
 				0AEC4BB50083566EA3F77845 /* Resources */,
 				034EC23490189917FB7A4FBB /* Frameworks */,
@@ -888,9 +781,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 041AF0153475EEF854F6FF01 /* Build configuration list for PBXNativeTarget "FileHoundTests" */;
 			buildPhases = (
-				A8ABD5898D6C43252790661B /* [CP] Check Pods Manifest.lock */,
 				F6CA86F58A750C629AD51B06 /* Sources */,
-				6EF07C5A64C2396D8A4DF7C3 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -898,6 +789,8 @@
 				24E622886F2D09C768794AE8 /* PBXTargetDependency */,
 			);
 			name = FileHoundTests;
+			packageProductDependencies = (
+			);
 			productName = FileHoundTests;
 			productReference = E2A02BB6DDC828B9534A1EAA /* FileHoundTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -957,75 +850,6 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		6DD7297F63A9913052FCB948 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-FileHound-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		A8ABD5898D6C43252790661B /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-FileHound-FileHoundTests-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		E013A904A5FE0F4795867EA2 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-FileHound-FileHoundUITests-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		1ADF20D157BDCB52C20C65F0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -1065,9 +889,7 @@
 				932DD1C9211F418B3E60FAC5 /* PreferencesLayout.swift in Sources */,
 				62B299E43ADC8B00363B7077 /* PreferencesRootViewController.swift in Sources */,
 				FDE0457D765F9D84A3AFF972 /* PreferencesWindowController.swift in Sources */,
-				C0EDA9822991AE15D7F82484 /* PreviewPanelViewController.swift in Sources */,
 				8CE1DCF22F9C93B1D82B2081 /* PrivilegedFilesystemProvider.swift in Sources */,
-				90AA3654390F4E3CA706F803 /* QueryCompiler.swift in Sources */,
 				D122775DD7A2B69E3F082423 /* QueryRule.swift in Sources */,
 				CE3C07685BDC883DA79A03B5 /* ResultActionController.swift in Sources */,
 				70EA556331A95FAB7C9F27DA /* ResultFileOperationService.swift in Sources */,
@@ -1077,14 +899,12 @@
 				F948C800F74BEBE3CC43D0CF /* ResultsOutlineViewController.swift in Sources */,
 				F37A0E052328DAAB050E6EEA /* ResultsTableViewController.swift in Sources */,
 				E53437E8B92F79B487406F1A /* ResultsToolbarView.swift in Sources */,
-				854DE347F6790D52613118D3 /* SavedSearchSidebarViewController.swift in Sources */,
 				BEA9AD6EECF33E73783AF005 /* SavedSearchStore.swift in Sources */,
 				A70660DFFBD8945C749AB16E /* SearchExecutor.swift in Sources */,
 				33B00D85483819A654BCFCA7 /* SearchFormViewController.swift in Sources */,
 				8EE665277EF0D6F74041D50A /* SearchParityModels.swift in Sources */,
 				CF835D6E3C752F64878759CF /* SearchParityStores.swift in Sources */,
 				28224DE2379AC287D86D9E6D /* SearchPlan.swift in Sources */,
-				C64A00E7A36F221B4A8CE176 /* SearchPlanBuilder.swift in Sources */,
 				9E8E4C78866ADFE257596082 /* SearchPreferencesViewController.swift in Sources */,
 				1AE034117579A5D1C258D9BC /* SearchQuery.swift in Sources */,
 				FCABC41A1EED6A78A52EE62C /* SearchResultItem.swift in Sources */,
@@ -1097,12 +917,11 @@
 				16CA3F229B52E33585E757A2 /* SearchRulesViewController.swift in Sources */,
 				15BD03BFFD227D635E7AA7B4 /* SearchScopeMenuProvider.swift in Sources */,
 				15159058116A8968A3D44E4B /* SearchScopeResolver.swift in Sources */,
-				428D4E5D78D69EA9964D2ACF /* SearchSession.swift in Sources */,
-				A92FBC27A6221197F09BF548 /* SearchSplitViewController.swift in Sources */,
 				51E9BF1E14AB16AC5FF40BB1 /* SearchWindowController.swift in Sources */,
 				58A5122192D8539E712F999C /* SearchWindowLayoutCoordinator.swift in Sources */,
 				A28B691797BA0F0A0ABE9022 /* SearchWindowState.swift in Sources */,
 				269DAED1181F0FCBC54DD419 /* SearchWorkflowController.swift in Sources */,
+				AEF3540680CA56A608A80846 /* SpecialFolderPlanner.swift in Sources */,
 				AC79C06D10655273F8AF1D08 /* SpecialFoldersEditorViewController.swift in Sources */,
 				937430A1CDB7AC488DEC4692 /* SpotlightSearchService.swift in Sources */,
 				F4F6D70C44CF17E7B653F2E8 /* ThemeController.swift in Sources */,
@@ -1139,7 +958,6 @@
 				208E15466A0C2AC5FFEFDECB /* MainMenuBuilderTests.swift in Sources */,
 				CCB1EE6C2DA120DE63B529C0 /* PermissionGuidanceTests.swift in Sources */,
 				C1E43AA7EC8F6DEAA4357E7D /* PreferencesWindowControllerTests.swift in Sources */,
-				E880A721F079D51FDEFFF8E8 /* QueryCompilerTests.swift in Sources */,
 				C4ED5E60CCF265F8170A9222 /* ResultActionControllerTests.swift in Sources */,
 				6EFD5A142141FD250BEB9668 /* ResultFileOperationServiceTests.swift in Sources */,
 				B9F059D453897817F9DA4D50 /* ResultIconProviderTests.swift in Sources */,
@@ -1148,7 +966,6 @@
 				1FDB851FB5A3146B40F51679 /* SearchExecutorTests.swift in Sources */,
 				2D128AB05FDAF7A8811DFC54 /* SearchFormViewControllerTests.swift in Sources */,
 				DF8893E3E9D5AEE8CC673A53 /* SearchParityStoresTests.swift in Sources */,
-				8F5320698BDB794D0C5A5B46 /* SearchPlanBuilderTests.swift in Sources */,
 				DA8125D86F6A7C61F6BE1A07 /* SearchResultsViewControllerTests.swift in Sources */,
 				5123919786F94F343B4708D0 /* SearchResultsViewModelTests.swift in Sources */,
 				058E8A1647D3EF69BF3B17EB /* SearchResultsWindowControllerTests.swift in Sources */,
@@ -1156,10 +973,10 @@
 				46F07F58DC8ACEBB3694580F /* SearchRulesViewControllerTests.swift in Sources */,
 				DD356116AF490E3128602AA1 /* SearchScopeMenuProviderTests.swift in Sources */,
 				C10653FEF1786FC50D11773E /* SearchScopeResolverTests.swift in Sources */,
-				CFC72D5029BD64070970DF57 /* SearchSessionTests.swift in Sources */,
 				106594635FE3C4BEC28213FD /* SearchWindowControllerTests.swift in Sources */,
 				14C9F987009086FA1E2F3535 /* SearchWindowLayoutCoordinatorTests.swift in Sources */,
 				F4B2F21A80B3DF5243602530 /* SearchWindowStateTests.swift in Sources */,
+				23B931F50619DB365AFF2330 /* SpecialFolderPlannerTests.swift in Sources */,
 				F0DCE3DD4C2DE1E0A2CE3C64 /* TemporaryFixtureTree.swift in Sources */,
 				69FC296BB11DCF6D097EFE81 /* UpdateManagerTests.swift in Sources */,
 			);
@@ -1196,7 +1013,6 @@
 /* Begin XCBuildConfiguration section */
 		20B2F0EDFB05F372A9F1AEDB /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 4E00DD25D3883007E61A3F47 /* Pods-FileHound-FileHoundUITests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1215,7 +1031,6 @@
 		};
 		23536EEED3B393418C9BB104 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E5CF23924621F41BE0E131A1 /* Pods-FileHound-FileHoundTests.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1234,7 +1049,6 @@
 		};
 		2C64174E238E2843B7A98A61 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 5BEF582FE6C3FA2A52E6555B /* Pods-FileHound-FileHoundUITests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1253,7 +1067,6 @@
 		};
 		35E1FD3CF4163599C11F08EA /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E435C8AC4384EB6F9671FCE2 /* Pods-FileHound-FileHoundTests.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
@@ -1335,7 +1148,6 @@
 		};
 		597730BBF00251E341258912 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 542396E7651CDBA82200E8EE /* Pods-FileHound.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = FileHound/FileHound.entitlements;
@@ -1455,7 +1267,6 @@
 		};
 		C51E38BE40D484B68E6061A5 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9CF5EF50C56424FEFACEF9CA /* Pods-FileHound.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = FileHound/FileHound.entitlements;
