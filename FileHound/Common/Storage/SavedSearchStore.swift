@@ -7,7 +7,7 @@ enum SavedSearchCompatibilityMode: String, Codable, Sendable {
 }
 
 struct SavedSearch: Codable, Equatable, Sendable {
-    let name: String
+    var name: String
     let querySummary: String
     let createdAt: Date
     var criteria: SearchCriteriaSnapshot?
@@ -81,6 +81,30 @@ final class SavedSearchStore {
         var searches = all()
         searches.append(search)
         try storage.setCodable(searches, forKey: key)
+    }
+
+    func delete(_ search: SavedSearch) throws {
+        var searches = all()
+        guard let index = index(of: search, in: searches) else {
+            return
+        }
+        searches.remove(at: index)
+        try storage.setCodable(searches, forKey: key)
+    }
+
+    func rename(_ search: SavedSearch, to newName: String) throws {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        var searches = all()
+        guard trimmedName.isEmpty == false, let index = index(of: search, in: searches) else {
+            return
+        }
+        searches[index].name = trimmedName
+        try storage.setCodable(searches, forKey: key)
+    }
+
+    /// 存储项没有独立 ID，按名称与创建时间定位
+    private func index(of search: SavedSearch, in searches: [SavedSearch]) -> Int? {
+        searches.firstIndex { $0.name == search.name && $0.createdAt == search.createdAt }
     }
 
     func all() -> [SavedSearch] {

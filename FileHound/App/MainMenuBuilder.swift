@@ -16,17 +16,23 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
     private let savedSearchStore: SavedSearchStore
     private weak var recentSearchMenu: NSMenu?
     private weak var savedSearchMenu: NSMenu?
+    private let confirmSavedSearchDeletion: (SavedSearch) -> Bool
+    private let promptSavedSearchName: (SavedSearch) -> String?
 
     init(
         target: AnyObject? = nil,
         settings: AppSettings = .shared,
         searchHistoryStore: SearchHistoryStore = .shared,
-        savedSearchStore: SavedSearchStore = .shared
+        savedSearchStore: SavedSearchStore = .shared,
+        confirmSavedSearchDeletion: @escaping (SavedSearch) -> Bool = MainMenuBuilder.runSavedSearchDeletionAlert,
+        promptSavedSearchName: @escaping (SavedSearch) -> String? = MainMenuBuilder.runSavedSearchRenameAlert
     ) {
         self.target = target
         self.settings = settings
         self.searchHistoryStore = searchHistoryStore
         self.savedSearchStore = savedSearchStore
+        self.confirmSavedSearchDeletion = confirmSavedSearchDeletion
+        self.promptSavedSearchName = promptSavedSearchName
     }
 
     func build() -> NSMenu {
@@ -272,6 +278,57 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
         }
     }
 
+    @objc func deleteSavedSearch(_ sender: NSMenuItem) {
+        guard let search = sender.representedObject as? SavedSearch, confirmSavedSearchDeletion(search) else {
+            return
+        }
+        try? savedSearchStore.delete(search)
+        refreshSavedSearchMenu()
+    }
+
+    @objc func renameSavedSearch(_ sender: NSMenuItem) {
+        guard let search = sender.representedObject as? SavedSearch, let newName = promptSavedSearchName(search) else {
+            return
+        }
+        try? savedSearchStore.rename(search, to: newName)
+        refreshSavedSearchMenu()
+    }
+
+    private func refreshSavedSearchMenu() {
+        if let savedSearchMenu {
+            populateSavedSearchMenu(savedSearchMenu)
+        }
+    }
+
+    static func runSavedSearchDeletionAlert(for search: SavedSearch) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = L10n.format("saved_search.delete.title", search.name)
+        alert.informativeText = L10n.string("saved_search.delete.message")
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: L10n.string("saved_search.delete.confirm"))
+        alert.addButton(withTitle: L10n.string("common.cancel"))
+        return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    static func runSavedSearchRenameAlert(for search: SavedSearch) -> String? {
+        let alert = NSAlert()
+        alert.messageText = L10n.string("menu.rename_saved_search")
+        alert.informativeText = L10n.format("saved_search.rename.message", search.name)
+        alert.addButton(withTitle: L10n.string("saved_search.rename.confirm"))
+        alert.addButton(withTitle: L10n.string("common.cancel"))
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
+        textField.stringValue = search.name
+        alert.accessoryView = textField
+        alert.window.initialFirstResponder = textField
+
+        guard alert.runModal() == .alertFirstButtonReturn else {
+            return nil
+        }
+        let name = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.isEmpty ? nil : name
+    }
+
     // MARK: - Dynamic submenus
 
     private func addSubmenu(_ submenu: NSMenu, title: String, to mainMenu: NSMenu) {
@@ -339,5 +396,30 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
             item.isEnabled = isRestorable
             menu.addItem(item)
         }
+
+        menu.addItem(.separator())
+        menu.addItem(makeSavedSearchManagementItem(
+            title: L10n.string("menu.rename_saved_search"),
+            action: #selector(renameSavedSearch(_:)),
+            searches: searches
+        ))
+        menu.addItem(makeSavedSearchManagementItem(
+            title: L10n.string("menu.delete_saved_search"),
+            action: #selector(deleteSavedSearch(_:)),
+            searches: searches
+        ))
+    }
+
+    private func makeSavedSearchManagementItem(title: String, action: Selector, searches: [SavedSearch]) -> NSMenuItem {
+        let submenu = NSMenu(title: title)
+        for search in searches {
+            let item = NSMenuItem(title: search.name, action: action, keyEquivalent: "")
+            item.target = self
+            item.representedObject = search
+            submenu.addItem(item)
+        }
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.submenu = submenu
+        return item
     }
 }

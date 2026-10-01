@@ -22,6 +22,13 @@
 "menu.open_saved_search" = "Open Saved Search";
 "menu.no_saved_searches" = "No Saved Searches";
 "menu.saved_search_summary_only" = "%@ (Summary Only)";
+"menu.rename_saved_search" = "Rename Saved Search";
+"menu.delete_saved_search" = "Delete Saved Search";
+"saved_search.rename.message" = "Enter a new name for “%@”.";
+"saved_search.rename.confirm" = "Rename";
+"saved_search.delete.title" = "Delete “%@”?";
+"saved_search.delete.message" = "This saved search will be removed from the menu.";
+"saved_search.delete.confirm" = "Delete";
 "menu.save_search" = "Save Search…";
 "menu.services" = "Services";
 "menu.hide_app" = "Hide FileHound";

@@ -22,6 +22,13 @@
 "menu.open_saved_search" = "打開已儲存的搜尋";
 "menu.no_saved_searches" = "沒有已儲存的搜尋";
 "menu.saved_search_summary_only" = "%@（僅摘要）";
+"menu.rename_saved_search" = "重新命名已儲存的搜尋";
+"menu.delete_saved_search" = "刪除已儲存的搜尋";
+"saved_search.rename.message" = "為「%@」輸入新名稱。";
+"saved_search.rename.confirm" = "重新命名";
+"saved_search.delete.title" = "要刪除「%@」嗎？";
+"saved_search.delete.message" = "此搜尋將從選單中移除。";
+"saved_search.delete.confirm" = "刪除";
 "menu.save_search" = "儲存搜尋…";
 "menu.services" = "服務";
 "menu.hide_app" = "隱藏 FileHound";

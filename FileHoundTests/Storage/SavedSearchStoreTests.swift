@@ -17,6 +17,27 @@ final class SavedSearchStoreTests: XCTestCase {
         XCTAssertEqual(store.all().last?.criteria?.scope.representedPath, "/tmp")
     }
 
+    func testDeletesAndRenamesSavedSearches() throws {
+        let store = SavedSearchStore(storage: InMemoryKeyValueStore())
+        let query = SearchQuery(scope: .roots(["/tmp"]), rootGroup: .all([.rule(.nameContains("log"))]))
+        try store.save(name: "甲", query: query)
+        try store.save(name: "乙", query: query)
+
+        let first = try XCTUnwrap(store.all().first)
+        try store.rename(first, to: "  丙  ")
+        XCTAssertEqual(store.all().map(\.name), ["丙", "乙"])
+        XCTAssertEqual(store.all().first?.criteria, first.criteria)
+
+        let renamed = try XCTUnwrap(store.all().first)
+        try store.rename(renamed, to: "   ")
+        XCTAssertEqual(store.all().map(\.name), ["丙", "乙"])
+
+        try store.delete(renamed)
+        XCTAssertEqual(store.all().map(\.name), ["乙"])
+        try store.delete(renamed)
+        XCTAssertEqual(store.all().map(\.name), ["乙"])
+    }
+
     func testReadsLegacySummaryOnlySavedSearchRecords() throws {
         let storage = InMemoryKeyValueStore()
         let legacy = [

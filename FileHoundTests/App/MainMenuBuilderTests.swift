@@ -70,7 +70,7 @@ struct MainMenuBuilderTests {
         let savedItem = try #require(fileMenu.items.first { $0.title == L10n.string("menu.open_saved_search") })
         let savedMenu = try #require(savedItem.submenu)
 
-        #expect(savedMenu.items.map(\.title) == [L10n.format("menu.saved_search_summary_only", "旧搜索")])
+        #expect(savedMenu.items.map(\.title) == [L10n.format("menu.saved_search_summary_only", "旧搜索"), "", L10n.string("menu.rename_saved_search"), L10n.string("menu.delete_saved_search")])
         #expect(savedMenu.items.first?.isEnabled == false)
     }
 
@@ -99,7 +99,7 @@ struct MainMenuBuilderTests {
         let savedItem = try #require(fileMenu.items.first { $0.title == L10n.string("menu.open_saved_search") })
         let savedMenu = try #require(savedItem.submenu)
 
-        #expect(savedMenu.items.map(\.title) == ["报告搜索"])
+        #expect(savedMenu.items.map(\.title) == ["报告搜索", "", L10n.string("menu.rename_saved_search"), L10n.string("menu.delete_saved_search")])
         #expect(savedMenu.items.first?.isEnabled == true)
     }
 
@@ -204,6 +204,52 @@ extension MainMenuBuilderTests {
         builder.clearRecentSearches(nil)
         #expect(historyStore.all().isEmpty)
         #expect(recentMenu.items.map(\.title) == [L10n.string("menu.no_recent_searches")])
+    }
+
+    @MainActor
+    @Test
+    func savedSearchMenuRenamesAndDeletesEntries() throws {
+        let storage = InMemoryKeyValueStore()
+        let savedSearchStore = SavedSearchStore(storage: storage)
+        let criteria = SearchCriteriaSnapshot(
+            scope: SearchScopeSnapshot(title: "Home", representedPath: "/tmp", scopeDescription: "Home", sourceKind: .folder),
+            rules: [SearchRuleSelection(field: .name, operator: .contains, value: "a")]
+        )
+        try savedSearchStore.save(name: "第一", criteria: criteria)
+        try savedSearchStore.save(name: "第二", criteria: criteria)
+
+        var confirmedNames: [String] = []
+        let builder = MainMenuBuilder(
+            settings: AppSettings(storage: storage),
+            searchHistoryStore: SearchHistoryStore(storage: storage),
+            savedSearchStore: savedSearchStore,
+            confirmSavedSearchDeletion: { search in
+                confirmedNames.append(search.name)
+                return true
+            },
+            promptSavedSearchName: { _ in "改名后" }
+        )
+        let menu = builder.build()
+        let fileMenu = try #require(menu.item(at: 1)?.submenu)
+        let savedMenu = try #require(fileMenu.items.first { $0.title == L10n.string("menu.open_saved_search") }?.submenu)
+
+        let renameMenu = try #require(savedMenu.items.first { $0.title == L10n.string("menu.rename_saved_search") }?.submenu)
+        #expect(renameMenu.items.map(\.title) == ["第一", "第二"])
+        let renameItem = try #require(renameMenu.items.first)
+        #expect(renameItem.target === builder)
+        builder.renameSavedSearch(renameItem)
+        #expect(savedSearchStore.all().map(\.name) == ["改名后", "第二"])
+        #expect(savedMenu.items.first?.title == "改名后")
+
+        let deleteMenu = try #require(savedMenu.items.first { $0.title == L10n.string("menu.delete_saved_search") }?.submenu)
+        builder.deleteSavedSearch(try #require(deleteMenu.items.last))
+        #expect(confirmedNames == ["第二"])
+        #expect(savedSearchStore.all().map(\.name) == ["改名后"])
+
+        let remainingDeleteMenu = try #require(savedMenu.items.first { $0.title == L10n.string("menu.delete_saved_search") }?.submenu)
+        builder.deleteSavedSearch(try #require(remainingDeleteMenu.items.first))
+        #expect(savedSearchStore.all().isEmpty)
+        #expect(savedMenu.items.map(\.title) == [L10n.string("menu.no_saved_searches")])
     }
 }
 
