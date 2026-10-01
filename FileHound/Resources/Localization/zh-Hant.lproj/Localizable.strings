@@ -96,7 +96,16 @@
 "preferences.update.feed_missing" = "目前建置未設定更新來源。";
 "preferences.reset_defaults" = "恢復預設";
 "preferences.permissions.title" = "權限";
-"preferences.permissions.subtitle" = "完整磁碟存取與權限狀態";
+"preferences.permissions.subtitle" = "搜尋受保護位置所需的取用權限";
+"preferences.permissions.fda.label" = "完整磁碟取用權限：";
+"preferences.permissions.fda.granted" = "已授權";
+"preferences.permissions.fda.denied" = "未授權";
+"preferences.permissions.fda.explanation" = "未授權時，FileHound 無法搜尋郵件、訊息、Safari 及其他 App 容器等受保護位置。請在「系統設定 › 隱私權與安全性 › 完整磁碟取用權限」中加入 FileHound，然後回到此視窗。";
+"preferences.permissions.helper.label" = "特權輔助程式：";
+"preferences.permissions.helper.installed" = "已安裝";
+"preferences.permissions.helper.not_installed" = "未安裝（以目前使用者權限搜尋）";
+"preferences.permissions.open_settings" = "打開完整磁碟取用設定…";
+"preferences.permissions.refresh" = "重新整理";
 "preview.title" = "預覽";
 "sidebar.saved_searches" = "已儲存搜尋";
 "search_rules.title" = "搜尋規則";

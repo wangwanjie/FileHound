@@ -38,6 +38,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 initialSegment = 1
             } else if ProcessInfo.processInfo.arguments.contains("--open-updates-preferences-on-launch") {
                 initialSegment = 3
+            } else if ProcessInfo.processInfo.arguments.contains("--open-permissions-preferences-on-launch") {
+                initialSegment = 4
             } else {
                 initialSegment = 2
             }

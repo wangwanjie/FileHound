@@ -96,7 +96,16 @@
 "preferences.update.feed_missing" = "Update feed is not configured in this build.";
 "preferences.reset_defaults" = "Reset to Defaults";
 "preferences.permissions.title" = "Permissions";
-"preferences.permissions.subtitle" = "Full Disk Access and helper state";
+"preferences.permissions.subtitle" = "Access FileHound needs to search protected locations";
+"preferences.permissions.fda.label" = "Full Disk Access:";
+"preferences.permissions.fda.granted" = "Granted";
+"preferences.permissions.fda.denied" = "Not granted";
+"preferences.permissions.fda.explanation" = "Without Full Disk Access, FileHound cannot see inside protected locations such as Mail, Messages, Safari and other apps’ containers. Add FileHound in System Settings › Privacy & Security › Full Disk Access, then come back to this window.";
+"preferences.permissions.helper.label" = "Privileged helper:";
+"preferences.permissions.helper.installed" = "Installed";
+"preferences.permissions.helper.not_installed" = "Not installed (searches run with your user permissions)";
+"preferences.permissions.open_settings" = "Open Full Disk Access Settings…";
+"preferences.permissions.refresh" = "Refresh";
 "preview.title" = "Preview";
 "sidebar.saved_searches" = "Saved Searches";
 "search_rules.title" = "Search Rules";

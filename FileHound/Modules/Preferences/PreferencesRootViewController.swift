@@ -8,7 +8,8 @@ final class PreferencesRootViewController: NSViewController {
             L10n.string("preferences.tab.general"),
             L10n.string("preferences.tab.search"),
             L10n.string("preferences.tab.appearance"),
-            L10n.string("preferences.tab.update")
+            L10n.string("preferences.tab.update"),
+            L10n.string("preferences.tab.permissions")
         ],
         trackingMode: .selectOne,
         target: nil,
@@ -20,7 +21,8 @@ final class PreferencesRootViewController: NSViewController {
         GeneralPreferencesViewController(),
         SearchPreferencesViewController(),
         AppearancePreferencesViewController(),
-        UpdatePreferencesViewController()
+        UpdatePreferencesViewController(),
+        PermissionsPreferencesViewController()
     ]
 
     init(initialSegment: Int = 2) {
@@ -118,6 +120,14 @@ final class PreferencesRootViewController: NSViewController {
 
 #if DEBUG
 extension PreferencesRootViewController {
+    var debugSegmentLabels: [String] {
+        (0..<segmentedControl.segmentCount).compactMap { segmentedControl.label(forSegment: $0) }
+    }
+
+    var debugActiveController: NSViewController {
+        contentControllers[segmentedControl.selectedSegment]
+    }
+
     var debugActiveSectionHasCardBackground: Bool {
         (contentControllers[segmentedControl.selectedSegment].view as? PreferencesSectionView)?.debugHasCardBackground == true
     }

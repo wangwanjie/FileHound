@@ -96,7 +96,16 @@
 "preferences.update.feed_missing" = "当前构建未配置更新源。";
 "preferences.reset_defaults" = "恢复默认";
 "preferences.permissions.title" = "权限";
-"preferences.permissions.subtitle" = "完全磁盘访问与权限状态";
+"preferences.permissions.subtitle" = "搜索受保护位置所需的访问权限";
+"preferences.permissions.fda.label" = "完全磁盘访问权限：";
+"preferences.permissions.fda.granted" = "已授权";
+"preferences.permissions.fda.denied" = "未授权";
+"preferences.permissions.fda.explanation" = "未授权时，FileHound 无法搜索邮件、信息、Safari 及其他应用容器等受保护位置。请在“系统设置 › 隐私与安全性 › 完全磁盘访问权限”中添加 FileHound，然后回到此窗口。";
+"preferences.permissions.helper.label" = "特权辅助程序：";
+"preferences.permissions.helper.installed" = "已安装";
+"preferences.permissions.helper.not_installed" = "未安装（以当前用户权限搜索）";
+"preferences.permissions.open_settings" = "打开完全磁盘访问设置…";
+"preferences.permissions.refresh" = "刷新";
 "preview.title" = "预览";
 "sidebar.saved_searches" = "已保存搜索";
 "search_rules.title" = "搜索规则";
