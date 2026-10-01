@@ -18,6 +18,17 @@ struct ResultFileOperationServiceTests {
 
         let aliasURL = try service.createAlias(for: renamedURL, in: URL(fileURLWithPath: fixture.path))
         #expect(FileManager.default.fileExists(atPath: aliasURL.path))
+        #expect(aliasURL.lastPathComponent == "renamed.txt alias")
+        let resolvedAlias = try URL(resolvingAliasFileAt: aliasURL)
+        #expect(resolvedAlias.resolvingSymlinksInPath().path == renamedURL.resolvingSymlinksInPath().path)
+        let secondAliasURL = try service.createAlias(for: renamedURL, in: URL(fileURLWithPath: fixture.path))
+        #expect(secondAliasURL.lastPathComponent == "renamed.txt alias 2")
+
+        let redURL = try service.setLabel(6, for: renamedURL)
+        let labelValues = try URL(fileURLWithPath: redURL.path).resourceValues(forKeys: [.labelNumberKey])
+        #expect(labelValues.labelNumber == 6)
+        _ = try service.setLabel(0, for: renamedURL)
+        #expect(try URL(fileURLWithPath: renamedURL.path).resourceValues(forKeys: [.labelNumberKey]).labelNumber == 0)
 
         let hiddenURL = try service.setHidden(true, for: renamedURL)
         let hiddenValues = try hiddenURL.resourceValues(forKeys: Set<URLResourceKey>([.isHiddenKey]))

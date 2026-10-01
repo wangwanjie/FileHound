@@ -7,6 +7,7 @@ protocol ResultFileOperationServing {
     func createAlias(for url: URL, in destinationFolder: URL) throws -> URL
     func setHidden(_ hidden: Bool, for url: URL) throws -> URL
     func setLocked(_ locked: Bool, for url: URL) throws -> URL
+    func setLabel(_ labelNumber: Int, for url: URL) throws -> URL
 }
 
 struct ResultFileOperationService {
@@ -29,8 +30,7 @@ struct ResultFileOperationService {
     }
 
     func createAlias(for url: URL, in destinationFolder: URL) throws -> URL {
-        let aliasName = url.deletingPathExtension().lastPathComponent + " alias"
-        let aliasURL = destinationFolder.appendingPathComponent(aliasName).appendingPathExtension("alias")
+        let aliasURL = Self.availableAliasURL(for: url, in: destinationFolder)
         let bookmarkData = try url.bookmarkData(
             options: .suitableForBookmarkFile,
             includingResourceValuesForKeys: nil,
@@ -54,6 +54,31 @@ struct ResultFileOperationService {
         values.isUserImmutable = locked
         try mutableURL.setResourceValues(values)
         return mutableURL
+    }
+
+    /// Finder 标签编号：0 无、1 灰、2 绿、3 紫、4 蓝、5 黄、6 红、7 橙
+    func setLabel(_ labelNumber: Int, for url: URL) throws -> URL {
+        var mutableURL = url
+        var values = URLResourceValues()
+        values.labelNumber = min(max(labelNumber, 0), 7)
+        try mutableURL.setResourceValues(values)
+        return mutableURL
+    }
+
+    /// 与 Finder 一致的替身命名：“名称 alias”，重名时追加序号
+    static func availableAliasURL(
+        for url: URL,
+        in destinationFolder: URL,
+        fileExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+    ) -> URL {
+        let baseName = url.lastPathComponent + " alias"
+        var candidate = destinationFolder.appendingPathComponent(baseName)
+        var index = 2
+        while fileExists(candidate.path) {
+            candidate = destinationFolder.appendingPathComponent("\(baseName) \(index)")
+            index += 1
+        }
+        return candidate
     }
 }
 

@@ -522,17 +522,26 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func showInfo(items: [SearchResultItem]) {
-        runFinderScript(commandBody: items.map { item in
+        runFinderScript(commandBody: ["activate"] + items.map { item in
             #"open information window of (POSIX file "\#(escapedForAppleScript(item.path))" as alias)"#
         })
     }
 
     private func setLabel(index: Int, items: [SearchResultItem]) {
-        runFinderScript(commandBody: items.map { item in
-            #"set label index of (POSIX file "\#(escapedForAppleScript(item.path))" as alias) to \#(index)"#
-        })
-        let updatedItems = items.compactMap { refreshedItem(from: $0, atPath: $0.path) }
+        var failure: Error?
+        let updatedItems = items.compactMap { item -> SearchResultItem? in
+            do {
+                let url = try actionController.fileService.setLabel(index, for: URL(fileURLWithPath: item.path))
+                return refreshedItem(from: item, atPath: url.path)
+            } catch {
+                failure = failure ?? error
+                return nil
+            }
+        }
         viewModel.replaceItems(updatedItems)
+        if let failure {
+            presentErrorAlert(failure)
+        }
     }
 
     private func runFinderScript(commandBody: [String]) {
@@ -545,7 +554,9 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         var error: NSDictionary?
         NSAppleScript(source: source)?.executeAndReturnError(&error)
         if let error {
-            presentErrorAlert(NSError(domain: "FinderScript", code: 1, userInfo: error as? [String: Any]))
+            let message = error[NSAppleScript.errorMessage] as? String ?? error.description
+            let code = error[NSAppleScript.errorNumber] as? Int ?? 1
+            presentErrorAlert(NSError(domain: "FinderScript", code: code, userInfo: [NSLocalizedDescriptionKey: message]))
         }
     }
 

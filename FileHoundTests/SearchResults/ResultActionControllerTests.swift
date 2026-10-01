@@ -65,4 +65,8 @@ private struct StubResultFileOperationService: ResultFileOperationServing {
     func setLocked(_ locked: Bool, for url: URL) throws -> URL {
         url
     }
+
+    func setLabel(_ labelNumber: Int, for url: URL) throws -> URL {
+        url
+    }
 }
