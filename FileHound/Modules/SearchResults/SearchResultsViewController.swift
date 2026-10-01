@@ -290,61 +290,56 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
             self?.open(items: items, applicationURL: nil)
         })
 
-        let openWithItem = NSMenuItem(title: "Open With", action: nil, keyEquivalent: "")
+        let openWithItem = NSMenuItem(title: L10n.string("results.menu.open_with"), action: nil, keyEquivalent: "")
         openWithItem.submenu = makeOpenWithMenu(for: items)
         menu.addItem(openWithItem)
 
-        menu.addItem(makeMenuItem(title: "Reveal in Finder") { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.reveal_in_finder")) { [weak self] in
             self?.revealInFinder(items: items)
         })
         menu.addItem(.separator())
-        menu.addItem(makeMenuItem(title: "Move to Trash", isEnabled: state.canMoveToTrash) { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.move_to_trash"), isEnabled: state.canMoveToTrash) { [weak self] in
             self?.moveToTrash(items: items)
         })
-        menu.addItem(makeMenuItem(title: "Delete Immediately", isEnabled: state.canMoveToTrash) { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.delete_immediately"), isEnabled: state.canMoveToTrash) { [weak self] in
             self?.deleteImmediately(items: items)
         })
         menu.addItem(.separator())
 
-        let copyPathItem = NSMenuItem(title: "Copy Path", action: nil, keyEquivalent: "")
+        let copyPathItem = NSMenuItem(title: L10n.string("results.menu.copy_path"), action: nil, keyEquivalent: "")
         copyPathItem.submenu = makeCopyPathMenu(for: items)
         menu.addItem(copyPathItem)
 
         menu.addItem(.separator())
-        menu.addItem(makeMenuItem(title: "Get Info") { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.get_info")) { [weak self] in
             self?.showInfo(items: items)
         })
-        menu.addItem(makeMenuItem(title: "Rename", isEnabled: state.canRename) { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.rename"), isEnabled: state.canRename) { [weak self] in
             self?.rename(item: items.first)
         })
-        menu.addItem(makeMenuItem(title: "Create Alias in...") { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.create_alias")) { [weak self] in
             self?.createAlias(items: items)
         })
-        menu.addItem(makeMenuItem(title: "Quick Look") { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.quick_look")) { [weak self] in
             self?.showQuickLook(items: items)
         })
 
-        let labelItem = NSMenuItem(title: "Set Label", action: nil, keyEquivalent: "")
+        let labelItem = NSMenuItem(title: L10n.string("results.menu.set_label"), action: nil, keyEquivalent: "")
         labelItem.submenu = makeLabelMenu(for: items)
         menu.addItem(labelItem)
 
         let shouldShowAsVisible = items.allSatisfy { self.isItemHidden($0) }
-        menu.addItem(makeMenuItem(title: shouldShowAsVisible ? "Make Visible" : "Make Invisible") { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string(shouldShowAsVisible ? "results.menu.make_visible" : "results.menu.make_invisible")) { [weak self] in
             self?.setHidden(shouldHide: !shouldShowAsVisible, items: items)
         })
-        menu.addItem(makeMenuItem(title: "Unlock") { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.unlock")) { [weak self] in
             self?.unlock(items: items)
         })
         menu.addItem(.separator())
-        menu.addItem(makeMenuItem(title: "Remove from Results", isEnabled: state.canRemoveFromResults) { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.remove_from_results"), isEnabled: state.canRemoveFromResults) { [weak self] in
             guard let self else { return }
             self.actionController.removeFromResults(items: items, viewModel: self.viewModel)
         })
-        menu.addItem(.separator())
-
-        let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
-        servicesItem.submenu = makeServicesMenu()
-        menu.addItem(servicesItem)
 
         return menu
     }
@@ -352,18 +347,18 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     private func openMenuTitle(for items: [SearchResultItem]) -> String {
         guard items.count == 1,
               let appURL = NSWorkspace.shared.urlForApplication(toOpen: URL(fileURLWithPath: items[0].path)) else {
-            return "Open"
+            return L10n.string("results.menu.open")
         }
 
         let appName = FileManager.default.displayName(atPath: appURL.path).replacingOccurrences(of: ".app", with: "")
-        return "Open with \(appName)"
+        return L10n.format("results.menu.open_with_app", appName)
     }
 
     private func makeOpenWithMenu(for items: [SearchResultItem]) -> NSMenu {
-        let menu = NSMenu(title: "Open With")
+        let menu = NSMenu(title: L10n.string("results.menu.open_with"))
         let apps = availableApplicationURLs(for: items)
         guard apps.isEmpty == false else {
-            let item = NSMenuItem(title: "No Compatible Applications", action: nil, keyEquivalent: "")
+            let item = NSMenuItem(title: L10n.string("results.menu.no_compatible_apps"), action: nil, keyEquivalent: "")
             item.isEnabled = false
             menu.addItem(item)
             return menu
@@ -379,13 +374,13 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func makeCopyPathMenu(for items: [SearchResultItem]) -> NSMenu {
-        let menu = NSMenu(title: "Copy Path")
-        menu.addItem(makeMenuItem(title: "POSIX Path") {
+        let menu = NSMenu(title: L10n.string("results.menu.copy_path"))
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.posix_path")) {
             let value = items.map(\.path).joined(separator: "\n")
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(value, forType: .string)
         })
-        menu.addItem(makeMenuItem(title: "File URL") {
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.file_url")) {
             let value = items.map { URL(fileURLWithPath: $0.path).absoluteString }.joined(separator: "\n")
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(value, forType: .string)
@@ -394,35 +389,22 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func makeLabelMenu(for items: [SearchResultItem]) -> NSMenu {
-        let menu = NSMenu(title: "Set Label")
+        let menu = NSMenu(title: L10n.string("results.menu.set_label"))
         let labels: [(String, Int)] = [
-            ("None", 0),
-            ("Gray", 1),
-            ("Green", 2),
-            ("Purple", 3),
-            ("Blue", 4),
-            ("Yellow", 5),
-            ("Red", 6),
-            ("Orange", 7)
+            (L10n.string("results.label.none"), 0),
+            (L10n.string("results.label.gray"), 1),
+            (L10n.string("results.label.green"), 2),
+            (L10n.string("results.label.purple"), 3),
+            (L10n.string("results.label.blue"), 4),
+            (L10n.string("results.label.yellow"), 5),
+            (L10n.string("results.label.red"), 6),
+            (L10n.string("results.label.orange"), 7)
         ]
 
         for (title, index) in labels {
             menu.addItem(makeMenuItem(title: title) { [weak self] in
                 self?.setLabel(index: index, items: items)
             })
-        }
-        return menu
-    }
-
-    private func makeServicesMenu() -> NSMenu {
-        let menu = NSMenu(title: "Services")
-        view.window?.makeFirstResponder(self)
-        NSApp.servicesMenu = menu
-        NSUpdateDynamicServices()
-        if menu.items.isEmpty {
-            let item = NSMenuItem(title: "No Services Available", action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            menu.addItem(item)
         }
         return menu
     }
@@ -472,10 +454,10 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         guard let item else { return }
 
         let alert = NSAlert()
-        alert.messageText = "Rename"
+        alert.messageText = L10n.string("results.rename.title")
         alert.informativeText = item.displayName
-        alert.addButton(withTitle: "Rename")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: L10n.string("results.rename.confirm"))
+        alert.addButton(withTitle: L10n.string("common.cancel"))
         let field = NSTextField(string: item.displayName)
         alert.accessoryView = field
 
@@ -679,14 +661,47 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         case .deleteImmediately(let itemCount):
             let alert = NSAlert()
             alert.alertStyle = .warning
-            alert.messageText = "Delete Immediately?"
+            alert.messageText = L10n.string("results.delete.title")
             alert.informativeText = itemCount == 1
-                ? "This item will be deleted permanently."
-                : "\(itemCount) items will be deleted permanently."
-            alert.addButton(withTitle: "Delete")
-            alert.addButton(withTitle: "Cancel")
+                ? L10n.string("results.delete.single")
+                : L10n.format("results.delete.multiple", Int64(itemCount))
+            alert.addButton(withTitle: L10n.string("results.delete.confirm"))
+            alert.addButton(withTitle: L10n.string("common.cancel"))
             return alert.runModal() == .alertFirstButtonReturn
         }
+    }
+
+    @objc
+    func openSelectedResults(_ sender: Any?) {
+        let items = viewModel.selectedItems
+        guard items.isEmpty == false else { return }
+        open(items: items, applicationURL: nil)
+    }
+
+    @objc
+    func moveSelectedResultsToTrash(_ sender: Any?) {
+        let items = viewModel.selectedItems
+        guard items.isEmpty == false else { return }
+        moveToTrash(items: items)
+    }
+
+    /// ⌘C：把选中结果作为文件 URL 写入剪贴板，同时附带以换行分隔的路径文本
+    @objc
+    func copy(_ sender: Any?) {
+        writeSelectedItems(to: .general)
+    }
+
+    @discardableResult
+    func writeSelectedItems(to pasteboard: NSPasteboard) -> Bool {
+        let selectedURLs = viewModel.selectedItems.map { URL(fileURLWithPath: $0.path) }
+        guard selectedURLs.isEmpty == false else {
+            return false
+        }
+
+        pasteboard.clearContents()
+        pasteboard.writeObjects(selectedURLs as [NSURL])
+        pasteboard.setString(selectedURLs.map(\.path).joined(separator: "\n"), forType: .string)
+        return true
     }
 
     override func validRequestor(forSendType sendType: NSPasteboard.PasteboardType?, returnType: NSPasteboard.PasteboardType?) -> Any? {
@@ -1173,6 +1188,20 @@ struct SearchResultNameHighlighter {
             let lowerOffset = scopedTitle.distance(from: scopedTitle.startIndex, to: range.lowerBound)
             let location = title.distance(from: title.startIndex, to: candidateRange.lowerBound) + lowerOffset
             return NSRange(location: location, length: scopedTitle.distance(from: range.lowerBound, to: range.upperBound))
+        }
+    }
+}
+
+extension SearchResultsViewController: NSMenuItemValidation {
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        switch menuItem.action {
+        case #selector(moveSelectedResultsToTrash(_:)):
+            // 过滤框等文本输入获得焦点时 ⌘⌫ 留给文本编辑，避免误删文件
+            return viewModel.selectedItems.isEmpty == false && (view.window?.firstResponder is NSText) == false
+        case #selector(openSelectedResults(_:)), #selector(copy(_:)):
+            return viewModel.selectedItems.isEmpty == false
+        default:
+            return true
         }
     }
 }

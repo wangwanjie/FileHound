@@ -139,17 +139,39 @@ struct SearchResultsViewControllerTests {
         _ = controller.view
 
         #expect(controller.debugSortTitles == [
-            "Name",
-            "Date Modified",
-            "Date Created",
-            "Last Opened",
-            "Date Added",
-            "Kind",
-            "Size",
-            "Tags",
-            "Enclosing Folder",
-            "Path"
-        ])
+            "name", "modified", "created", "last_opened", "added",
+            "kind", "size", "tags", "enclosing_folder", "path"
+        ].map { L10n.string("results.column.\($0)") })
+    }
+
+    @MainActor
+    @Test
+    func selectionActionsValidateAndCopyFileURLs() throws {
+        let viewModel = SearchResultsViewModel()
+        let first = SearchResultItem(path: "/tmp/a.txt", matchReason: "", previewSnippet: "")
+        let second = SearchResultItem(path: "/tmp/b c.txt", matchReason: "", previewSnippet: "")
+        viewModel.items = [first, second]
+        let controller = SearchResultsViewController(viewModel: viewModel)
+        _ = controller.view
+
+        let openItem = NSMenuItem(title: "", action: #selector(SearchResultsViewController.openSelectedResults(_:)), keyEquivalent: "")
+        let trashItem = NSMenuItem(title: "", action: #selector(SearchResultsViewController.moveSelectedResultsToTrash(_:)), keyEquivalent: "")
+        let copyItem = NSMenuItem(title: "", action: #selector(SearchResultsViewController.copy(_:)), keyEquivalent: "")
+        #expect(controller.validateMenuItem(openItem) == false)
+        #expect(controller.validateMenuItem(trashItem) == false)
+        #expect(controller.validateMenuItem(copyItem) == false)
+
+        viewModel.selectedIDs = [first.id, second.id]
+        #expect(controller.validateMenuItem(openItem))
+        #expect(controller.validateMenuItem(trashItem))
+        #expect(controller.validateMenuItem(copyItem))
+
+        let pasteboard = NSPasteboard(name: NSPasteboard.Name("FileHoundTests.copy.\(UUID().uuidString)"))
+        defer { pasteboard.releaseGlobally() }
+        #expect(controller.writeSelectedItems(to: pasteboard))
+        let urls = pasteboard.readObjects(forClasses: [NSURL.self]) as? [URL]
+        #expect(urls?.map(\.path) == ["/tmp/a.txt", "/tmp/b c.txt"])
+        #expect(pasteboard.string(forType: .string) == "/tmp/a.txt\n/tmp/b c.txt")
     }
 
     @MainActor

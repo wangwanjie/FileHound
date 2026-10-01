@@ -21,10 +21,10 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
     var onSortChange: ((SearchResultsViewModel.SortField, SearchResultsViewModel.SortOrder) -> Void)?
 
     override func loadView() {
-        addColumn(id: "name", title: "Name", width: 420, sortField: .name, isOutline: true)
-        addColumn(id: "kind", title: "Kind", width: 180, sortField: .kind)
-        addColumn(id: "modified", title: "Date Modified", width: 190, sortField: .dateModified)
-        addColumn(id: "size", title: "Size", width: 90, sortField: .size)
+        addColumn(id: "name", title: L10n.string("results.column.name"), width: 420, sortField: .name, isOutline: true)
+        addColumn(id: "kind", title: L10n.string("results.column.kind"), width: 180, sortField: .kind)
+        addColumn(id: "modified", title: L10n.string("results.column.modified"), width: 190, sortField: .dateModified)
+        addColumn(id: "size", title: L10n.string("results.column.size"), width: 90, sortField: .size)
         outlineView.delegate = self
         outlineView.dataSource = self
         outlineView.target = self

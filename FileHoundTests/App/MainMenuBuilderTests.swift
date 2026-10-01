@@ -105,11 +105,15 @@ struct MainMenuBuilderTests {
 
     @MainActor
     @Test
-    func fileMenuIncludesSaveSearchCommand() {
+    func fileMenuIncludesSaveSearchCommand() throws {
         let menu = MainMenuBuilder().build()
-        let fileMenu = try! #require(menu.item(at: 1)?.submenu)
+        let fileMenu = try #require(menu.item(at: 1)?.submenu)
 
         #expect(fileMenu.items.contains { $0.title == L10n.string("menu.save_search") })
+        let trashItem = try #require(fileMenu.items.first { $0.action == #selector(SearchResultsViewController.moveSelectedResultsToTrash(_:)) })
+        #expect(trashItem.keyEquivalent == "\u{8}")
+        #expect(trashItem.keyEquivalentModifierMask == [.command])
+        #expect(fileMenu.items.contains { $0.action == #selector(SearchResultsViewController.openSelectedResults(_:)) && $0.keyEquivalent == "o" })
     }
 
     @MainActor

@@ -161,6 +161,21 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
         fileMenu.addItem(savedSearchMenuItem)
 
         fileMenu.addItem(.separator())
+        fileMenu.addItem(
+            NSMenuItem(
+                title: L10n.string("results.menu.open"),
+                action: #selector(SearchResultsViewController.openSelectedResults(_:)),
+                keyEquivalent: "o"
+            )
+        )
+        fileMenu.addItem(
+            NSMenuItem(
+                title: L10n.string("results.menu.move_to_trash"),
+                action: #selector(SearchResultsViewController.moveSelectedResultsToTrash(_:)),
+                keyEquivalent: "\u{8}"
+            )
+        )
+        fileMenu.addItem(.separator())
 
         let saveSearchItem = NSMenuItem(
             title: L10n.string("menu.save_search"),

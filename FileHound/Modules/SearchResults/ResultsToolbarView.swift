@@ -27,7 +27,7 @@ final class ResultsToolbarView: NSView {
     private let topBar = NSStackView()
     private let secondaryBar = NSView()
     private let previewLabel = NSTextField(labelWithString: "Preview Size:")
-    private let sortLabel = NSTextField(labelWithString: "Sort By")
+    private let sortLabel = NSTextField(labelWithString: L10n.string("results.toolbar.sort_by"))
     private var secondaryBarHeightConstraint: Constraint?
     private var secondaryBarTopConstraint: Constraint?
 
@@ -35,13 +35,13 @@ final class ResultsToolbarView: NSView {
         super.init(frame: frameRect)
 
         filterField.setAccessibilityIdentifier("ResultsFilterField")
-        filterField.placeholderString = "Filter"
-        gridButton.toolTip = "Grid View"
-        tableButton.toolTip = "List View"
-        treeButton.toolTip = "Tree View"
-        invisiblesButton.toolTip = "Show Invisible Items"
-        packageButton.toolTip = "Show Package Contents"
-        trashedButton.toolTip = "Show Trashed Items"
+        filterField.placeholderString = L10n.string("results.toolbar.filter")
+        gridButton.toolTip = L10n.string("results.toolbar.grid")
+        tableButton.toolTip = L10n.string("results.mode.list")
+        treeButton.toolTip = L10n.string("results.mode.tree")
+        invisiblesButton.toolTip = L10n.string("results.toolbar.show_invisibles")
+        packageButton.toolTip = L10n.string("results.toolbar.show_package_contents")
+        trashedButton.toolTip = L10n.string("results.toolbar.show_trashed")
         previewSlider.controlSize = .small
         previewSlider.isContinuous = true
         previewSlider.setAccessibilityIdentifier("ResultsPreviewSlider")
@@ -53,9 +53,9 @@ final class ResultsToolbarView: NSView {
             $0.textColor = .secondaryLabelColor
         }
 
-        let modeGroup = makeGroupedStack(title: "View", views: [gridButton, tableButton, treeButton])
-        let optionsGroup = makeGroupedStack(title: "Show", views: [invisiblesButton, packageButton, trashedButton])
-        let filterGroup = makeGroupedStack(title: "Filter", views: [filterField])
+        let modeGroup = makeGroupedStack(title: L10n.string("results.toolbar.view"), views: [gridButton, tableButton, treeButton])
+        let optionsGroup = makeGroupedStack(title: L10n.string("results.toolbar.show"), views: [invisiblesButton, packageButton, trashedButton])
+        let filterGroup = makeGroupedStack(title: L10n.string("results.toolbar.filter"), views: [filterField])
 
         topBar.orientation = .horizontal
         topBar.alignment = .top
@@ -174,25 +174,25 @@ final class ResultsToolbarView: NSView {
     private static func title(for field: SearchResultsViewModel.SortField) -> String {
         switch field {
         case .name:
-            return "Name"
+            return L10n.string("results.column.name")
         case .dateModified:
-            return "Date Modified"
+            return L10n.string("results.column.modified")
         case .dateCreated:
-            return "Date Created"
+            return L10n.string("results.column.created")
         case .lastOpened:
-            return "Last Opened"
+            return L10n.string("results.column.last_opened")
         case .dateAdded:
-            return "Date Added"
+            return L10n.string("results.column.added")
         case .kind:
-            return "Kind"
+            return L10n.string("results.column.kind")
         case .size:
-            return "Size"
+            return L10n.string("results.column.size")
         case .tags:
-            return "Tags"
+            return L10n.string("results.column.tags")
         case .enclosingFolder:
-            return "Enclosing Folder"
+            return L10n.string("results.column.enclosing_folder")
         case .path:
-            return "Path"
+            return L10n.string("results.column.path")
         }
     }
 
