@@ -7,6 +7,7 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     private var items: [SearchResultItem] = []
     private let iconProvider = ResultIconProvider()
     private var isApplyingSortDescriptor = false
+    private(set) var resultsAppearance = ResultsAppearance.current()
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onSelectionSetChange: (([SearchResultItem]) -> Void)?
@@ -33,7 +34,7 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         tableView.setAccessibilityIdentifier("ResultsTable")
         tableView.selectionHighlightStyle = .regular
         tableView.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.96)
-        tableView.rowHeight = 24
+        tableView.rowHeight = resultsAppearance.rowHeight
         tableView.intercellSpacing = NSSize(width: 0, height: 1)
         tableView.menuProvider = { [weak self] event in
             self?.menu(for: event)
@@ -51,6 +52,22 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
 
         applyAppearance()
         applySort(field: .name, order: .ascending)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(resultsAppearanceDidChange(_:)),
+            name: AppSettings.resultsAppearanceDidChangeNotification,
+            object: nil
+        )
+    }
+
+    func applyResultsAppearance(_ appearance: ResultsAppearance) {
+        resultsAppearance = appearance
+        tableView.rowHeight = appearance.rowHeight
+        tableView.reloadData()
+    }
+
+    @objc private func resultsAppearanceDidChange(_ notification: Notification) {
+        applyResultsAppearance(.current())
     }
 
     private func addColumn(id: String, title: String, width: CGFloat, sortField: SearchResultsViewModel.SortField?) {
@@ -75,7 +92,12 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let item = items[row]
         let cell = tableView.makeView(withIdentifier: ResultTableCellView.identifier, owner: self) as? ResultTableCellView ?? ResultTableCellView()
-        cell.render(item: item, columnID: tableColumn?.identifier.rawValue ?? "name", iconProvider: iconProvider)
+        cell.render(
+            item: item,
+            columnID: tableColumn?.identifier.rawValue ?? "name",
+            iconProvider: iconProvider,
+            appearance: resultsAppearance
+        )
         return cell
     }
 
@@ -242,7 +264,7 @@ private final class ResultTableCellView: NSTableCellView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func render(item: SearchResultItem, columnID: String, iconProvider: ResultIconProvider) {
+    func render(item: SearchResultItem, columnID: String, iconProvider: ResultIconProvider, appearance: ResultsAppearance) {
         representedPath = item.path
         let showsIcon = columnID == "name"
         imageView?.isHidden = showsIcon == false
@@ -254,7 +276,8 @@ private final class ResultTableCellView: NSTableCellView {
             leadingToSuperviewConstraint?.activate()
         }
         textField?.identifier = NSUserInterfaceItemIdentifier(item.displayName)
-        textField?.textColor = .labelColor
+        textField?.font = appearance.font
+        textField?.textColor = appearance.textColor(for: item)
 
         switch columnID {
         case "kind":
@@ -264,7 +287,11 @@ private final class ResultTableCellView: NSTableCellView {
         case "size":
             textField?.stringValue = item.sizeText
         default:
-            textField?.attributedStringValue = SearchResultNameHighlighter.attributedTitle(for: item, baseColor: .labelColor)
+            textField?.attributedStringValue = SearchResultNameHighlighter.attributedTitle(
+                for: item,
+                baseColor: appearance.textColor(for: item),
+                font: appearance.font
+            )
             imageView?.image = NSWorkspace.shared.icon(forFile: item.path)
             let path = item.path
             Task { @MainActor [weak self] in
@@ -332,9 +359,19 @@ extension ResultsTableViewController {
         tableView.rowHeight
     }
 
+    func debugNameAttributes(for item: SearchResultItem) -> (font: NSFont?, color: NSColor?) {
+        let cell = ResultTableCellView(frame: NSRect(x: 0, y: 0, width: 420, height: tableView.rowHeight))
+        cell.render(item: item, columnID: "name", iconProvider: iconProvider, appearance: resultsAppearance)
+        guard let title = cell.textField?.attributedStringValue, title.length > 0 else {
+            return (nil, nil)
+        }
+        let attributes = title.attributes(at: 0, effectiveRange: nil)
+        return (attributes[.font] as? NSFont, attributes[.foregroundColor] as? NSColor)
+    }
+
     func debugNameCellAlignmentOffset(for item: SearchResultItem) -> CGFloat {
         let cell = ResultTableCellView(frame: NSRect(x: 0, y: 0, width: 420, height: tableView.rowHeight))
-        cell.render(item: item, columnID: "name", iconProvider: iconProvider)
+        cell.render(item: item, columnID: "name", iconProvider: iconProvider, appearance: resultsAppearance)
         cell.layoutSubtreeIfNeeded()
         guard let imageView = cell.imageView, let textField = cell.textField else {
             return .greatestFiniteMagnitude

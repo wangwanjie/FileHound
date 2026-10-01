@@ -10,6 +10,7 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
     private var currentSortField: SearchResultsViewModel.SortField = .name
     private var currentSortOrder: SearchResultsViewModel.SortOrder = .ascending
     private var rootNodes: [ResultOutlineNode] = []
+    private(set) var resultsAppearance = ResultsAppearance.current()
     var expandsFoldersOnReload = false
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
@@ -38,7 +39,7 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         outlineView.setAccessibilityIdentifier("ResultsOutline")
         outlineView.selectionHighlightStyle = .regular
         outlineView.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.96)
-        outlineView.rowHeight = 24
+        outlineView.rowHeight = resultsAppearance.rowHeight
         outlineView.intercellSpacing = NSSize(width: 0, height: 1)
         outlineView.menuProvider = { [weak self] event in
             self?.menu(for: event)
@@ -56,6 +57,24 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
 
         applyAppearance()
         applySort(field: .name, order: .ascending)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(resultsAppearanceDidChange(_:)),
+            name: AppSettings.resultsAppearanceDidChangeNotification,
+            object: nil
+        )
+    }
+
+    func applyResultsAppearance(_ appearance: ResultsAppearance) {
+        resultsAppearance = appearance
+        outlineView.rowHeight = appearance.rowHeight
+        let expandedPaths = expandedNodePaths()
+        outlineView.reloadData()
+        applyExpansionState(expandedPaths)
+    }
+
+    @objc private func resultsAppearanceDidChange(_ notification: Notification) {
+        applyResultsAppearance(.current())
     }
 
     private func addColumn(
@@ -109,6 +128,7 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
             item: node.item,
             columnID: tableColumn?.identifier.rawValue ?? "name",
             iconProvider: iconProvider,
+            appearance: resultsAppearance,
             displayName: node.displayTitle,
             highlightName: node.isMatchedResult
         )
@@ -635,11 +655,14 @@ private final class ResultOutlineCellView: NSTableCellView {
         item: SearchResultItem,
         columnID: String,
         iconProvider: ResultIconProvider,
+        appearance: ResultsAppearance,
         displayName: String? = nil,
         highlightName: Bool = true
     ) {
         representedPath = item.path
         textField?.identifier = NSUserInterfaceItemIdentifier(item.displayName)
+        textField?.font = appearance.font
+        textField?.textColor = appearance.textColor(for: item)
         let showsIcon = columnID == "name"
         imageView?.isHidden = showsIcon == false
         if showsIcon {
@@ -659,13 +682,17 @@ private final class ResultOutlineCellView: NSTableCellView {
             textField?.stringValue = item.sizeText
         default:
             if highlightName {
-                textField?.attributedStringValue = SearchResultNameHighlighter.attributedTitle(for: item, baseColor: .labelColor)
+                textField?.attributedStringValue = SearchResultNameHighlighter.attributedTitle(
+                    for: item,
+                    baseColor: appearance.textColor(for: item),
+                    font: appearance.font
+                )
             } else {
                 textField?.attributedStringValue = NSAttributedString(
                     string: displayName ?? item.displayName,
                     attributes: [
-                        .foregroundColor: NSColor.labelColor,
-                        .font: NSFont.systemFont(ofSize: 13, weight: .regular)
+                        .foregroundColor: appearance.textColor(for: item),
+                        .font: appearance.font
                     ]
                 )
             }
@@ -740,7 +767,7 @@ extension ResultsOutlineViewController {
 
     func debugNameCellAlignmentOffset(for item: SearchResultItem) -> CGFloat {
         let cell = ResultOutlineCellView(frame: NSRect(x: 0, y: 0, width: 420, height: outlineView.rowHeight))
-        cell.render(item: item, columnID: "name", iconProvider: iconProvider)
+        cell.render(item: item, columnID: "name", iconProvider: iconProvider, appearance: resultsAppearance)
         cell.layoutSubtreeIfNeeded()
         guard let imageView = cell.imageView, let textField = cell.textField else {
             return .greatestFiniteMagnitude

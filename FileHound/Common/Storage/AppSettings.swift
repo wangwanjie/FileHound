@@ -113,6 +113,9 @@ final class AppSettings {
 
     static let shared = AppSettings(storage: MMKVKeyValueStore.shared)
 
+    /// 结果列表字体大小或隐藏项淡化颜色变化时发出
+    static let resultsAppearanceDidChangeNotification = Notification.Name("FileHound.AppSettings.resultsAppearanceDidChange")
+
     private let storage: KeyValueStoring
 
     init(storage: KeyValueStoring = MMKVKeyValueStore.shared) {
@@ -148,6 +151,7 @@ final class AppSettings {
         set {
             storage.set(String(newValue), forKey: Keys.resultsFontSize)
             synchronizeAppearancePreferences()
+            NotificationCenter.default.post(name: Self.resultsAppearanceDidChangeNotification, object: self)
         }
     }
 
@@ -156,6 +160,7 @@ final class AppSettings {
         set {
             storage.set(newValue, forKey: Keys.dimColorHex)
             synchronizeAppearancePreferences()
+            NotificationCenter.default.post(name: Self.resultsAppearanceDidChangeNotification, object: self)
         }
     }
 
@@ -297,6 +302,7 @@ final class AppSettings {
             storage.set(String(newValue.resultsFontSize), forKey: Keys.resultsFontSize)
             storage.set(newValue.dimColorHex, forKey: Keys.dimColorHex)
             try? storage.setCodable(newValue, forKey: Keys.appearancePreferences)
+            NotificationCenter.default.post(name: Self.resultsAppearanceDidChangeNotification, object: self)
         }
     }
 

@@ -8,6 +8,7 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
     private var items: [SearchResultItem] = []
     private let iconProvider = ResultIconProvider()
     private var previewSize: CGFloat = 72
+    private(set) var resultsAppearance = ResultsAppearance.current()
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onSelectionSetChange: (([SearchResultItem]) -> Void)?
@@ -38,6 +39,22 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
         scrollView.documentView = collectionView
         scrollView.hasVerticalScroller = true
         view = scrollView
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(resultsAppearanceDidChange(_:)),
+            name: AppSettings.resultsAppearanceDidChangeNotification,
+            object: nil
+        )
+    }
+
+    func applyResultsAppearance(_ appearance: ResultsAppearance) {
+        resultsAppearance = appearance
+        collectionView.reloadData()
+    }
+
+    @objc private func resultsAppearanceDidChange(_ notification: Notification) {
+        applyResultsAppearance(.current())
     }
 
     func update(items: [SearchResultItem]) {
@@ -65,7 +82,7 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
             return item
         }
 
-        resultItem.render(items[indexPath.item], iconProvider: iconProvider, previewSize: previewSize)
+        resultItem.render(items[indexPath.item], iconProvider: iconProvider, previewSize: previewSize, appearance: resultsAppearance)
         return resultItem
     }
 
@@ -138,6 +155,7 @@ private final class ResultGridItem: NSCollectionViewItem {
     private var representedPath: String?
     private var iconSizeConstraint: Constraint?
     private var currentItem: SearchResultItem?
+    private var appearance = ResultsAppearance.current()
 
     override func loadView() {
         view = NSView()
@@ -184,8 +202,14 @@ private final class ResultGridItem: NSCollectionViewItem {
         }
     }
 
-    func render(_ item: SearchResultItem, iconProvider: ResultIconProvider, previewSize: CGFloat) {
+    func render(
+        _ item: SearchResultItem,
+        iconProvider: ResultIconProvider,
+        previewSize: CGFloat,
+        appearance: ResultsAppearance
+    ) {
         currentItem = item
+        self.appearance = appearance
         representedPath = item.path
         iconSizeConstraint?.update(offset: previewSize)
         iconView.image = NSWorkspace.shared.icon(forFile: item.path)
@@ -211,13 +235,13 @@ private final class ResultGridItem: NSCollectionViewItem {
         }
         titleLabel.attributedStringValue = centeredGridTitle(
             for: currentItem,
-            baseColor: isSelected ? .controlAccentColor : .labelColor
+            baseColor: isSelected ? .controlAccentColor : appearance.textColor(for: currentItem)
         )
     }
 
     private func centeredGridTitle(for item: SearchResultItem, baseColor: NSColor) -> NSAttributedString {
         let attributed = NSMutableAttributedString(
-            attributedString: SearchResultNameHighlighter.attributedTitle(for: item, baseColor: baseColor)
+            attributedString: SearchResultNameHighlighter.attributedTitle(for: item, baseColor: baseColor, font: appearance.font)
         )
         guard attributed.length > 0 else {
             return attributed
@@ -310,7 +334,7 @@ extension ResultsCollectionViewController {
         let gridItem = ResultGridItem()
         _ = gridItem.view
         gridItem.view.frame = NSRect(x: 0, y: 0, width: previewSize + 60, height: previewSize + 44)
-        gridItem.render(item, iconProvider: iconProvider, previewSize: previewSize)
+        gridItem.render(item, iconProvider: iconProvider, previewSize: previewSize, appearance: resultsAppearance)
         gridItem.view.layoutSubtreeIfNeeded()
         return gridItem
     }

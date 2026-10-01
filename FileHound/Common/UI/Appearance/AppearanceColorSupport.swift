@@ -80,3 +80,32 @@ final class AppearanceAwareView: NSView {
         layer?.backgroundColor = backgroundColorProvider(effectiveAppearance).fhResolvedCGColor(for: effectiveAppearance)
     }
 }
+
+extension NSColor {
+    convenience init?(hexString: String) {
+        let hex = hexString.replacingOccurrences(of: "#", with: "")
+        guard hex.count == 6, let value = Int(hex, radix: 16) else { return nil }
+        self.init(
+            calibratedRed: CGFloat((value >> 16) & 0xFF) / 255,
+            green: CGFloat((value >> 8) & 0xFF) / 255,
+            blue: CGFloat(value & 0xFF) / 255,
+            alpha: 1
+        )
+    }
+
+    var hexString: String? {
+        // 已是 RGB 颜色时直接取分量，避免跨色彩空间转换导致十六进制值漂移
+        let color: NSColor
+        if type == .componentBased, colorSpace.colorSpaceModel == .rgb {
+            color = self
+        } else if let converted = usingColorSpace(.sRGB) {
+            color = converted
+        } else {
+            return nil
+        }
+        let red = Int(round(color.redComponent * 255))
+        let green = Int(round(color.greenComponent * 255))
+        let blue = Int(round(color.blueComponent * 255))
+        return String(format: "#%02X%02X%02X", red, green, blue)
+    }
+}

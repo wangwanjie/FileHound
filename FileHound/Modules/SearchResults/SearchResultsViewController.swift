@@ -1106,13 +1106,17 @@ private final class ResultsFadeView: NSView {
 }
 
 struct SearchResultNameHighlighter {
-    static func attributedTitle(for item: SearchResultItem, baseColor: NSColor) -> NSAttributedString {
+    static func attributedTitle(
+        for item: SearchResultItem,
+        baseColor: NSColor,
+        font: NSFont = .systemFont(ofSize: NSFont.systemFontSize)
+    ) -> NSAttributedString {
         let title = item.displayName
         let attributed = NSMutableAttributedString(
             string: title,
             attributes: [
                 .foregroundColor: baseColor,
-                .font: NSFont.systemFont(ofSize: NSFont.systemFontSize)
+                .font: font
             ]
         )
 
