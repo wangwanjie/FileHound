@@ -2,6 +2,10 @@ import AppKit
 import SnapKit
 
 final class SearchRuleListView: NSView {
+    /// 行自身带有上下 padding，面板竖向 inset 加上行 padding 后与横向 inset 一致，四周视觉留白相同。
+    static let horizontalInset: CGFloat = 14
+    static let verticalInset: CGFloat = horizontalInset - SearchRuleRowView.Layout.verticalPadding
+
     let stackView = NSStackView()
     private let scrollView = NSScrollView()
     private let contentView = NSView()
@@ -18,7 +22,8 @@ final class SearchRuleListView: NSView {
         layer?.borderWidth = 1
 
         stackView.orientation = .vertical
-        stackView.spacing = 10
+        stackView.alignment = .leading
+        stackView.spacing = 2
         stackView.setContentHuggingPriority(.required, for: .vertical)
         stackView.setContentCompressionResistancePriority(.required, for: .vertical)
 
@@ -37,8 +42,8 @@ final class SearchRuleListView: NSView {
         contentView.addSubview(stackView)
 
         scrollView.snp.makeConstraints { make in
-            make.leading.top.trailing.equalToSuperview().inset(16)
-            make.bottom.equalToSuperview().inset(16)
+            make.leading.trailing.equalToSuperview().inset(Self.horizontalInset)
+            make.top.bottom.equalToSuperview().inset(Self.verticalInset)
         }
         contentView.snp.makeConstraints { make in
             make.top.leading.trailing.equalTo(scrollView.contentView)
@@ -54,7 +59,7 @@ final class SearchRuleListView: NSView {
 
     var preferredContentHeight: CGFloat {
         layoutSubtreeIfNeeded()
-        return stackView.fittingSize.height + 32
+        return stackView.fittingSize.height + Self.verticalInset * 2
     }
 
     func updateLogicSummary(_ text: String) {

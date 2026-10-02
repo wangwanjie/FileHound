@@ -1,4 +1,5 @@
 import AppKit
+import SnapKit
 
 final class SearchRulesViewController: NSViewController {
     private let listView = SearchRuleListView()
@@ -89,6 +90,9 @@ final class SearchRulesViewController: NSViewController {
         let insertionIndex = sourceRow.flatMap { rows.firstIndex(of: $0).map { $0 + 1 } } ?? rows.count
         rows.insert(row, at: insertionIndex)
         listView.stackView.insertArrangedSubview(row, at: insertionIndex)
+        row.snp.makeConstraints { make in
+            make.leading.trailing.equalTo(listView.stackView)
+        }
         updateRowValidations()
         updateRowControls()
         updateLogicSummary()
@@ -117,8 +121,13 @@ final class SearchRulesViewController: NSViewController {
     }
 
     private func handleRowChange() {
+        let previousHeight = preferredContentHeight
         updateRowValidations()
         updateLogicSummary()
+        // 校验提示的显隐会改变行高，需要让窗口跟着伸缩
+        if preferredContentHeight != previousHeight {
+            notifyContentLayoutChange()
+        }
         onSelectionsChange?(currentSelections)
     }
 

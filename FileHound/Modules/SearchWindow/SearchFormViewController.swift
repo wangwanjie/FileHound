@@ -3,6 +3,22 @@ import SnapKit
 
 @MainActor
 final class SearchFormViewController: NSViewController {
+    enum Layout {
+        static let horizontalMargin: CGFloat = 20
+        static let topMargin: CGFloat = 16
+        static let bottomMargin: CGFloat = 20
+        static let headerSpacing: CGFloat = 12
+        static let sectionSpacing: CGFloat = 16
+        /// 顶部范围弹出菜单与底部查找按钮所在行的高度，与规则行控件同高。
+        static let barHeight: CGFloat = SearchRuleRowView.Layout.controlHeight
+        /// 规则面板以外的固定高度：上下边距 + 顶栏 + 底栏 + 两段间距。
+        static let chromeHeight: CGFloat = topMargin + barHeight + sectionSpacing + sectionSpacing + barHeight + bottomMargin
+        /// 单条规则时的面板高度。
+        static let minimumRuleAreaHeight: CGFloat = SearchRuleRowView.Layout.controlHeight
+            + SearchRuleRowView.Layout.verticalPadding * 2
+            + SearchRuleListView.verticalInset * 2
+    }
+
     weak var windowLayoutDelegate: SearchWindowLayoutDelegate?
 
     private let scopePopup = NSPopUpButton()
@@ -65,14 +81,22 @@ final class SearchFormViewController: NSViewController {
         let rootView = AppearanceAwareView()
         rootView.backgroundColorProvider = { _ in .windowBackgroundColor }
 
-        titleLabel.font = .systemFont(ofSize: 20, weight: .medium)
-        whereLabel.font = .systemFont(ofSize: 18, weight: .regular)
+        titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+        whereLabel.font = .systemFont(ofSize: 16, weight: .regular)
+        titleLabel.setContentHuggingPriority(.required, for: .horizontal)
+        whereLabel.setContentHuggingPriority(.required, for: .horizontal)
+        titleLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        whereLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        statusLabel.lineBreakMode = .byTruncatingTail
         statusLabel.font = .systemFont(ofSize: 13, weight: .regular)
         statusLabel.textColor = .secondaryLabelColor
 
         scopePopup.setAccessibilityIdentifier("SearchScopePopup")
         scopePopup.setAccessibilityLabel("SearchScopePopup")
-        scopePopup.font = .systemFont(ofSize: 16, weight: .regular)
+        scopePopup.font = .systemFont(ofSize: 14, weight: .regular)
+        scopePopup.controlSize = .large
+        primaryButton.controlSize = .large
+        primaryButton.font = .systemFont(ofSize: 14, weight: .medium)
         scopePopup.imagePosition = .imageLeft
         statusLabel.setAccessibilityIdentifier("SearchStatusLabel")
         primaryButton.setAccessibilityIdentifier("PrimarySearchButton")
@@ -93,36 +117,37 @@ final class SearchFormViewController: NSViewController {
         [titleLabel, scopePopup, whereLabel, rulesViewController.view, statusLabel, activityIndicator, primaryButton].forEach(rootView.addSubview)
 
         titleLabel.snp.makeConstraints { make in
-            make.leading.top.equalToSuperview().inset(18)
+            make.leading.equalToSuperview().inset(Layout.horizontalMargin)
+            make.centerY.equalTo(scopePopup)
         }
         scopePopup.snp.makeConstraints { make in
-            make.leading.equalTo(titleLabel.snp.trailing).offset(16)
-            make.centerY.equalTo(titleLabel)
-            make.width.equalTo(300)
-            make.height.equalTo(40)
+            make.leading.equalTo(titleLabel.snp.trailing).offset(Layout.headerSpacing)
+            make.top.equalToSuperview().inset(Layout.topMargin)
+            make.height.equalTo(Layout.barHeight)
         }
         whereLabel.snp.makeConstraints { make in
-            make.leading.equalTo(scopePopup.snp.trailing).offset(14)
-            make.centerY.equalTo(titleLabel)
-            make.trailing.lessThanOrEqualToSuperview().inset(18)
+            make.leading.equalTo(scopePopup.snp.trailing).offset(Layout.headerSpacing)
+            make.trailing.equalToSuperview().inset(Layout.horizontalMargin)
+            make.centerY.equalTo(scopePopup)
         }
         rulesViewController.view.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview().inset(18)
-            make.top.equalTo(titleLabel.snp.bottom).offset(16)
-            self.rulesHeightConstraint = make.height.equalTo(90).constraint
-        }
-        statusLabel.snp.makeConstraints { make in
-            make.leading.bottom.equalToSuperview().inset(18)
-            make.top.equalTo(rulesViewController.view.snp.bottom).offset(14)
+            make.leading.trailing.equalToSuperview().inset(Layout.horizontalMargin)
+            make.top.equalTo(scopePopup.snp.bottom).offset(Layout.sectionSpacing)
+            self.rulesHeightConstraint = make.height.equalTo(Layout.minimumRuleAreaHeight).constraint
         }
         primaryButton.snp.makeConstraints { make in
-            make.trailing.bottom.equalToSuperview().inset(18)
-            make.top.greaterThanOrEqualTo(rulesViewController.view.snp.bottom).offset(14)
-            make.width.equalTo(160)
-            make.height.equalTo(40)
+            make.trailing.equalToSuperview().inset(Layout.horizontalMargin)
+            make.top.equalTo(rulesViewController.view.snp.bottom).offset(Layout.sectionSpacing)
+            make.width.equalTo(120)
+            make.height.equalTo(Layout.barHeight)
         }
         activityIndicator.snp.makeConstraints { make in
             make.trailing.equalTo(primaryButton.snp.leading).offset(-10)
+            make.centerY.equalTo(primaryButton)
+        }
+        statusLabel.snp.makeConstraints { make in
+            make.leading.equalToSuperview().inset(Layout.horizontalMargin)
+            make.trailing.lessThanOrEqualTo(activityIndicator.snp.leading).offset(-12)
             make.centerY.equalTo(primaryButton)
         }
 

@@ -12,7 +12,10 @@ protocol SearchWindowLayoutDelegate: AnyObject {
 }
 
 final class SearchWindowController: NSWindowController, SearchWindowLayoutDelegate {
-    private static let defaultContentSize = NSSize(width: 760, height: 214)
+    private static let defaultContentSize = NSSize(
+        width: 760,
+        height: SearchFormViewController.Layout.chromeHeight + SearchFormViewController.Layout.minimumRuleAreaHeight
+    )
     private let layoutCoordinator: SearchWindowLayoutCoordinator
 
     init(
@@ -97,9 +100,9 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
         let layout = layoutCoordinator.layout(
             currentFrame: currentFrame,
             desiredRuleContentHeight: desiredRulesContentHeight,
-            minimumRuleAreaHeight: 78,
+            minimumRuleAreaHeight: SearchFormViewController.Layout.minimumRuleAreaHeight,
             minimumWindowHeight: Self.defaultContentSize.height,
-            chromeHeight: 124,
+            chromeHeight: SearchFormViewController.Layout.chromeHeight,
             maxWindowHeightFraction: 1
         )
 

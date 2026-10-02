@@ -2,6 +2,17 @@ import AppKit
 import SnapKit
 
 final class SearchRuleRowView: NSView {
+    enum Layout {
+        /// 大号控件（.large）的标准高度，弹出菜单、按钮、输入框统一到这个高度。
+        static let controlHeight: CGFloat = 28
+        static let verticalPadding: CGFloat = 6
+        static let squareButtonWidth: CGFloat = 32
+        static let buttonSpacing: CGFloat = 6
+        static let controlSpacing: CGFloat = 10
+        static let validationSpacing: CGFloat = 4
+        static let validationHeight: CGFloat = 16
+    }
+
     let addButton = NSButton(title: "+", target: nil, action: nil)
     let removeButton = NSButton(title: "−", target: nil, action: nil)
     let fieldPopup = NSPopUpButton()
@@ -54,6 +65,11 @@ final class SearchRuleRowView: NSView {
         relativeUnitPopup.font = .systemFont(ofSize: 14, weight: .regular)
         relativeUnitPopup.controlSize = .large
         toggleValueControl.font = .systemFont(ofSize: 13, weight: .regular)
+        toggleValueControl.controlSize = .large
+        [addButton, removeButton].forEach {
+            $0.controlSize = .large
+            $0.font = .systemFont(ofSize: 15, weight: .medium)
+        }
 
         validationLabel.font = .systemFont(ofSize: 12, weight: .regular)
         validationLabel.textColor = .secondaryLabelColor
@@ -94,30 +110,27 @@ final class SearchRuleRowView: NSView {
         addButton.snp.makeConstraints { make in
             make.leading.equalToSuperview()
             make.centerY.equalTo(valueContainer)
-            make.size.equalTo(28)
+            make.width.equalTo(Layout.squareButtonWidth)
         }
         removeButton.snp.makeConstraints { make in
-            make.leading.equalTo(addButton.snp.trailing).offset(8)
-            make.centerY.equalTo(valueContainer)
-            make.size.equalTo(28)
+            make.leading.equalTo(addButton.snp.trailing).offset(Layout.buttonSpacing)
+            make.width.centerY.equalTo(addButton)
         }
         fieldPopup.snp.makeConstraints { make in
-            make.leading.equalTo(removeButton.snp.trailing).offset(12)
+            make.leading.equalTo(removeButton.snp.trailing).offset(Layout.controlSpacing)
             make.centerY.equalTo(valueContainer)
             make.width.equalTo(160)
-            make.height.equalTo(32)
         }
         operatorPopup.snp.makeConstraints { make in
-            make.leading.equalTo(fieldPopup.snp.trailing).offset(12)
+            make.leading.equalTo(fieldPopup.snp.trailing).offset(Layout.controlSpacing)
             make.centerY.equalTo(valueContainer)
             make.width.equalTo(170)
-            make.height.equalTo(32)
         }
         valueContainer.snp.makeConstraints { make in
-            make.leading.equalTo(operatorPopup.snp.trailing).offset(12)
+            make.leading.equalTo(operatorPopup.snp.trailing).offset(Layout.controlSpacing)
             make.trailing.equalToSuperview()
-            make.top.equalToSuperview().offset(6)
-            make.height.equalTo(32)
+            make.top.equalToSuperview().offset(Layout.verticalPadding)
+            make.height.equalTo(Layout.controlHeight)
         }
         valueField.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -125,10 +138,9 @@ final class SearchRuleRowView: NSView {
         toggleValueControl.snp.makeConstraints { make in
             make.leading.centerY.equalToSuperview()
             make.width.equalTo(190)
-            make.height.equalTo(28)
         }
         choiceValuePopup.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
+            make.leading.trailing.centerY.equalToSuperview()
         }
         relativeValueContainer.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -138,15 +150,15 @@ final class SearchRuleRowView: NSView {
             make.width.equalTo(84)
         }
         relativeUnitPopup.snp.makeConstraints { make in
-            make.leading.equalTo(relativeAmountField.snp.trailing).offset(8)
-            make.trailing.top.bottom.equalToSuperview()
+            make.leading.equalTo(relativeAmountField.snp.trailing).offset(Layout.buttonSpacing)
+            make.trailing.centerY.equalToSuperview()
         }
         validationLabel.snp.makeConstraints { make in
             make.leading.equalTo(fieldPopup)
             self.validationTopConstraint = make.top.equalTo(valueContainer.snp.bottom).offset(0).constraint
             make.trailing.lessThanOrEqualToSuperview()
             self.validationHeightConstraint = make.height.equalTo(0).constraint
-            make.bottom.equalToSuperview().inset(6)
+            make.bottom.equalToSuperview().inset(Layout.verticalPadding)
         }
 
         reloadLocalizedStrings()
@@ -195,8 +207,8 @@ final class SearchRuleRowView: NSView {
         validationLabel.stringValue = result.blockingMessage ?? ""
         let isVisible = result != .valid
         validationLabel.isHidden = isVisible == false
-        validationTopConstraint?.update(offset: isVisible ? 4 : 0)
-        validationHeightConstraint?.update(offset: isVisible ? 16 : 0)
+        validationTopConstraint?.update(offset: isVisible ? Layout.validationSpacing : 0)
+        validationHeightConstraint?.update(offset: isVisible ? Layout.validationHeight : 0)
         invalidateIntrinsicContentSize()
         needsLayout = true
     }
@@ -376,6 +388,7 @@ final class SearchRuleRowView: NSView {
     }
 
     private func configureTextField(_ textField: NSTextField, defaultValue: String) {
+        textField.cell = VerticallyCenteredTextFieldCell(textCell: "")
         textField.stringValue = defaultValue
         textField.alignment = .natural
         textField.font = .systemFont(ofSize: 14, weight: .regular)
@@ -397,8 +410,11 @@ final class SearchRuleRowView: NSView {
     }
 
     override var intrinsicContentSize: NSSize {
-        let extraHeight: CGFloat = currentValidationResult == .valid ? 44 : 58
-        return NSSize(width: NSView.noIntrinsicMetric, height: extraHeight)
+        var height = Layout.controlHeight + Layout.verticalPadding * 2
+        if currentValidationResult != .valid {
+            height += Layout.validationSpacing + Layout.validationHeight
+        }
+        return NSSize(width: NSView.noIntrinsicMetric, height: height)
     }
 }
 
@@ -452,5 +468,27 @@ extension SearchRuleRowView {
 private extension Collection {
     subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil
+    }
+}
+
+/// 带边框输入框的文字默认贴顶绘制，高度对齐弹出菜单后需要手动垂直居中（编辑态的 field editor 同样使用 drawingRect）。
+private final class VerticallyCenteredTextFieldCell: NSTextFieldCell {
+    override func drawingRect(forBounds rect: NSRect) -> NSRect {
+        let baseRect = super.drawingRect(forBounds: rect)
+        guard let font else {
+            return baseRect
+        }
+
+        let lineHeight = ceil(NSLayoutManager().defaultLineHeight(for: font))
+        guard baseRect.height > lineHeight else {
+            return baseRect
+        }
+
+        return NSRect(
+            x: baseRect.origin.x,
+            y: baseRect.origin.y + floor((baseRect.height - lineHeight) / 2),
+            width: baseRect.width,
+            height: lineHeight
+        )
     }
 }
