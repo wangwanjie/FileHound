@@ -19,6 +19,18 @@ struct SpotlightSearchService: Sendable {
         return try runQuery(rootPath, query)
     }
 
+    /// 文本内容的短语查询依赖 Spotlight 的分词：值里带标点（如“05-屏幕截图”）或含中日文时整句查询常常查不到，
+    /// 因为索引把“屏幕截图”切成了“屏幕”“截图”两个词。这时另外按同样的方式分词，查询“每个词片段都出现”的文件作为候选，
+    /// 返回 nil 表示不需要；候选只是超集，调用方需读取文件复核
+    func searchTextContentCandidates(rootPath: String, rules: [SearchRuleSelection]) throws -> [String]? {
+        guard rules.contains(where: Self.needsTokenizedTextQuery),
+              let query = buildQuery(from: rules, tokenizingTextContent: true) else {
+            return nil
+        }
+
+        return try runQuery(rootPath, query)
+    }
+
     func canSatisfyTextContentSearch(
         rules: [SearchRuleSelection],
         caseSensitive: Bool,
@@ -31,7 +43,7 @@ struct SpotlightSearchService: Sendable {
         return rules.contains(where: { $0.field == .textContent }) && buildQuery(from: rules) != nil
     }
 
-    func buildQuery(from rules: [SearchRuleSelection]) -> String? {
+    func buildQuery(from rules: [SearchRuleSelection], tokenizingTextContent: Bool = false) -> String? {
         var predicates: [String] = []
 
         for rule in rules {
@@ -41,7 +53,7 @@ struct SpotlightSearchService: Sendable {
                 continue
             }
 
-            guard let predicate = buildPredicate(for: rule) else {
+            guard let predicate = buildPredicate(for: rule, tokenizingTextContent: tokenizingTextContent) else {
                 return nil
             }
 
@@ -55,7 +67,7 @@ struct SpotlightSearchService: Sendable {
         return predicates.joined(separator: " && ")
     }
 
-    private func buildPredicate(for rule: SearchRuleSelection) -> String? {
+    private func buildPredicate(for rule: SearchRuleSelection, tokenizingTextContent: Bool) -> String? {
         let trimmedValue = rule.value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedValue.isEmpty == false else {
             return nil
@@ -72,6 +84,12 @@ struct SpotlightSearchService: Sendable {
         case .comments:
             return predicate(for: "kMDItemFinderComment", value: trimmedValue, operator: rule.operator)
         case .textContent:
+            if tokenizingTextContent, Self.needsTokenizedTextQuery(rule) {
+                // 词片段两端都加通配，值的首尾落在索引词的中间（如“幕截图”里的“幕”）时也能命中
+                return Self.spotlightTokens(of: trimmedValue)
+                    .map { "kMDItemTextContent == \"*\(escapeForQuery($0))*\"cdw" }
+                    .joined(separator: " && ")
+            }
             return freeTextQuery(for: trimmedValue, operator: rule.operator)
         default:
             return nil
@@ -161,6 +179,37 @@ struct SpotlightSearchService: Sendable {
         case .isNot, .doesNotContain, .containsPhrase, .containsWords, .matchesPattern, .matchesRegex, .doesNotMatchRegex, .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
             return nil
         }
+    }
+
+    private static func needsTokenizedTextQuery(_ rule: SearchRuleSelection) -> Bool {
+        guard rule.field == .textContent, rule.operator == .contains || rule.operator == .containsPhrase else {
+            return false
+        }
+        let value = rule.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tokens = spotlightTokens(of: value)
+        guard tokens.isEmpty == false else {
+            return false
+        }
+        // 只含 ASCII 的单个词整句查询就能查到；非 ASCII 的值可能被索引切成多个词，或只是索引词的一部分
+        return tokens != [value] || value.unicodeScalars.contains { $0.isASCII == false }
+    }
+
+    /// 按系统的分词规则（与 Spotlight 建索引时一致）把值切成词，中日文会按词典切分
+    static func spotlightTokens(of value: String) -> [String] {
+        let string = value as NSString
+        let tokenizer = CFStringTokenizerCreate(
+            nil,
+            value as CFString,
+            CFRange(location: 0, length: string.length),
+            kCFStringTokenizerUnitWord,
+            nil
+        )
+        var tokens: [String] = []
+        while CFStringTokenizerAdvanceToNextToken(tokenizer).isEmpty == false {
+            let range = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+            tokens.append(string.substring(with: NSRange(location: range.location, length: range.length)))
+        }
+        return tokens
     }
 
     private func splitTerms(from value: String) -> [String] {

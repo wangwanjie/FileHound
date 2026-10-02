@@ -254,6 +254,70 @@ struct SearchExecutorTests {
     }
 
     @Test
+    func punctuatedTextContentSearchVerifiesSpotlightWordCandidates() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("lib/UIImage+WJ.m", contents: "//  05-屏幕截图\n")
+            try builder.file("lib/notes.txt", contents: "05 张屏幕截图")
+        }
+        let matchingPath = URL(fileURLWithPath: fixture.path).appendingPathComponent("lib/UIImage+WJ.m").path
+        let candidatePath = URL(fileURLWithPath: fixture.path).appendingPathComponent("lib/notes.txt").path
+        let provider = ContentReadingSpotlightProvider()
+        let spotlightService = SpotlightSearchService { _, query in
+            // 整句查询查不到，按词查询返回两个候选
+            query == "kMDItemTextContent == \"*05*\"cdw && kMDItemTextContent == \"*屏幕*\"cdw && kMDItemTextContent == \"*截图*\"cdw" ? [matchingPath, candidatePath] : []
+        }
+        let executor = SearchExecutor(
+            walker: DirectoryWalker(providerFactory: { _ in provider }),
+            provider: provider,
+            spotlightSearchService: spotlightService,
+            specialFoldersStore: SpecialFoldersStore(storage: InMemoryKeyValueStore())
+        )
+
+        let result = executor.execute(
+            request: SearchRequest(
+                scopeDescription: "Root",
+                rootPath: fixture.path,
+                rules: [SearchRuleSelection(field: .textContent, operator: .contains, value: "05-屏幕截图")]
+            )
+        )
+
+        #expect(result.items.map(\.path) == [matchingPath])
+        #expect(provider.didReadDirectory == false)
+    }
+
+    @Test
+    func spotlightWordCandidateQueryIsOnlyBuiltForPunctuatedTextContent() throws {
+        var queries: [String] = []
+        let lock = NSLock()
+        let service = SpotlightSearchService { _, query in
+            lock.lock()
+            queries.append(query)
+            lock.unlock()
+            return []
+        }
+
+        _ = try service.searchTextContentCandidates(
+            rootPath: "/",
+            rules: [SearchRuleSelection(field: .textContent, operator: .contains, value: "05-屏幕截图")]
+        )
+        #expect(queries == ["kMDItemTextContent == \"*05*\"cdw && kMDItemTextContent == \"*屏幕*\"cdw && kMDItemTextContent == \"*截图*\"cdw"])
+        #expect(try service.searchTextContentCandidates(
+            rootPath: "/",
+            rules: [SearchRuleSelection(field: .textContent, operator: .contains, value: "32x32")]
+        ) == nil)
+        // 不带标点的中文也会被索引切成多个词，整句查询查不到
+        _ = try service.searchTextContentCandidates(
+            rootPath: "/",
+            rules: [SearchRuleSelection(field: .textContent, operator: .contains, value: "屏幕截图")]
+        )
+        #expect(queries.last == "kMDItemTextContent == \"*屏幕*\"cdw && kMDItemTextContent == \"*截图*\"cdw")
+        #expect(try service.searchTextContentCandidates(
+            rootPath: "/",
+            rules: [SearchRuleSelection(field: .name, operator: .contains, value: "a-b")]
+        ) == nil)
+    }
+
+    @Test
     func spotlightProcessOutputKeepsBatchesWrittenRightBeforeExit() throws {
         // mdfind 先输出一批，过一会儿再输出剩下的并立即退出；最后一批不能丢
         let lines = try SpotlightSearchService.outputLines(
@@ -374,6 +438,24 @@ private final class SpotlightOnlySearchProvider: FilesystemAccessProviding, @unc
     func contentsOfFile(atPath path: String) throws -> Data {
         Issue.record("Filesystem content scan should be skipped when Spotlight satisfies the text search")
         return Data()
+    }
+}
+
+private final class ContentReadingSpotlightProvider: FilesystemAccessProviding, @unchecked Sendable {
+    let kind: ProviderKind = .local
+    var didReadDirectory = false
+
+    func contentsOfDirectory(atPath path: String) throws -> [String] {
+        didReadDirectory = true
+        return []
+    }
+
+    func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
+        try FileManager.default.attributesOfItem(atPath: path)
+    }
+
+    func contentsOfFile(atPath path: String) throws -> Data {
+        try Data(contentsOf: URL(fileURLWithPath: path))
     }
 }
 

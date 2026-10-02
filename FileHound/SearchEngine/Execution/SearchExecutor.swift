@@ -433,15 +433,19 @@ struct SearchExecutor: Sendable {
         highlight: (kind: SearchResultHighlightKind, query: String)?,
         matchReasons: MatchReasons
     ) -> [SearchResultItem]? {
-        var paths = Set<String>()
+        var trustedPaths = Set<String>()
+        var candidatePaths = Set<String>()
         for rootPath in request.rootPaths {
             guard let rootPaths = try? spotlightSearchService.search(rootPath: rootPath, rules: request.rules) else {
                 return nil
             }
-            paths.formUnion(rootPaths)
+            trustedPaths.formUnion(rootPaths)
+            if let candidates = try? spotlightSearchService.searchTextContentCandidates(rootPath: rootPath, rules: request.rules) {
+                candidatePaths.formUnion(candidates)
+            }
         }
 
-        let uniquePaths = paths.sorted()
+        let uniquePaths = trustedPaths.union(candidatePaths).sorted()
         guard Task.isCancelled == false else {
             return nil
         }
@@ -471,9 +475,11 @@ struct SearchExecutor: Sendable {
 
             do {
                 // Spotlight 查询是不区分大小写的近似结果，这里按完整规则复核；
-                // 文本内容由 Spotlight 索引判定（可覆盖 PDF 等非纯文本格式），不再重复读取文件
+                // 短语查询命中的文本内容由 Spotlight 索引判定（可覆盖 PDF 等非纯文本格式），不再重复读取文件，
+                // 只按分词查到的候选需要读取文件确认
+                let trustsTextContent = trustedPaths.contains(path)
                 guard try rules.allSatisfy({ rule in
-                    if rule.field == .textContent { return true }
+                    if rule.field == .textContent, trustsTextContent { return true }
                     return try matches(entry: entry, attributes: attributes, rule: rule, behavior: behavior)
                 }) else {
                     return nil
