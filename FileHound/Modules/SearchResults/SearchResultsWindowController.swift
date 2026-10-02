@@ -76,6 +76,11 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
         viewModel.items = items
     }
 
+    var searchStatus: SearchResultsViewModel.SearchStatus {
+        get { viewModel.searchStatus }
+        set { viewModel.searchStatus = newValue }
+    }
+
     func apply(presentationState: ResultPresentationState) {
         viewModel.apply(presentationState: presentationState)
     }

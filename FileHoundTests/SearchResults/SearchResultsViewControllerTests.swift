@@ -22,6 +22,48 @@ struct SearchResultsViewControllerTests {
 
     @MainActor
     @Test
+    func statusBarReflectsSearchInProgressAndCompletion() {
+        let viewModel = SearchResultsViewModel()
+        viewModel.searchStatus = .searching
+        viewModel.items = [
+            SearchResultItem(path: "/tmp/report.txt", matchReason: "名称命中", previewSnippet: nil)
+        ]
+        let controller = SearchResultsViewController(viewModel: viewModel)
+        _ = controller.view
+
+        #expect(controller.debugShowsSearchActivity == true)
+        #expect(controller.debugStatusText == L10n.format("results.status.searching", 1))
+
+        viewModel.items += [
+            SearchResultItem(path: "/tmp/archive.txt", matchReason: "名称命中", previewSnippet: nil)
+        ]
+        #expect(controller.debugStatusText == L10n.format("results.status.searching", 2))
+
+        viewModel.searchStatus = .finished
+        #expect(controller.debugShowsSearchActivity == false)
+        #expect(controller.debugStatusText == L10n.format("results.status.matched", 2))
+
+        viewModel.searchStatus = .stopped
+        #expect(controller.debugStatusText == L10n.format("results.status.stopped", 2))
+    }
+
+    @MainActor
+    @Test
+    func hidesEmptyStateWhileSearchIsInProgress() {
+        let viewModel = SearchResultsViewModel()
+        viewModel.searchStatus = .searching
+        let controller = SearchResultsViewController(viewModel: viewModel)
+        _ = controller.view
+
+        #expect(controller.debugShowsEmptyState == false)
+
+        viewModel.searchStatus = .finished
+
+        #expect(controller.debugShowsEmptyState == true)
+    }
+
+    @MainActor
+    @Test
     func gridModeShowsPreviewAndSortControlsAndTracksSelectedMode() {
         let viewModel = SearchResultsViewModel()
         viewModel.items = [

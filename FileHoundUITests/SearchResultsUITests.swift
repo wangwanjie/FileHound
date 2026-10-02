@@ -45,6 +45,13 @@ final class SearchResultsUITests: XCTestCase {
 
         XCTAssertTrue(waitUntil(timeout: 1.0) { app.windows.count > 1 })
         XCTAssertEqual(primaryButton.label, "Stop")
+
+        let statusLabel = app.staticTexts["SearchResultsStatusLabel"]
+        XCTAssertTrue(statusLabel.waitForExistence(timeout: 1))
+        XCTAssertTrue(statusLabel.label.hasPrefix("Searching"))
+
+        XCTAssertTrue(waitUntil(timeout: 3) { primaryButton.label == "Find" })
+        XCTAssertTrue(waitUntil(timeout: 1) { statusLabel.label == "3 matched" })
     }
 
     @MainActor

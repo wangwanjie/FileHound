@@ -385,6 +385,10 @@ final class SearchFormViewController: NSViewController {
             return
         }
 
+        if didOpenResultsForCurrentSearch {
+            resultsWindowController?.searchStatus = didCancelCurrentSearch ? .stopped : .finished
+        }
+
         defer {
             didCancelCurrentSearch = false
             didOpenResultsForCurrentSearch = false
@@ -448,6 +452,7 @@ final class SearchFormViewController: NSViewController {
                 existing.apply(presentationState: presentationState)
             }
             existing.expandsFoldersWhenShowingResults = settings.expandFoldersWhenShowingResults
+            existing.searchStatus = searchStatusForResultsWindow
             existing.update(title: title, items: items)
             // 搜索中结果持续刷新，只在本次搜索首次展示时前置窗口，避免反复抢占焦点
             if didOpenResultsForCurrentSearch == false {
@@ -467,6 +472,7 @@ final class SearchFormViewController: NSViewController {
         }
         viewModel.title = title
         viewModel.items = items
+        viewModel.searchStatus = searchStatusForResultsWindow
 
         let controller = SearchResultsWindowController(
             viewModel: viewModel,
@@ -479,6 +485,11 @@ final class SearchFormViewController: NSViewController {
         controller.showWindow(nil)
         resultsWindowController = controller
         didOpenResultsForCurrentSearch = true
+    }
+
+    /// 结果页在搜索进行中（提前显示结果）打开或更新时标记为搜索中，搜索结束后由 handleStateTransition 更新
+    private var searchStatusForResultsWindow: SearchResultsViewModel.SearchStatus {
+        state.phase.isSearching ? .searching : .finished
     }
 
     private func refreshLastSearchIfNeeded() {

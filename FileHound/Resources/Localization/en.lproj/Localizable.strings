@@ -117,6 +117,8 @@
 "results.kind.folder" = "Folder";
 "results.kind.volume" = "Volume";
 "results.status.matched" = "%lld matched";
+"results.status.searching" = "Searching… %lld found";
+"results.status.stopped" = "Search stopped · %lld found";
 "search_window.find_items" = "Find Items";
 "search_window.where" = "where";
 "search_window.choose" = "Choose";

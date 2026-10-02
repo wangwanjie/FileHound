@@ -117,6 +117,8 @@
 "results.kind.folder" = "資料夾";
 "results.kind.volume" = "卷宗";
 "results.status.matched" = "找到 %lld 項";
+"results.status.searching" = "正在搜尋… 已找到 %lld 項";
+"results.status.stopped" = "已停止搜尋 · 找到 %lld 項";
 "search_window.find_items" = "查找項目";
 "search_window.where" = "其中";
 "search_window.choose" = "選擇";

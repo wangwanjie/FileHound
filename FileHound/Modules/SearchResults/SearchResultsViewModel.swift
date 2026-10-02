@@ -31,6 +31,13 @@ final class SearchResultsViewModel {
         case descending
     }
 
+    /// 结果页对应搜索的进度：提前显示结果时，结果页会在搜索仍在进行中打开
+    enum SearchStatus: Equatable {
+        case searching
+        case finished
+        case stopped
+    }
+
     var title: String = ""
     var filterText: String = "" {
         didSet { notifyProjectionChanged() }
@@ -70,6 +77,13 @@ final class SearchResultsViewModel {
 
     var selectedIDs: Set<SearchResultItem.ID> = []
 
+    var searchStatus: SearchStatus = .finished {
+        didSet {
+            guard searchStatus != oldValue else { return }
+            onSearchStatusChange?(searchStatus)
+        }
+    }
+
     private(set) var trashedEntries: [TrashedResultEntry] = []
 
     var selectedItems: [SearchResultItem] {
@@ -82,6 +96,7 @@ final class SearchResultsViewModel {
 
     var onModeChange: ((Mode) -> Void)?
     var onItemsChange: (([SearchResultItem]) -> Void)?
+    var onSearchStatusChange: ((SearchStatus) -> Void)?
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onFilterChange: ((String) -> Void)?
     var onSortChange: ((SortField, SortOrder) -> Void)?

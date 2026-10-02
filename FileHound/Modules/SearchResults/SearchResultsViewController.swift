@@ -24,6 +24,7 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     private var quickLookURLs: [URL] = []
     private let trashedItemsWatcher = DirectoryChangeWatcher()
     private var activationObservers: [NSObjectProtocol] = []
+    private var displayedItemCount = 0
 
     init(
         viewModel: SearchResultsViewModel,
@@ -182,8 +183,13 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
             self?.gridController.update(items: items)
             self?.tableController.update(items: items)
             self?.treeController.update(items: items)
-            self?.renderEmptyState(isVisible: items.isEmpty)
+            self?.displayedItemCount = items.count
+            self?.renderEmptyState()
             self?.statusBarView.updateMatchCount(items.count)
+        }
+        viewModel.onSearchStatusChange = { [weak self] status in
+            self?.renderEmptyState()
+            self?.statusBarView.updateSearchStatus(status)
         }
         viewModel.onSortChange = { [weak self] field, order in
             self?.toolbarView.selectSortField(field)
@@ -209,7 +215,9 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         gridController.update(items: items)
         tableController.update(items: items)
         treeController.update(items: items)
-        renderEmptyState(isVisible: items.isEmpty)
+        displayedItemCount = items.count
+        renderEmptyState()
+        statusBarView.updateSearchStatus(viewModel.searchStatus)
         statusBarView.updateMatchCount(items.count)
         statusBarView.updateSelectedItem(viewModel.selectedItem)
     }
@@ -266,8 +274,9 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         toolbarView.apply(mode: mode)
     }
 
-    private func renderEmptyState(isVisible: Bool) {
-        emptyStateLabel.isHidden = isVisible == false
+    private func renderEmptyState() {
+        // 搜索仍在进行时不显示“没有结果”，结果可能马上就会到来
+        emptyStateLabel.isHidden = displayedItemCount > 0 || viewModel.searchStatus == .searching
     }
 
     private func updateSelection(_ items: [SearchResultItem]) {
@@ -817,6 +826,14 @@ extension SearchResultsViewController {
         emptyStateLabel.isHidden == false
     }
 
+    var debugStatusText: String {
+        statusBarView.debugCountText
+    }
+
+    var debugShowsSearchActivity: Bool {
+        statusBarView.searchStatus == .searching
+    }
+
     var debugSelectedMode: SearchResultsViewModel.Mode? {
         if toolbarView.gridButton.state == .on {
             return .grid
@@ -931,10 +948,12 @@ private final class MenuActionHandler: NSObject {
 private final class ResultsStatusBarView: NSView {
     private let pathStackView = NSStackView()
     private let countLabel = NSTextField(labelWithString: "")
+    private let activityIndicator = NSProgressIndicator()
     private var buttonHandlers: [MenuActionHandler] = []
 
     private(set) var displayedPathComponents: [String] = []
     private(set) var matchCountValue = 0
+    private(set) var searchStatus: SearchResultsViewModel.SearchStatus = .finished
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -951,18 +970,29 @@ private final class ResultsStatusBarView: NSView {
         countLabel.font = .systemFont(ofSize: 11)
         countLabel.textColor = .secondaryLabelColor
         countLabel.alignment = .right
+        countLabel.setAccessibilityIdentifier("SearchResultsStatusLabel")
+
+        activityIndicator.style = .spinning
+        activityIndicator.controlSize = .small
+        activityIndicator.isDisplayedWhenStopped = false
+        activityIndicator.setAccessibilityIdentifier("SearchResultsActivityIndicator")
 
         addSubview(pathStackView)
+        addSubview(activityIndicator)
         addSubview(countLabel)
 
         pathStackView.snp.makeConstraints { make in
             make.leading.top.bottom.equalToSuperview()
-            make.trailing.lessThanOrEqualTo(countLabel.snp.leading).offset(-12)
+            make.trailing.lessThanOrEqualTo(activityIndicator.snp.leading).offset(-12)
+        }
+        activityIndicator.snp.makeConstraints { make in
+            make.trailing.equalTo(countLabel.snp.leading).offset(-6)
+            make.centerY.equalToSuperview()
+            make.size.equalTo(14)
         }
         countLabel.snp.makeConstraints { make in
             make.trailing.equalToSuperview().inset(10)
             make.centerY.equalToSuperview()
-            make.leading.greaterThanOrEqualTo(pathStackView.snp.trailing).offset(12)
         }
 
         applyAppearance()
@@ -988,10 +1018,35 @@ private final class ResultsStatusBarView: NSView {
 
     func updateMatchCount(_ count: Int) {
         matchCountValue = count
-        countLabel.stringValue = String.localizedStringWithFormat(
-            NSLocalizedString("results.status.matched", comment: ""),
-            count
-        )
+        renderCountLabel()
+    }
+
+    func updateSearchStatus(_ status: SearchResultsViewModel.SearchStatus) {
+        searchStatus = status
+        if status == .searching {
+            activityIndicator.startAnimation(nil)
+        } else {
+            activityIndicator.stopAnimation(nil)
+        }
+        renderCountLabel()
+    }
+
+    var debugCountText: String {
+        countLabel.stringValue
+    }
+
+    private func renderCountLabel() {
+        let key: String
+        switch searchStatus {
+        case .searching:
+            key = "results.status.searching"
+        case .stopped:
+            key = "results.status.stopped"
+        case .finished:
+            key = "results.status.matched"
+        }
+        countLabel.stringValue = L10n.format(key, matchCountValue)
+        countLabel.setAccessibilityLabel(countLabel.stringValue)
     }
 
     func updateSelectedItem(_ item: SearchResultItem?) {
