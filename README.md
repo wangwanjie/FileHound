@@ -41,10 +41,10 @@ rm -f FileHound.xcodeproj/project.xcworkspace/xcuserdata/"$USER".xcuserdatad/Use
 ./Scripts/build_dmg.sh --arch arm64
 ./Scripts/build_dmg.sh --arch x86_64
 ./Scripts/publish_github_release.sh \
-  --dmg build/dmg/FileHound_v1.1.0_2_arm64.dmg \
-  --dmg build/dmg/FileHound_v1.1.0_2_x86_64.dmg
-./Scripts/generate_appcast.sh --arch arm64 --archive build/dmg/FileHound_v1.1.0_2_arm64.dmg
-./Scripts/generate_appcast.sh --arch x86_64 --archive build/dmg/FileHound_v1.1.0_2_x86_64.dmg
+  --dmg build/dmg/FileHound_v1.2.0_3_arm64.dmg \
+  --dmg build/dmg/FileHound_v1.2.0_3_x86_64.dmg
+./Scripts/generate_appcast.sh --arch arm64 --archive build/dmg/FileHound_v1.2.0_3_arm64.dmg
+./Scripts/generate_appcast.sh --arch x86_64 --archive build/dmg/FileHound_v1.2.0_3_x86_64.dmg
 ```
 
 说明：
