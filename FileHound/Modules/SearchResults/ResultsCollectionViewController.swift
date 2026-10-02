@@ -50,6 +50,7 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
 
     func applyResultsAppearance(_ appearance: ResultsAppearance) {
         resultsAppearance = appearance
+        applyPreviewLayout()
         collectionView.reloadData()
     }
 
@@ -151,7 +152,7 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
 
     private func applyPreviewLayout() {
         let iconSize = previewSize
-        layout.itemSize = NSSize(width: iconSize + 60, height: iconSize + 44)
+        layout.itemSize = ResultGridItem.itemSize(previewSize: iconSize, appearance: resultsAppearance)
         layout.minimumInteritemSpacing = max(14, floor(iconSize / 4))
         layout.minimumLineSpacing = max(14, floor(iconSize / 4))
         layout.sectionInset = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
@@ -160,6 +161,19 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
 
 private final class ResultGridItem: NSCollectionViewItem {
     static let identifier = NSUserInterfaceItemIdentifier("ResultGridItem")
+
+    private static let iconTopInset: CGFloat = 10
+    private static let iconTitleSpacing: CGFloat = 10
+    private static let titleInset: CGFloat = 8
+
+    /// 标题最多两行，单元格高度按结果字体的实际行高计算，避免大字号时文字被裁剪
+    static func itemSize(previewSize: CGFloat, appearance: ResultsAppearance) -> NSSize {
+        let lineHeight = ceil(NSLayoutManager().defaultLineHeight(for: appearance.font))
+        let titleHeight = lineHeight * 2
+        let width = previewSize + 60 + max(0, appearance.fontSize - 13) * 4
+        let height = iconTopInset + previewSize + iconTitleSpacing + titleHeight + titleInset
+        return NSSize(width: ceil(width), height: ceil(height))
+    }
 
     private let iconView = NSImageView()
     private let titleLabel = NSTextField(labelWithString: "")
@@ -194,13 +208,13 @@ private final class ResultGridItem: NSCollectionViewItem {
             make.edges.equalToSuperview()
         }
         iconView.snp.makeConstraints { make in
-            make.top.equalToSuperview().inset(10)
+            make.top.equalToSuperview().inset(Self.iconTopInset)
             make.centerX.equalToSuperview()
             iconSizeConstraint = make.size.equalTo(72).constraint
         }
         titleLabel.snp.makeConstraints { make in
-            make.leading.trailing.bottom.equalToSuperview().inset(8)
-            make.top.equalTo(iconView.snp.bottom).offset(10)
+            make.leading.trailing.bottom.equalToSuperview().inset(Self.titleInset)
+            make.top.equalTo(iconView.snp.bottom).offset(Self.iconTitleSpacing)
         }
     }
 
@@ -345,7 +359,7 @@ extension ResultsCollectionViewController {
     private func debugGridItem(for item: SearchResultItem, previewSize: CGFloat) -> ResultGridItem {
         let gridItem = ResultGridItem()
         _ = gridItem.view
-        gridItem.view.frame = NSRect(x: 0, y: 0, width: previewSize + 60, height: previewSize + 44)
+        gridItem.view.frame = NSRect(origin: .zero, size: ResultGridItem.itemSize(previewSize: previewSize, appearance: resultsAppearance))
         gridItem.render(item, iconProvider: iconProvider, previewSize: previewSize, appearance: resultsAppearance)
         gridItem.view.layoutSubtreeIfNeeded()
         return gridItem

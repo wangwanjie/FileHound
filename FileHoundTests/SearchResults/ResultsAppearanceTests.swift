@@ -22,6 +22,8 @@ struct ResultsAppearanceTests {
         #expect(ResultsAppearance(fontSize: 99, dimColorHex: "#A0A7B3").fontSize == ResultsAppearance.maximumFontSize)
         #expect(ResultsAppearance(fontSize: 13, dimColorHex: "nope").dimColor == .tertiaryLabelColor)
         #expect(ResultsAppearance(fontSize: 13, dimColorHex: "#A0A7B3").rowHeight == 24)
+        #expect(ResultsAppearance(fontSize: 13, dimColorHex: "#A0A7B3").listIconSize == 16)
+        #expect(ResultsAppearance(fontSize: 16, dimColorHex: "#A0A7B3").listIconSize == 20)
     }
 
     @Test
@@ -55,12 +57,12 @@ struct ResultsAppearanceTests {
     func tableControllerAppliesAppearanceToRowsAndNames() {
         let controller = ResultsTableViewController()
         _ = controller.view
-        controller.applyResultsAppearance(ResultsAppearance(fontSize: 18, dimColorHex: "#112233"))
+        controller.applyResultsAppearance(ResultsAppearance(fontSize: 15, dimColorHex: "#112233"))
 
-        #expect(controller.debugRowHeight == 29)
+        #expect(controller.debugRowHeight == 26)
         let hidden = SearchResultItem(path: "/tmp/.hidden", matchReason: "", previewSnippet: nil, isInvisible: true)
         let attributes = controller.debugNameAttributes(for: hidden)
-        #expect(attributes.font?.pointSize == 18)
+        #expect(attributes.font?.pointSize == 15)
         #expect(attributes.color?.hexString == "#112233")
     }
 

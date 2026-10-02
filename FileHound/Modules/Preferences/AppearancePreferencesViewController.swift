@@ -50,8 +50,8 @@ final class AppearancePreferencesViewController: NSViewController {
         dimColorButton.title = L10n.string("preferences.appearance.choose_color")
         resetButton.title = L10n.string("preferences.reset_defaults")
         fontSizeField.alignment = .left
-        fontSizeStepper.minValue = 10
-        fontSizeStepper.maxValue = 24
+        fontSizeStepper.minValue = Double(ResultsAppearance.minimumFontSize)
+        fontSizeStepper.maxValue = Double(ResultsAppearance.maximumFontSize)
         fontSizeStepper.increment = 1
         fontSizeStepper.target = self
         fontSizeStepper.action = #selector(fontSizeStepperChanged)
@@ -148,8 +148,9 @@ final class AppearancePreferencesViewController: NSViewController {
     private func syncFromSettings() {
         themePopup.selectItem(at: AppTheme.allCases.firstIndex(of: themeController.currentTheme) ?? 0)
         languagePopup.selectItem(at: AppLanguage.allCases.firstIndex(of: localizationController.currentLanguage) ?? 0)
-        fontSizeField.stringValue = String(settings.resultsFontSize)
+        // 旧版本允许更大的字号，步进器会把超出范围的存量值收敛到当前上限
         fontSizeStepper.integerValue = settings.resultsFontSize
+        fontSizeField.stringValue = String(fontSizeStepper.integerValue)
         dimColorPreview.borderColor = .separatorColor
         dimColorPreview.fillColor = NSColor(hexString: settings.dimColorHex) ?? .quaternaryLabelColor
     }

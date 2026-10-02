@@ -633,6 +633,7 @@ private final class ResultOutlineCellView: NSTableCellView {
     static let identifier = NSUserInterfaceItemIdentifier("OutlineCell")
 
     private var representedPath: String?
+    private var iconSizeConstraint: Constraint?
     private var leadingToIconConstraint: Constraint?
     private var leadingToSuperviewConstraint: Constraint?
 
@@ -650,7 +651,7 @@ private final class ResultOutlineCellView: NSTableCellView {
         imageView.snp.makeConstraints { make in
             make.leading.equalToSuperview().inset(8)
             make.centerY.equalToSuperview()
-            make.size.equalTo(16)
+            iconSizeConstraint = make.size.equalTo(16).constraint
         }
         textField.snp.makeConstraints { make in
             leadingToIconConstraint = make.leading.equalTo(imageView.snp.trailing).offset(8).constraint
@@ -680,6 +681,7 @@ private final class ResultOutlineCellView: NSTableCellView {
         textField?.textColor = appearance.textColor(for: item)
         let showsIcon = columnID == "name"
         imageView?.isHidden = showsIcon == false
+        iconSizeConstraint?.update(offset: appearance.listIconSize)
         if showsIcon {
             leadingToSuperviewConstraint?.deactivate()
             leadingToIconConstraint?.activate()
@@ -718,7 +720,7 @@ private final class ResultOutlineCellView: NSTableCellView {
                 guard let self else { return }
                 let image = await iconProvider.icon(
                     for: URL(fileURLWithPath: path),
-                    size: NSSize(width: 16, height: 16),
+                    size: NSSize(width: appearance.listIconSize, height: appearance.listIconSize),
                     preferThumbnail: false
                 )
                 guard self.representedPath == path else { return }
