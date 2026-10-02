@@ -1,5 +1,11 @@
 import Foundation
 
+/// 被移到废纸篓的结果项，记录原始项与其在废纸篓中的位置，用于「放回原处」后恢复显示
+struct TrashedResultEntry: Equatable {
+    let item: SearchResultItem
+    let trashedPath: String
+}
+
 final class SearchResultsViewModel {
     enum Mode: Equatable {
         case grid
@@ -64,6 +70,8 @@ final class SearchResultsViewModel {
 
     var selectedIDs: Set<SearchResultItem.ID> = []
 
+    private(set) var trashedEntries: [TrashedResultEntry] = []
+
     var selectedItems: [SearchResultItem] {
         items.filter { selectedIDs.contains($0.id) }
     }
@@ -97,6 +105,50 @@ final class SearchResultsViewModel {
         items.removeAll { ids.contains($0.id) }
         selectedIDs.subtract(ids)
         selectedItem = selectedItems.first
+    }
+
+    func markItemsTrashed(_ entries: [TrashedResultEntry]) {
+        guard entries.isEmpty == false else {
+            return
+        }
+
+        let ids = Set(entries.map(\.item.id))
+        trashedEntries.removeAll { ids.contains($0.item.id) }
+        trashedEntries.append(contentsOf: entries)
+        removeItems(ids: ids)
+    }
+
+    /// 检查已移到废纸篓的项：回到原位置的重新加入结果并返回；原位置与废纸篓中都已不存在的不再跟踪
+    @discardableResult
+    func restoreItemsPutBackFromTrash(
+        fileExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+    ) -> [SearchResultItem] {
+        guard trashedEntries.isEmpty == false else {
+            return []
+        }
+
+        let existingPaths = Set(items.map(\.path))
+        var restored: [SearchResultItem] = []
+        var remaining: [TrashedResultEntry] = []
+        for entry in trashedEntries {
+            if fileExists(entry.item.path) {
+                if existingPaths.contains(entry.item.path) == false {
+                    restored.append(entry.item)
+                }
+            } else if fileExists(entry.trashedPath) {
+                remaining.append(entry)
+            }
+        }
+
+        trashedEntries = remaining
+        if restored.isEmpty == false {
+            items.append(contentsOf: restored)
+        }
+        return restored
+    }
+
+    func discardTrashedEntries() {
+        trashedEntries.removeAll()
     }
 
     func replaceItems(_ updatedItems: [SearchResultItem]) {

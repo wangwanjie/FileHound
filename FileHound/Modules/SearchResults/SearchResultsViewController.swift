@@ -22,6 +22,8 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     })
     private var menuHandlers: [MenuActionHandler] = []
     private var quickLookURLs: [URL] = []
+    private let trashedItemsWatcher = DirectoryChangeWatcher()
+    private var activationObservers: [NSObjectProtocol] = []
 
     init(
         viewModel: SearchResultsViewModel,
@@ -35,6 +37,10 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        activationObservers.forEach { NotificationCenter.default.removeObserver($0) }
     }
 
     override func loadView() {
@@ -112,6 +118,7 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     override func viewDidLoad() {
         super.viewDidLoad()
         treeController.expandsFoldersOnReload = expandsFoldersWhenShowingResults
+        observeItemsPutBackFromTrash()
 
         gridController.onSelectionChange = { [weak self] item in
             self?.viewModel.selectedItem = item
@@ -435,11 +442,44 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
     private func moveToTrash(items: [SearchResultItem]) {
         do {
-            _ = try actionController.fileService.moveToTrash(urls: items.map { URL(fileURLWithPath: $0.path) })
-            viewModel.removeItems(ids: Set(items.map(\.id)))
+            try actionController.handleMoveToTrash(items: items, viewModel: viewModel)
         } catch {
             presentErrorAlert(error)
         }
+        updateTrashedItemsWatcher()
+    }
+
+    /// 在访达中「放回原处」后让结果重新出现：监听原位置所在目录，并在窗口/应用重新激活时补查一次
+    private func observeItemsPutBackFromTrash() {
+        trashedItemsWatcher.onChange = { [weak self] in
+            self?.restoreItemsPutBackFromTrash()
+        }
+        let center = NotificationCenter.default
+        activationObservers = [
+            center.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+                self?.restoreItemsPutBackFromTrash()
+            },
+            center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] notification in
+                guard let self, notification.object as? NSWindow === self.view.window else { return }
+                self.restoreItemsPutBackFromTrash()
+            }
+        ]
+    }
+
+    private func restoreItemsPutBackFromTrash() {
+        guard viewModel.trashedEntries.isEmpty == false else {
+            return
+        }
+
+        let restored = viewModel.restoreItemsPutBackFromTrash()
+        if restored.isEmpty == false {
+            viewModel.replaceItems(restored.compactMap { refreshedItem(from: $0, atPath: $0.path) })
+        }
+        updateTrashedItemsWatcher()
+    }
+
+    private func updateTrashedItemsWatcher() {
+        trashedItemsWatcher.watch(directories: Set(viewModel.trashedEntries.map { URL(fileURLWithPath: $0.item.path).deletingLastPathComponent().path }))
     }
 
     private func deleteImmediately(items: [SearchResultItem]) {

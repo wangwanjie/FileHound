@@ -34,6 +34,29 @@ final class ResultActionController {
         viewModel.removeItems(ids: Set(items.map(\.id)))
     }
 
+    func handleMoveToTrash(items: [SearchResultItem], viewModel: SearchResultsViewModel) throws {
+        guard items.isEmpty == false else {
+            return
+        }
+
+        var entries: [TrashedResultEntry] = []
+        var firstError: Error?
+
+        for item in items {
+            do {
+                let trashedURLs = try fileService.moveToTrash(urls: [URL(fileURLWithPath: item.path)])
+                entries.append(TrashedResultEntry(item: item, trashedPath: trashedURLs.first?.path ?? item.path))
+            } catch {
+                firstError = firstError ?? error
+            }
+        }
+
+        viewModel.markItemsTrashed(entries)
+        if let firstError {
+            throw firstError
+        }
+    }
+
     func handleRename(item: SearchResultItem, newName: String, viewModel: SearchResultsViewModel) throws {
         let updatedURL = try fileService.renameItem(at: URL(fileURLWithPath: item.path), to: newName)
         viewModel.replaceItems([item.withUpdatedPath(updatedURL.path)])

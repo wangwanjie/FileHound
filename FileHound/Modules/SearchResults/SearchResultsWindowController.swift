@@ -72,6 +72,7 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
     func update(title: String, items: [SearchResultItem]) {
         window?.title = title
         viewModel.title = title
+        viewModel.discardTrashedEntries()
         viewModel.items = items
     }
 

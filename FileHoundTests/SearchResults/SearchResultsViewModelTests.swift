@@ -87,6 +87,31 @@ struct SearchResultsViewModelTests {
     }
 
     @Test
+    func trashedItemsReappearAfterBeingPutBack() {
+        let first = SearchResultItem(path: "/tmp/a.txt", matchReason: "名称命中", previewSnippet: nil)
+        let second = SearchResultItem(path: "/tmp/b.txt", matchReason: "名称命中", previewSnippet: nil)
+        let viewModel = SearchResultsViewModel()
+        viewModel.items = [first, second]
+        viewModel.markItemsTrashed([
+            TrashedResultEntry(item: first, trashedPath: "/Users/me/.Trash/a.txt"),
+            TrashedResultEntry(item: second, trashedPath: "/Users/me/.Trash/b.txt")
+        ])
+        #expect(viewModel.items.isEmpty)
+
+        // a 仍在废纸篓，b 已被放回原处
+        var existing: Set<String> = ["/Users/me/.Trash/a.txt", "/tmp/b.txt"]
+        let restored = viewModel.restoreItemsPutBackFromTrash(fileExists: { existing.contains($0) })
+        #expect(restored.map(\.id) == [second.id])
+        #expect(viewModel.items.map(\.path) == ["/tmp/b.txt"])
+        #expect(viewModel.trashedEntries.map(\.item.id) == [first.id])
+
+        // 废纸篓被清空后不再跟踪
+        existing = ["/tmp/b.txt"]
+        #expect(viewModel.restoreItemsPutBackFromTrash(fileExists: { existing.contains($0) }).isEmpty)
+        #expect(viewModel.trashedEntries.isEmpty)
+    }
+
+    @Test
     func presentationStateRoundTripsThroughViewModel() {
         let state = ResultPresentationState(
             mode: .table,
