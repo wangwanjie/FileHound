@@ -10,6 +10,10 @@ struct LocalFilesystemProvider: FilesystemAccessProviding, Sendable {
         try FileManager.default.contentsOfDirectory(atPath: path)
     }
 
+    func listDirectory(atPath path: String) throws -> [DirectoryListingItem] {
+        try BulkDirectoryLister.list(atPath: path)
+    }
+
     func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
         try FileManager.default.attributesOfItem(atPath: path)
     }
@@ -72,5 +76,80 @@ struct LocalFilesystemProvider: FilesystemAccessProviding, Sendable {
             madvise(pointer, length, MADV_WILLNEED)
         }
         return data
+    }
+}
+
+/// 用 getattrlistbulk 一次系统调用批量取回目录中多个子项的名称与类型，
+/// 比 contentsOfDirectory + 逐项 attributesOfItem 快一个数量级
+enum BulkDirectoryLister {
+    private static let bufferSize = 128 * 1024
+
+    static func list(atPath path: String) throws -> [DirectoryListingItem] {
+        let descriptor = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+        guard descriptor >= 0 else {
+            throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+        }
+        defer { close(descriptor) }
+
+        var attributeList = attrlist()
+        attributeList.bitmapcount = u_short(ATTR_BIT_MAP_COUNT)
+        attributeList.commonattr = attrgroup_t(ATTR_CMN_RETURNED_ATTRS)
+            | attrgroup_t(ATTR_CMN_NAME)
+            | attrgroup_t(ATTR_CMN_ERROR)
+            | attrgroup_t(ATTR_CMN_OBJTYPE)
+
+        let buffer = UnsafeMutableRawPointer.allocate(byteCount: bufferSize, alignment: 8)
+        defer { buffer.deallocate() }
+
+        var items: [DirectoryListingItem] = []
+        var isFirstBatch = true
+        while true {
+            let count = getattrlistbulk(descriptor, &attributeList, buffer, bufferSize, 0)
+            if count == 0 {
+                break
+            }
+            if count < 0 {
+                // 首批就失败说明目录不可读；中途失败则保留已读到的部分
+                if isFirstBatch {
+                    throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                }
+                break
+            }
+            isFirstBatch = false
+
+            var entry = buffer
+            for _ in 0..<count {
+                let length = Int(entry.loadUnaligned(as: UInt32.self))
+                if let item = parseEntry(entry + MemoryLayout<UInt32>.size) {
+                    items.append(item)
+                }
+                entry += length
+            }
+        }
+        return items
+    }
+
+    /// 返回的属性按 ATTR_CMN_* 位序紧密排列：returned_attrs、error、name、objtype
+    private static func parseEntry(_ start: UnsafeMutableRawPointer) -> DirectoryListingItem? {
+        var field = start
+        let returned = field.loadUnaligned(as: attribute_set_t.self)
+        field += MemoryLayout<attribute_set_t>.size
+
+        if returned.commonattr & attrgroup_t(ATTR_CMN_ERROR) != 0 {
+            field += MemoryLayout<UInt32>.size
+        }
+
+        guard returned.commonattr & attrgroup_t(ATTR_CMN_NAME) != 0 else {
+            return nil
+        }
+        let nameReference = field.loadUnaligned(as: attrreference_t.self)
+        let name = String(cString: (field + Int(nameReference.attr_dataoffset)).assumingMemoryBound(to: CChar.self))
+        field += MemoryLayout<attrreference_t>.size
+
+        guard returned.commonattr & attrgroup_t(ATTR_CMN_OBJTYPE) != 0 else {
+            return nil
+        }
+        let objectType = field.loadUnaligned(as: fsobj_type_t.self)
+        return DirectoryListingItem(name: name, isDirectory: objectType == VDIR.rawValue)
     }
 }

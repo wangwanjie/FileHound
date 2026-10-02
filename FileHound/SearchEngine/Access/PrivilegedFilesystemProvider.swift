@@ -9,6 +9,10 @@ struct PrivilegedFilesystemProvider: FilesystemAccessProviding, Sendable {
         try FileManager.default.contentsOfDirectory(atPath: path)
     }
 
+    func listDirectory(atPath path: String) throws -> [DirectoryListingItem] {
+        try BulkDirectoryLister.list(atPath: path)
+    }
+
     func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
         try FileManager.default.attributesOfItem(atPath: path)
     }

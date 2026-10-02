@@ -16,6 +16,11 @@ struct SpecialFolderPlanningResult: Equatable, Sendable {
     }
 
     func allows(path: String) -> Bool {
+        // 遍历时对每个条目都会调用，没有排除项时避免构造 URL 做路径规范化
+        guard specialFolderExclusions.isEmpty == false else {
+            return true
+        }
+
         let normalizedPath = Self.normalized(path)
         let isExcluded = specialFolderExclusions.contains {
             Self.isSameOrDescendant(normalizedPath, of: $0)

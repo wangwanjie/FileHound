@@ -68,7 +68,7 @@ struct SpotlightSearchService: Sendable {
             return predicate(for: "kMDItemPath", value: trimmedValue, operator: rule.operator)
         case .extensionName:
             let normalizedValue = trimmedValue.trimmingCharacters(in: CharacterSet(charactersIn: "."))
-            return predicate(for: "kMDItemFSName", value: ".\(normalizedValue)", operator: rule.operator, treatAsSuffix: true)
+            return extensionPredicate(value: normalizedValue, operator: rule.operator)
         case .comments:
             return predicate(for: "kMDItemFinderComment", value: trimmedValue, operator: rule.operator)
         case .textContent:
@@ -99,8 +99,7 @@ struct SpotlightSearchService: Sendable {
     private func predicate(
         for field: String,
         value: String,
-        operator searchOperator: SearchRuleOperator,
-        treatAsSuffix: Bool = false
+        operator searchOperator: SearchRuleOperator
     ) -> String? {
         let tokens = splitTerms(from: value)
         guard tokens.isEmpty == false else {
@@ -125,9 +124,41 @@ struct SpotlightSearchService: Sendable {
         case .isAnyOf:
             return tokens.map { "\(field) == '\(escapeForQuery($0))'cd" }.joined(separator: " || ")
         case .isNot, .doesNotContain, .containsWords, .matchesPattern, .beginsWithAnyOf, .endsWithAnyOf, .matchesRegex, .doesNotMatchRegex, .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
-            if treatAsSuffix, searchOperator == .contains {
-                return "\(field) == '*\(escapeForQuery(value))'cd"
-            }
+            return nil
+        }
+    }
+
+    /// 扩展名是文件名最后一个 “.” 之后的部分，转成对 kMDItemFSName 的通配匹配；
+    /// 生成的条件是结果的超集，候选项随后会按完整规则复核
+    private func extensionPredicate(value: String, operator searchOperator: SearchRuleOperator) -> String? {
+        guard value.isEmpty == false else {
+            return nil
+        }
+
+        func namePattern(_ pattern: String) -> String {
+            "kMDItemFSName == '\(pattern)'cd"
+        }
+
+        let escaped = escapeForQuery(value)
+        let escapedTerms = splitTerms(from: value).map(escapeForQuery)
+        switch searchOperator {
+        case .isExactly:
+            return namePattern("*.\(escaped)")
+        case .beginsWith:
+            return namePattern("*.\(escaped)*")
+        case .endsWith:
+            return namePattern("*\(escaped)")
+        case .contains:
+            return namePattern("*.*\(escaped)*")
+        case .isAnyOf:
+            return escapedTerms.isEmpty ? nil : escapedTerms.map { namePattern("*.\($0)") }.joined(separator: " || ")
+        case .beginsWithAnyOf:
+            return escapedTerms.isEmpty ? nil : escapedTerms.map { namePattern("*.\($0)*") }.joined(separator: " || ")
+        case .endsWithAnyOf:
+            return escapedTerms.isEmpty ? nil : escapedTerms.map { namePattern("*\($0)") }.joined(separator: " || ")
+        case .containsAnyOf:
+            return escapedTerms.isEmpty ? nil : escapedTerms.map { namePattern("*.*\($0)*") }.joined(separator: " || ")
+        case .isNot, .doesNotContain, .containsPhrase, .containsWords, .matchesPattern, .matchesRegex, .doesNotMatchRegex, .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
             return nil
         }
     }

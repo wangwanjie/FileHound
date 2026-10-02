@@ -4,6 +4,49 @@ import Testing
 
 struct SearchExecutorTests {
     @Test
+    func spotlightQueryMatchesExtensionAgainstFileNameSuffix() {
+        let service = SpotlightSearchService(runQuery: { _, _ in [] })
+
+        #expect(
+            service.buildQuery(from: [SearchRuleSelection(field: .extensionName, operator: .isExactly, value: " .dmgcanvas ")])
+                == "kMDItemFSName == '*.dmgcanvas'cd"
+        )
+        #expect(
+            service.buildQuery(from: [SearchRuleSelection(field: .extensionName, operator: .isAnyOf, value: "dmg, pkg")])
+                == "kMDItemFSName == '*.dmg'cd || kMDItemFSName == '*.pkg'cd"
+        )
+        #expect(service.buildQuery(from: [SearchRuleSelection(field: .extensionName, operator: .isNot, value: "dmg")]) == nil)
+    }
+
+    @Test
+    func executeFindsExtensionMatchesAcrossNestedFolders() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("a/b/c/Installer.dmgcanvas", contents: "")
+            try builder.file("a/Other.DMGCANVAS", contents: "")
+            try builder.file("a/b/notes.txt", contents: "")
+            try builder.file("x/dmgcanvas", contents: "")
+        }
+        let executor = SearchExecutor(
+            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] }),
+            specialFoldersStore: SpecialFoldersStore(storage: InMemoryKeyValueStore())
+        )
+
+        let result = executor.execute(
+            request: SearchRequest(
+                scopeDescription: "Root",
+                rootPath: fixture.path,
+                rules: [SearchRuleSelection(field: .extensionName, operator: .isExactly, value: ".dmgcanvas")]
+            ),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        )
+
+        #expect(Set(result.items.map(\.path)) == [
+            fixture.path + "/a/b/c/Installer.dmgcanvas",
+            fixture.path + "/a/Other.DMGCANVAS"
+        ])
+    }
+
+    @Test
     func executeSkipsEntriesThatCannotBeRead() {
         let provider = FailingSearchProvider()
         let walker = DirectoryWalker(providerFactory: { _ in provider })
@@ -324,4 +367,211 @@ private final class SpotlightOnlySearchProvider: FilesystemAccessProviding, @unc
 
 private enum SpotlightProviderError: Error {
     case shouldNotWalk
+}
+
+struct SearchExecutorCatalogSearchTests {
+    @Test
+    func nameFragmentUsesLongestRequiredSubstringThatVolumeSearchCanMatch() {
+        func fragment(_ rules: [SearchRuleSelection], diacriticsSensitive: Bool = false) -> String? {
+            SearchExecutor.catalogNameFragment(for: rules, diacriticsSensitive: diacriticsSensitive)
+        }
+
+        #expect(fragment([SearchRuleSelection(field: .extensionName, operator: .isExactly, value: "dmgcanvas")]) == ".dmgcanvas")
+        #expect(fragment([
+            SearchRuleSelection(field: .name, operator: .contains, value: "report"),
+            SearchRuleSelection(field: .extensionName, operator: .isExactly, value: "pdf")
+        ]) == "report")
+        #expect(fragment([SearchRuleSelection(field: .name, operator: .containsWords, value: "annual, budget2026")]) == "budget2026")
+        #expect(fragment([SearchRuleSelection(field: .name, operator: .matchesPattern, value: "Screenshot*.png")]) == "Screenshot")
+        // 忽略变音符号时，名称里可能写成不带变音的形式，只能用其余部分预筛选
+        #expect(fragment([SearchRuleSelection(field: .name, operator: .contains, value: "Ölbild")]) == "lbild")
+        #expect(fragment([SearchRuleSelection(field: .name, operator: .contains, value: "Ölbild")], diacriticsSensitive: true) == "Ölbild")
+        #expect(fragment([SearchRuleSelection(field: .name, operator: .contains, value: "Straße")]) == "Stra")
+        #expect(fragment([SearchRuleSelection(field: .name, operator: .contains, value: "测试报告")]) == "测试报告")
+        #expect(fragment([SearchRuleSelection(field: .name, operator: .contains, value: "a")]) == nil)
+        #expect(fragment([SearchRuleSelection(field: .name, operator: .doesNotContain, value: "report")]) == nil)
+        #expect(fragment([SearchRuleSelection(field: .extensionName, operator: .isAnyOf, value: "dmg, pkg")]) == nil)
+    }
+
+    @Test
+    func catalogSearchReplacesWalkAndRechecksEveryCandidate() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("a/Installer.dmgcanvas", contents: "")
+            try builder.file("a/Installer.dmgcanvas.zip", contents: "")
+            try builder.file(".hidden/Secret.dmgcanvas", contents: "")
+            try builder.file("excluded/Skipped.dmgcanvas", contents: "")
+            try builder.file("unlisted/Walked.dmgcanvas", contents: "")
+        }
+        let root = fixture.path
+        let searcher = FakeVolumeCatalogSearcher(mountPoints: [root + "/"]) { volumePath in
+            guard volumePath == root else { return [] }
+            return [
+                VolumeCatalogMatch(path: root + "/a/Installer.dmgcanvas", isDirectory: false),
+                VolumeCatalogMatch(path: root + "/a/Installer.dmgcanvas", isDirectory: false),
+                VolumeCatalogMatch(path: root + "/a/Installer.dmgcanvas.zip", isDirectory: false),
+                VolumeCatalogMatch(path: root + "/.hidden/Secret.dmgcanvas", isDirectory: false),
+                VolumeCatalogMatch(path: root + "/excluded/Skipped.dmgcanvas", isDirectory: false),
+                VolumeCatalogMatch(path: "/elsewhere/Outside.dmgcanvas", isDirectory: false)
+            ]
+        }
+        let executor = SearchExecutor(
+            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] }),
+            catalogSearcher: searcher,
+            specialFoldersStore: SpecialFoldersStore(storage: InMemoryKeyValueStore())
+        )
+
+        let result = executor.execute(
+            request: SearchRequest(
+                scopeDescription: "Root",
+                rootPaths: [root],
+                excludedPaths: [root + "/excluded"],
+                rules: [
+                    SearchRuleSelection(field: .extensionName, operator: .isExactly, value: "dmgcanvas"),
+                    SearchRuleSelection(field: .invisibleItems, operator: .isExactly, value: "false")
+                ]
+            ),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        )
+
+        // 卷目录搜索覆盖了整个卷，不再遍历，所以未被搜索返回的条目不会出现
+        #expect(result.items.map(\.path) == [root + "/a/Installer.dmgcanvas"])
+        #expect(searcher.searchedVolumes == [root])
+        #expect(searcher.fragments == [".dmgcanvas"])
+    }
+
+    @Test
+    func unsupportedVolumesFallBackToWalkingOnlyThatVolume() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("Top.dmgcanvas", contents: "")
+            try builder.file("nested/Inner.dmgcanvas", contents: "")
+        }
+        let root = fixture.path
+        let nested = root + "/nested"
+        let searcher = FakeVolumeCatalogSearcher(mountPoints: [root, nested], unsupportedVolumes: [nested]) { volumePath in
+            volumePath == root ? [VolumeCatalogMatch(path: root + "/Top.dmgcanvas", isDirectory: false)] : []
+        }
+        let executor = SearchExecutor(
+            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] }),
+            catalogSearcher: searcher,
+            specialFoldersStore: SpecialFoldersStore(storage: InMemoryKeyValueStore())
+        )
+
+        let result = executor.execute(
+            request: SearchRequest(
+                scopeDescription: "Root",
+                rootPath: root,
+                rules: [SearchRuleSelection(field: .extensionName, operator: .isExactly, value: "dmgcanvas")]
+            ),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        )
+
+        #expect(Set(result.items.map(\.path)) == [root + "/Top.dmgcanvas", nested + "/Inner.dmgcanvas"])
+        #expect(Set(searcher.searchedVolumes) == [root, nested])
+    }
+
+    @Test
+    func depthLimitedSearchesKeepWalking() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("Top.dmgcanvas", contents: "")
+            try builder.file("a/b/Deep.dmgcanvas", contents: "")
+        }
+        let searcher = FakeVolumeCatalogSearcher(mountPoints: [fixture.path]) { _ in [] }
+        let executor = SearchExecutor(
+            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] }),
+            catalogSearcher: searcher,
+            specialFoldersStore: SpecialFoldersStore(storage: InMemoryKeyValueStore())
+        )
+
+        let result = executor.execute(
+            request: SearchRequest(
+                scopeDescription: "Root",
+                rootPath: fixture.path,
+                rules: [
+                    SearchRuleSelection(field: .extensionName, operator: .isExactly, value: "dmgcanvas"),
+                    SearchRuleSelection(field: .limitFolderDepth, operator: .isExactly, value: "1")
+                ]
+            ),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        )
+
+        #expect(result.items.map(\.path) == [fixture.path + "/Top.dmgcanvas"])
+        #expect(searcher.searchedVolumes.isEmpty)
+    }
+
+    @Test
+    func exclusionsDoNotApplyInsideSearchRootsTheyContain() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("Volumes/External/Found.dmgcanvas", contents: "")
+            try builder.file("Volumes/Other/Skipped.dmgcanvas", contents: "")
+            try builder.file("Local.dmgcanvas", contents: "")
+        }
+        let root = fixture.path
+        let executor = SearchExecutor(
+            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] }),
+            catalogSearcher: FakeVolumeCatalogSearcher(mountPoints: []) { _ in [] },
+            specialFoldersStore: SpecialFoldersStore(storage: InMemoryKeyValueStore())
+        )
+
+        // 与“所有磁盘”相同的形态：既排除 Volumes，又把其中的卷作为搜索根
+        let result = executor.execute(
+            request: SearchRequest(
+                scopeDescription: "All",
+                rootPaths: [root, root + "/Volumes/External"],
+                excludedPaths: [root + "/Volumes"],
+                rules: [SearchRuleSelection(field: .extensionName, operator: .isExactly, value: "dmgcanvas")]
+            ),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        )
+
+        #expect(Set(result.items.map(\.path)) == [root + "/Local.dmgcanvas", root + "/Volumes/External/Found.dmgcanvas"])
+    }
+}
+
+private final class FakeVolumeCatalogSearcher: VolumeCatalogSearching, @unchecked Sendable {
+    private let lock = NSLock()
+    private let mounts: [String]
+    private let unsupportedVolumes: Set<String>
+    private let matches: (String) -> [VolumeCatalogMatch]
+    private var searched: [(volume: String, fragment: String)] = []
+
+    init(
+        mountPoints: [String],
+        unsupportedVolumes: Set<String> = [],
+        matches: @escaping (String) -> [VolumeCatalogMatch]
+    ) {
+        mounts = mountPoints
+        self.unsupportedVolumes = unsupportedVolumes
+        self.matches = matches
+    }
+
+    var searchedVolumes: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return searched.map(\.volume)
+    }
+
+    var fragments: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return searched.map(\.fragment)
+    }
+
+    func mountPoints() -> [String] {
+        mounts
+    }
+
+    func search(
+        volumePath: String,
+        nameFragment: String,
+        shouldStop: () -> Bool,
+        onMatches: ([VolumeCatalogMatch]) -> Void
+    ) throws {
+        lock.lock()
+        searched.append((volumePath, nameFragment))
+        lock.unlock()
+        if unsupportedVolumes.contains(volumePath) {
+            throw VolumeCatalogSearchError.unsupported(errno: ENOTSUP)
+        }
+        onMatches(matches(volumePath))
+    }
 }
