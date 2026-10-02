@@ -19,6 +19,42 @@ struct SearchExecutorTests {
     }
 
     @Test
+    func streamingProgressEventuallyReportsResultsThrottledAfterLastEmission() async throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            for index in 0..<5 {
+                try builder.file("folder/report-\(index).txt", contents: "")
+            }
+        }
+        let executor = SearchExecutor(
+            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] }),
+            specialFoldersStore: SpecialFoldersStore(storage: InMemoryKeyValueStore())
+        )
+        final class ProgressRecorder: @unchecked Sendable {
+            private let lock = NSLock()
+            private var counts: [Int] = []
+            func record(_ count: Int) { lock.lock(); counts.append(count); lock.unlock() }
+            var last: Int? { lock.lock(); defer { lock.unlock() }; return counts.last }
+        }
+        let recorder = ProgressRecorder()
+
+        let result = executor.executeStreaming(
+            request: SearchRequest(
+                scopeDescription: "Root",
+                rootPath: fixture.path,
+                rules: [SearchRuleSelection(field: .name, operator: .contains, value: "report")]
+            ),
+            options: SearchExecutionOptions(includeSpotlightResults: false)
+        ) { progress in
+            recorder.record(progress.matchedCount)
+        }
+
+        #expect(result.items.count == 5)
+        // 节流间隔内的结果应在间隔结束后补发，而不是一直等到下一条命中
+        try await Task.sleep(nanoseconds: 400_000_000)
+        #expect(recorder.last == 5)
+    }
+
+    @Test
     func executeFindsExtensionMatchesAcrossNestedFolders() throws {
         let fixture = try TemporaryFixtureTree.make { builder in
             try builder.file("a/b/c/Installer.dmgcanvas", contents: "")

@@ -1227,6 +1227,8 @@ private final class SearchResultCollector: @unchecked Sendable {
     private var items: [SearchResultItem] = []
     private var seenPaths = Set<String>()
     private var lastProgressTime: TimeInterval?
+    private var hasPendingProgress = false
+    private var isTrailingFlushScheduled = false
 
     init(title: String, limit: Int?, onProgress: (@Sendable (SearchExecutionProgress) -> Void)?) {
         self.title = title
@@ -1266,11 +1268,37 @@ private final class SearchResultCollector: @unchecked Sendable {
 
         // 在锁内回调以保证进度按结果数递增的顺序送达；达到上限时立即送出最后一批
         let now = ProcessInfo.processInfo.systemUptime
-        if let onProgress, reachedLimitLocked || lastProgressTime.map({ now - $0 >= Self.progressInterval }) ?? true {
-            lastProgressTime = now
-            onProgress(.init(title: title, items: items, matchedCount: items.count))
+        if onProgress != nil {
+            if reachedLimitLocked || lastProgressTime.map({ now - $0 >= Self.progressInterval }) ?? true {
+                emitProgressLocked(now: now)
+            } else {
+                // 被节流的结果在间隔结束后补发，避免之后长时间没有新命中时界面停留在旧的结果上
+                hasPendingProgress = true
+                scheduleTrailingFlushLocked()
+            }
         }
         return reachedLimitLocked ? .reachedLimit : .appended
+    }
+
+    private func emitProgressLocked(now: TimeInterval) {
+        lastProgressTime = now
+        hasPendingProgress = false
+        onProgress?(.init(title: title, items: items, matchedCount: items.count))
+    }
+
+    private func scheduleTrailingFlushLocked() {
+        guard isTrailingFlushScheduled == false else {
+            return
+        }
+        isTrailingFlushScheduled = true
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + Self.progressInterval) { [self] in
+            lock.lock()
+            defer { lock.unlock() }
+            isTrailingFlushScheduled = false
+            if hasPendingProgress {
+                emitProgressLocked(now: ProcessInfo.processInfo.systemUptime)
+            }
+        }
     }
 
     func result() -> SearchExecutionResult {
