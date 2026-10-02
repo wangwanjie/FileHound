@@ -48,6 +48,8 @@ final class SearchWorkflowController {
     private var latestItems: [SearchResultItem] = []
     private var latestTitle = ""
     private var latestScopeDescription = ""
+    /// 每次开始、取消或完成搜索时递增；进度回调异步回到主线程，用它丢弃已结束搜索的迟到进度
+    private var generation = 0
 
     init(executor: SearchExecutor = SearchExecutor()) {
         self.executor = executor
@@ -58,6 +60,8 @@ final class SearchWorkflowController {
         preferences: SearchExecutionPreferences = SearchExecutionPreferences()
     ) {
         cancel()
+        generation += 1
+        let searchGeneration = generation
         latestMatchCount = 0
         latestItems = []
         latestTitle = request.queryTitle
@@ -68,7 +72,7 @@ final class SearchWorkflowController {
             guard let self else { return }
 
             let emitProgress: @MainActor (SearchExecutionProgress) -> Void = { progress in
-                guard Task.isCancelled == false else {
+                guard self.generation == searchGeneration else {
                     return
                 }
 
@@ -92,6 +96,7 @@ final class SearchWorkflowController {
                 if Task.isCancelled { return }
                 let items = self.fixtureItems()
                 await MainActor.run {
+                    guard self.finish(searchGeneration) else { return }
                     self.onResults?("Name contains \(request.rules.first?.value ?? "")", items)
                     self.onStateChange?(.init(phase: .idle(matchCount: items.count)))
                 }
@@ -119,6 +124,7 @@ final class SearchWorkflowController {
                 }
 
                 await MainActor.run {
+                    guard self.finish(searchGeneration) else { return }
                     self.onResults?(request.queryTitle, partialItems)
                     self.onStateChange?(.init(phase: .idle(matchCount: partialItems.count)))
                 }
@@ -137,6 +143,7 @@ final class SearchWorkflowController {
             }
             if Task.isCancelled { return }
             await MainActor.run {
+                guard self.finish(searchGeneration) else { return }
                 if result.items.isEmpty == false {
                     self.onResults?(result.title, result.items)
                 }
@@ -148,7 +155,17 @@ final class SearchWorkflowController {
     func cancel() {
         searchTask?.cancel()
         searchTask = nil
+        generation += 1
         onStateChange?(.init(phase: .editing(matchCount: latestMatchCount)))
+    }
+
+    /// 标记该次搜索已结束，之后迟到的进度不再生效；返回 false 表示它已被取消或被新搜索取代
+    private func finish(_ searchGeneration: Int) -> Bool {
+        guard generation == searchGeneration else {
+            return false
+        }
+        generation += 1
+        return true
     }
 
     func fixtureItems() -> [SearchResultItem] {
