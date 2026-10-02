@@ -449,7 +449,10 @@ final class SearchFormViewController: NSViewController {
             }
             existing.expandsFoldersWhenShowingResults = settings.expandFoldersWhenShowingResults
             existing.update(title: title, items: items)
-            existing.showWindow(nil)
+            // 搜索中结果持续刷新，只在本次搜索首次展示时前置窗口，避免反复抢占焦点
+            if didOpenResultsForCurrentSearch == false {
+                existing.showWindow(nil)
+            }
             didOpenResultsForCurrentSearch = true
             return
         }

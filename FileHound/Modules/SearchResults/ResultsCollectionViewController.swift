@@ -58,8 +58,20 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
     }
 
     func update(items: [SearchResultItem]) {
+        // 搜索进行中结果会持续刷新，按路径恢复选中项，避免选中项因新结果插入而错位
+        let selectedPaths = Set(selectedItems().map(\.path))
         self.items = items
         collectionView.reloadData()
+        guard selectedPaths.isEmpty == false else {
+            return
+        }
+        let indexPaths = Set(items.indices
+            .filter { selectedPaths.contains(items[$0].path) }
+            .map { IndexPath(item: $0, section: 0) })
+        if indexPaths != collectionView.selectionIndexPaths {
+            collectionView.selectionIndexPaths = indexPaths
+            notifySelectionChange()
+        }
     }
 
     func updatePreviewSize(_ previewSize: CGFloat) {

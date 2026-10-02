@@ -81,8 +81,18 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     }
 
     func update(items: [SearchResultItem]) {
+        // 搜索进行中结果会持续刷新，按路径恢复选中项，避免选中行因新结果插入而错位
+        let selectedPaths = Set(selectedItems().map(\.path))
         self.items = items
         tableView.reloadData()
+        guard selectedPaths.isEmpty == false else {
+            return
+        }
+        let rows = IndexSet(items.indices.filter { selectedPaths.contains(items[$0].path) })
+        if rows != tableView.selectedRowIndexes {
+            tableView.selectRowIndexes(rows, byExtendingSelection: false)
+            selectionDidChange()
+        }
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int {

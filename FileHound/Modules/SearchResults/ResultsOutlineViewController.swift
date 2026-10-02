@@ -98,10 +98,25 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
 
     func update(items: [SearchResultItem]) {
         let expandedPaths = expandedNodePaths()
+        // 搜索进行中结果会持续刷新，按路径恢复选中项，避免选中行因新结果插入而错位
+        let selectedPaths = Set(selectedItems().map(\.path))
         self.items = items
         rootNodes = buildTree(for: items)
         outlineView.reloadData()
         applyExpansionState(expandedPaths)
+        guard selectedPaths.isEmpty == false else {
+            return
+        }
+        let rows = IndexSet((0..<outlineView.numberOfRows).filter { row in
+            guard let node = outlineView.item(atRow: row) as? ResultOutlineNode else {
+                return false
+            }
+            return selectedPaths.contains(node.item.path)
+        })
+        if rows != outlineView.selectedRowIndexes {
+            outlineView.selectRowIndexes(rows, byExtendingSelection: false)
+            selectionDidChange()
+        }
     }
 
     func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
