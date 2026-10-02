@@ -18,6 +18,9 @@ final class SearchRuleRowView: NSView {
     private var validationTopConstraint: Constraint?
     private var currentOperators: [SearchRuleOperatorDefinition] = SearchRuleField.name.definition.operators
     private var currentValidationResult: SearchRuleValidationResult = .valid
+    // 整行可编辑与“允许删除”（至少保留一条条件）是两个独立状态，删除按钮需同时满足
+    private var isEditingEnabled = true
+    private var isRemoveAllowed = true
     var onAdd: (() -> Void)?
     var onRemove: (() -> Void)?
     var onChange: (() -> Void)?
@@ -199,17 +202,24 @@ final class SearchRuleRowView: NSView {
     }
 
     func setEnabled(_ enabled: Bool) {
-        [addButton, removeButton, fieldPopup, operatorPopup].forEach { $0.isEnabled = enabled }
+        isEditingEnabled = enabled
+        [addButton, fieldPopup, operatorPopup].forEach { $0.isEnabled = enabled }
         valueField.isEnabled = enabled
         toggleValueControl.isEnabled = enabled
         choiceValuePopup.isEnabled = enabled
         relativeAmountField.isEnabled = enabled
         relativeUnitPopup.isEnabled = enabled
+        updateRemoveButtonState()
         alphaValue = enabled ? 1 : 0.55
     }
 
     func setRemoveEnabled(_ enabled: Bool) {
-        removeButton.isEnabled = enabled
+        isRemoveAllowed = enabled
+        updateRemoveButtonState()
+    }
+
+    private func updateRemoveButtonState() {
+        removeButton.isEnabled = isEditingEnabled && isRemoveAllowed
     }
 
     func reloadLocalizedStrings() {
