@@ -33,14 +33,26 @@ struct SearchResultsViewModelTests {
     @Test
     func togglesPackageFilterWithoutDroppingVisibleFiles() {
         let package = SearchResultItem(path: "/tmp/Demo.app", matchReason: "名称命中", previewSnippet: nil, isPackage: true)
+        let packageContent = SearchResultItem(path: "/tmp/Demo.app/Contents/Info.plist", matchReason: "名称命中", previewSnippet: nil)
         let file = SearchResultItem(path: "/tmp/Demo.lookin", matchReason: "名称命中", previewSnippet: nil)
 
         let viewModel = SearchResultsViewModel()
-        viewModel.items = [package, file]
+        viewModel.items = [package, packageContent, file]
 
-        #expect(viewModel.projectedItems.count == 1)
+        #expect(Set(viewModel.projectedItems.map(\.path)) == ["/tmp/Demo.app", "/tmp/Demo.lookin"])
         viewModel.showPackageContents = true
-        #expect(viewModel.projectedItems.count == 2)
+        #expect(viewModel.projectedItems.count == 3)
+    }
+
+    @Test
+    func packageItemsStayVisibleWhenPackageContentsAreHidden() {
+        let package = SearchResultItem(path: "/Users/demo/Downloads/App.dmgcanvas", matchReason: "名称命中", previewSnippet: nil, isPackage: true)
+
+        let viewModel = SearchResultsViewModel()
+        viewModel.items = [package]
+
+        #expect(viewModel.showPackageContents == false)
+        #expect(viewModel.projectedItems == [package])
     }
 
     @Test

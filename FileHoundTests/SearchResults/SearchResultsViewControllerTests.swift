@@ -85,7 +85,7 @@ struct SearchResultsViewControllerTests {
     func toolbarButtonsExposeTooltipsAndFilterFlags() {
         let visible = SearchResultItem(path: "/tmp/report.txt", matchReason: "名称命中", previewSnippet: nil)
         let hidden = SearchResultItem(path: "/tmp/.hidden.txt", matchReason: "名称命中", previewSnippet: nil, isInvisible: true)
-        let package = SearchResultItem(path: "/tmp/Demo.app", matchReason: "名称命中", previewSnippet: nil, isPackage: true)
+        let package = SearchResultItem(path: "/tmp/Demo.app/Contents/Info.plist", matchReason: "名称命中", previewSnippet: nil)
         let trashed = SearchResultItem(path: "/tmp/trash.txt", matchReason: "名称命中", previewSnippet: nil, isTrashed: true)
 
         let viewModel = SearchResultsViewModel()
