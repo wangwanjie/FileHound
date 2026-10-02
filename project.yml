@@ -68,13 +68,16 @@ targets:
         INFOPLIST_KEY_SUFeedURL: https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast.xml
         INFOPLIST_KEY_SUPublicEDKey: EMkumAR7FRbjJ6T5LhBcK7yIcGnJAuAjU5RZFEm12JE=
         CODE_SIGN_ENTITLEMENTS: FileHound/FileHound.entitlements
+        # Debug 也用固定证书签名：ad-hoc 签名的 designated requirement 是 cdhash，
+        # 每次编译都会变，TCC（桌面/文稿/下载等文件夹授权）会认为是新 App 而反复弹窗。
+        # 与 Release 使用同一证书，二者 TCC 授权记录可以共用，不会互相覆盖。
+        CODE_SIGN_IDENTITY: "Developer ID Application"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: X6B6C6U6QV
       configs:
         Debug:
           SWIFT_VERSION: "5.10"
         Release:
-          CODE_SIGN_IDENTITY: "Developer ID Application"
-          CODE_SIGN_STYLE: Manual
-          DEVELOPMENT_TEAM: X6B6C6U6QV
           ENABLE_HARDENED_RUNTIME: YES
           SWIFT_VERSION: "5.10"
   FileHoundHelper:

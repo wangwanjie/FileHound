@@ -816,6 +816,10 @@
 					26FE55936B7FC95B00B31670 = {
 						TestTargetID = ABDDBFA76A03F4EB53DBDE50;
 					};
+					ABDDBFA76A03F4EB53DBDE50 = {
+						DevelopmentTeam = X6B6C6U6QV;
+						ProvisioningStyle = Manual;
+					};
 				};
 			};
 			buildConfigurationList = E0D5E1C8A33235421AEC2203 /* Build configuration list for PBXProject "FileHound" */;
@@ -1282,8 +1286,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = FileHound/FileHound.entitlements;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = X6B6C6U6QV;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleShortVersionString = "$(MARKETING_VERSION)";
 				INFOPLIST_KEY_CFBundleVersion = "$(CURRENT_PROJECT_VERSION)";
