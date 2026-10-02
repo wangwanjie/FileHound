@@ -254,6 +254,18 @@ struct SearchExecutorTests {
     }
 
     @Test
+    func spotlightProcessOutputKeepsBatchesWrittenRightBeforeExit() throws {
+        // mdfind 先输出一批，过一会儿再输出剩下的并立即退出；最后一批不能丢
+        let lines = try SpotlightSearchService.outputLines(
+            ofExecutableAt: "/bin/sh",
+            arguments: ["-c", "echo first; sleep 0.2; i=0; while [ $i -lt 20000 ]; do echo line$i; i=$((i+1)); done"]
+        )
+        #expect(lines.count == 20001)
+        #expect(lines.first == "first")
+        #expect(lines.last == "line19999")
+    }
+
+    @Test
     func executeSupportsFafDateOperatorsAndKindMatching() throws {
         let fixture = try TemporaryFixtureTree.make { builder in
             try builder.file("Preview.app/Contents/Info.plist", contents: "plist")

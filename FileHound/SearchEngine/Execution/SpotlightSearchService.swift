@@ -178,30 +178,40 @@ struct SpotlightSearchService: Sendable {
     }
 
     private static func runProcess(rootPath: String, query: String) throws -> [String] {
+        try outputLines(ofExecutableAt: "/usr/bin/mdfind", arguments: ["-onlyin", rootPath, query])
+    }
+
+    /// 运行命令并按行返回其标准输出；任务取消时结束进程并抛出 CancellationError
+    static func outputLines(ofExecutableAt executablePath: String, arguments: [String]) throws -> [String] {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/mdfind")
-        process.arguments = ["-onlyin", rootPath, query]
+        process.executableURL = URL(fileURLWithPath: executablePath)
+        process.arguments = arguments
 
         let outputPipe = Pipe()
         process.standardOutput = outputPipe
         process.standardError = FileHandle.nullDevice
 
-        // 边运行边读取输出，避免结果超过管道缓冲区后 mdfind 阻塞在写入上
-        let buffer = ProcessOutputBuffer()
-        outputPipe.fileHandleForReading.readabilityHandler = { handle in
-            buffer.append(handle.availableData)
-        }
         let exited = DispatchSemaphore(value: 0)
         process.terminationHandler = { _ in exited.signal() }
-
         try process.run()
+
+        // 在单独的线程上一直读到管道关闭，避免结果超过管道缓冲区后 mdfind 阻塞在写入上。
+        // 不能用 readabilityHandler：进程退出时它可能正读着最后一批输出，取结果时这批会丢失
+        // （mdfind 会分批输出，整盘文本查询常常只剩第一批）
+        let buffer = ProcessOutputBuffer()
+        let finishedReading = DispatchSemaphore(value: 0)
+        let reader = outputPipe.fileHandleForReading
+        DispatchQueue.global(qos: .userInitiated).async {
+            buffer.append(reader.readDataToEndOfFile())
+            finishedReading.signal()
+        }
+
         while exited.wait(timeout: .now() + .milliseconds(50)) == .timedOut {
             if Task.isCancelled {
                 process.terminate()
             }
         }
-        outputPipe.fileHandleForReading.readabilityHandler = nil
-        buffer.append(outputPipe.fileHandleForReading.readDataToEndOfFile())
+        finishedReading.wait()
 
         if Task.isCancelled {
             throw CancellationError()
