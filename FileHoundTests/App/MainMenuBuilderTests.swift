@@ -175,7 +175,7 @@ extension MainMenuBuilderTests {
         #expect(appMenu.items.contains { $0.action == #selector(NSApplication.hideOtherApplications(_:)) })
         #expect(appMenu.items.contains { $0.title == L10n.string("menu.services") && $0.submenu != nil })
 
-        let newSearch = try #require(fileMenu.items.first { $0.action == #selector(AppDelegate.presentSearchWindow(_:)) })
+        let newSearch = try #require(fileMenu.items.first { $0.action == #selector(AppDelegate.newSearchWindow(_:)) })
         #expect(newSearch.keyEquivalent == "n")
         #expect(viewMenu.items.map(\.keyEquivalent) == ["1", "2", "3"])
     }

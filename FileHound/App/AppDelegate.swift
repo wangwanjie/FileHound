@@ -11,7 +11,13 @@ import MMKV
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var windowController: NSWindowController?
-    private var searchWindowController: SearchWindowController?
+    private lazy var searchWindowManager: SearchWindowManager = {
+        let manager = SearchWindowManager()
+        manager.onControllerCreated = { [weak self] _ in
+            self?.applyCurrentTheme()
+        }
+        return manager
+    }()
     private lazy var preferencesWindowController = PreferencesWindowController()
     private lazy var launchShortcutController: LaunchShortcutControlling = LaunchShortcutController.shared
     private lazy var updateManager: UpdateManager = .shared
@@ -56,7 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.arguments.contains("--open-seeded-saved-search-on-launch"),
            let savedSearch = SavedSearchStore.shared.all().first(where: { $0.name == "UI Fixture Saved Search" }),
            let criteria = savedSearch.criteria {
-            searchWindowController?.apply(searchSessionSnapshot: SearchSessionSnapshot(
+            searchWindowManager.activeController?.apply(searchSessionSnapshot: SearchSessionSnapshot(
                 criteria: criteria,
                 presentationState: savedSearch.presentationState
             ))
@@ -79,21 +85,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyCurrentTheme()
     }
 
+    /// 显示当前查找窗口（启动、全局快捷键），不存在时才新建
     @objc
     func presentSearchWindow(_ sender: Any?) {
-        let controller: SearchWindowController
-        if let existing = searchWindowController {
-            controller = existing
-        } else {
-            controller = SearchWindowController()
-            searchWindowController = controller
-        }
-
-        controller.showWindow(sender)
-        controller.window?.makeKeyAndOrderFront(sender)
-        windowController = controller
+        windowController = searchWindowManager.presentActiveWindow()
         NSApp.activate(ignoringOtherApps: true)
         applyCurrentTheme()
+    }
+
+    /// 菜单「新建搜索」（⌘N）：另开一个空白查找窗口，保留其他窗口的条件与结果
+    @objc
+    func newSearchWindow(_ sender: Any?) {
+        windowController = searchWindowManager.openNewWindow()
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc
@@ -107,14 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let controller: SearchWindowController
-        if let existing = searchWindowController {
-            controller = existing
-        } else {
-            controller = SearchWindowController()
-            searchWindowController = controller
-        }
-
+        let controller = searchWindowManager.controllerForApplyingSnapshot()
         controller.apply(searchSessionSnapshot: SearchSessionSnapshot(
             criteria: record.criteria,
             presentationState: record.presentationState
@@ -132,14 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        let controller: SearchWindowController
-        if let existing = searchWindowController {
-            controller = existing
-        } else {
-            controller = SearchWindowController()
-            searchWindowController = controller
-        }
-
+        let controller = searchWindowManager.controllerForApplyingSnapshot()
         controller.apply(searchSessionSnapshot: SearchSessionSnapshot(
             criteria: criteria,
             presentationState: savedSearch.presentationState
@@ -151,7 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc
     func saveCurrentSearch(_ sender: Any?) {
         guard
-            let controller = searchWindowController,
+            let controller = searchWindowManager.activeController,
             let snapshot = controller.currentSearchSessionSnapshot()
         else {
             return
@@ -194,9 +184,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return true
         }
 
-        searchWindowController?.showWindow(sender)
-        searchWindowController?.window?.makeKeyAndOrderFront(sender)
-        NSApp.activate(ignoringOtherApps: true)
+        presentSearchWindow(sender)
         return true
     }
 
@@ -313,14 +301,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func reloadLocalizedInterface() {
         rebuildMainMenu()
-        searchWindowController?.reloadLocalizedContent()
+        searchWindowManager.reloadLocalizedContent()
         preferencesWindowController.reloadLocalizedContent()
         applyCurrentTheme()
     }
 
     private func applyCurrentTheme() {
         let theme = ThemeController.shared.currentTheme
-        ThemeController.shared.apply(theme: theme, to: searchWindowController?.window)
+        searchWindowManager.windows.forEach { ThemeController.shared.apply(theme: theme, to: $0) }
         ThemeController.shared.apply(theme: theme, to: preferencesWindowController.window)
     }
 }

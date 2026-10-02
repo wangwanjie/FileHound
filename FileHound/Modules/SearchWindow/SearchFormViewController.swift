@@ -45,6 +45,8 @@ final class SearchFormViewController: NSViewController {
     private var lastSubmittedSessionSnapshot: SearchSessionSnapshot?
     private var didCancelCurrentSearch = false
     private var didOpenResultsForCurrentSearch = false
+    /// 新建的查找窗口（⌘N）以空白条件开始，只有首个窗口按偏好恢复上次搜索
+    private let restoresPreviousSession: Bool
 
     private var state = SearchWindowState(phase: .idle(matchCount: 0)) {
         didSet {
@@ -60,7 +62,8 @@ final class SearchFormViewController: NSViewController {
         recentLocationStore: RecentLocationStore = .shared,
         searchHistoryStore: SearchHistoryStore = .shared,
         searchSessionStore: SearchSessionStore = .shared,
-        settings: AppSettings = .shared
+        settings: AppSettings = .shared,
+        restoresPreviousSession: Bool = true
     ) {
         self.workflowController = workflowController
         self.scopeProvider = scopeProvider
@@ -69,6 +72,7 @@ final class SearchFormViewController: NSViewController {
         self.searchHistoryStore = searchHistoryStore
         self.searchSessionStore = searchSessionStore
         self.settings = settings
+        self.restoresPreviousSession = restoresPreviousSession
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -172,7 +176,8 @@ final class SearchFormViewController: NSViewController {
         super.viewDidLoad()
         configureScopePopup()
 
-        if settings.restorePreviousSearch,
+        if restoresPreviousSession,
+           settings.restorePreviousSearch,
            let snapshot = searchSessionStore.load() {
             applySearchSessionSnapshot(snapshot)
         }
@@ -500,6 +505,24 @@ final class SearchFormViewController: NSViewController {
         }
 
         workflowController.start(request: lastSearchRequest, preferences: settings.searchExecutionPreferences)
+    }
+
+    var isSearching: Bool {
+        state.phase.isSearching
+    }
+
+    /// 查找窗口被释放前调用，确保结果窗口状态更新为「已停止」而不是一直停留在「搜索中」
+    func cancelSearchIfNeeded() {
+        guard state.phase.isSearching else {
+            return
+        }
+        didCancelCurrentSearch = true
+        workflowController.cancel()
+    }
+
+    /// 判断窗口是否为本查找窗口打开的结果窗口，用于从结果窗口反查当前活跃的查找窗口
+    func ownsResultsWindow(_ window: NSWindow) -> Bool {
+        resultsWindowController?.window === window
     }
 
     func applyRuleAreaLayout(height: CGFloat, shouldScroll: Bool) {

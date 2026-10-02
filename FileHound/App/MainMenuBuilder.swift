@@ -142,7 +142,7 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
         let fileMenu = NSMenu(title: L10n.string("menu.file"))
         let newSearchItem = NSMenuItem(
             title: L10n.string("menu.new_search"),
-            action: #selector(AppDelegate.presentSearchWindow(_:)),
+            action: #selector(AppDelegate.newSearchWindow(_:)),
             keyEquivalent: "n"
         )
         newSearchItem.target = target

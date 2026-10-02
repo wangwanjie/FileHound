@@ -17,6 +17,8 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
         height: SearchFormViewController.Layout.chromeHeight + SearchFormViewController.Layout.minimumRuleAreaHeight
     )
     private let layoutCoordinator: SearchWindowLayoutCoordinator
+    /// 窗口即将关闭时回调，由 SearchWindowManager 决定是否释放该查找窗口
+    var onWindowWillClose: ((SearchWindowController) -> Void)?
 
     init(
         layoutCoordinator: SearchWindowLayoutCoordinator = SearchWindowLayoutCoordinator(
@@ -28,10 +30,14 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
     }
 
     convenience init() {
+        self.init(restoresPreviousSession: true)
+    }
+
+    convenience init(restoresPreviousSession: Bool) {
         self.init(layoutCoordinator: SearchWindowLayoutCoordinator(
             visibleFrameProvider: { NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 720) }
         ))
-        let formController = SearchFormViewController()
+        let formController = SearchFormViewController(restoresPreviousSession: restoresPreviousSession)
         formController.windowLayoutDelegate = self
         let window = NSWindow(contentViewController: formController)
         window.title = "FileHound"
@@ -40,6 +46,12 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.isReleasedWhenClosed = false
         self.window = window
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowWillClose(_:)),
+            name: NSWindow.willCloseNotification,
+            object: window
+        )
         _ = formController.view
         searchFormViewController(formController, desiredRulesContentHeight: formController.preferredRulesContentHeight)
     }
@@ -88,6 +100,34 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
         }
 
         return controller.currentSearchSessionSnapshot()
+    }
+
+    private var formController: SearchFormViewController? {
+        window?.contentViewController as? SearchFormViewController
+    }
+
+    var isSearching: Bool {
+        formController?.isSearching ?? false
+    }
+
+    /// 窗口处于打开状态（可见或已最小化到 Dock）
+    var isWindowOpen: Bool {
+        guard let window else { return false }
+        return window.isVisible || window.isMiniaturized
+    }
+
+    func cancelSearchIfNeeded() {
+        formController?.cancelSearchIfNeeded()
+    }
+
+    /// 查找窗口本身或由它打开的结果窗口
+    func owns(window candidate: NSWindow) -> Bool {
+        candidate === window || formController?.ownsResultsWindow(candidate) == true
+    }
+
+    @objc
+    private func windowWillClose(_ notification: Notification) {
+        onWindowWillClose?(self)
     }
 
     func searchFormViewController(_ controller: SearchFormViewController?, desiredRulesContentHeight: CGFloat) {

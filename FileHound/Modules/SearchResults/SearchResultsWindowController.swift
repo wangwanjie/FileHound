@@ -1,6 +1,9 @@
 import AppKit
 
 final class SearchResultsWindowController: NSWindowController, NSMenuItemValidation {
+    /// 窗口打开期间由此持有：所属查找窗口关闭并被释放后，结果窗口仍可继续使用，直到用户关闭它
+    private static var openControllers: [ObjectIdentifier: SearchResultsWindowController] = [:]
+
     private let resultsViewController: SearchResultsViewController
     private let viewModel: SearchResultsViewModel
     private let refreshHandler: (() -> Void)?
@@ -24,11 +27,27 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.isReleasedWhenClosed = false
         super.init(window: window)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowWillClose(_:)),
+            name: NSWindow.willCloseNotification,
+            object: window
+        )
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func showWindow(_ sender: Any?) {
+        super.showWindow(sender)
+        Self.openControllers[ObjectIdentifier(self)] = self
+    }
+
+    @objc
+    private func windowWillClose(_ notification: Notification) {
+        Self.openControllers[ObjectIdentifier(self)] = nil
     }
 
     /// 菜单「重新搜索」（⌘R）：按上次的条件重新执行搜索

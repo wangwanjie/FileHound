@@ -46,6 +46,36 @@ final class SearchWindowUITests: XCTestCase {
     }
 
     @MainActor
+    func testNewSearchShortcutOpensSeparateWindowAndKeepsPreviousCriteria() throws {
+        let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
+        app.launchArguments = ["--uitesting"]
+        app.launch()
+
+        let findWindows = app.windows.matching(NSPredicate(format: "title == %@", "FileHound"))
+        let firstWindow = findWindows.element(boundBy: 0)
+        XCTAssertTrue(firstWindow.waitForExistence(timeout: 3))
+
+        let firstValueField = firstWindow.textFields["SearchRuleValueField"]
+        XCTAssertTrue(firstValueField.waitForExistence(timeout: 2))
+        firstValueField.click()
+        firstValueField.typeKey("a", modifierFlags: .command)
+        firstValueField.typeText("first-window-query")
+
+        app.typeKey("n", modifierFlags: .command)
+
+        let secondWindowAppeared = NSPredicate(format: "count == 2")
+        expectation(for: secondWindowAppeared, evaluatedWith: findWindows)
+        waitForExpectations(timeout: 3)
+
+        let values = (0..<2).map { index in
+            String(describing: findWindows.element(boundBy: index).textFields["SearchRuleValueField"].value ?? "")
+        }
+        XCTAssertTrue(values.contains("first-window-query"))
+        XCTAssertTrue(values.contains(""))
+    }
+
+    @MainActor
     func testRuleValueFieldAcceptsTyping() throws {
         let app = XCUIApplication()
         AppLaunchHelper.prepareForLaunch(app)
