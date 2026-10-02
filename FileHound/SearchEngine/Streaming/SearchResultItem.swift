@@ -34,6 +34,11 @@ struct SearchResultItem: Equatable, Hashable, Identifiable, Sendable {
         URL(fileURLWithPath: path).lastPathComponent
     }
 
+    /// 是否位于某个包内部（包本身不算），对应结果页「显示包内容」开关
+    var isInsidePackageContents: Bool {
+        SearchExecutor.isInsidePackageContents(path)
+    }
+
     func withUpdatedPath(_ newPath: String) -> SearchResultItem {
         SearchResultItem(
             id: id,

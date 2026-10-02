@@ -90,7 +90,7 @@ final class SearchResultsViewModel {
     var projectedItems: [SearchResultItem] {
         items
             .filter { showInvisibleItems || $0.isInvisible == false }
-            .filter { showPackageContents || $0.isPackage == false }
+            .filter { showPackageContents || $0.isInsidePackageContents == false }
             .filter { showTrashedItems || $0.isTrashed == false }
             .filter { filterText.isEmpty || $0.path.localizedCaseInsensitiveContains(filterText) }
             .sorted(by: sortComparator)

@@ -1002,7 +1002,7 @@ struct FileKindResolver: Sendable {
     ]
 }
 
-private extension SearchExecutor {
+extension SearchExecutor {
     static func isInsidePackageContents(_ path: String) -> Bool {
         let components = URL(fileURLWithPath: path).pathComponents
         guard components.count > 1 else {
@@ -1019,7 +1019,9 @@ private extension SearchExecutor {
 
         return false
     }
+}
 
+private extension SearchExecutor {
     static func isInsidePackageContents(_ path: String, relativeTo rootPath: String) -> Bool {
         let rootURL = URL(fileURLWithPath: rootPath)
         let pathURL = URL(fileURLWithPath: path)
