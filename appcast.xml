@@ -3,6 +3,39 @@
     <channel>
         <title>FileHound</title>
         <item>
+            <title>1.2.0</title>
+            <pubDate>Fri, 02 Oct 2026 18:02:42 +0800</pubDate>
+            <link>https://github.com/wangwanjie/FileHound/releases/tag/v1.2.0</link>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <enclosure url="https://github.com/wangwanjie/FileHound/releases/download/v1.2.0/FileHound_v1.2.0_3_arm64.dmg" length="2623911" type="application/octet-stream" sparkle:edSignature="plt1AQ93ynnq4FOj0VSuH38Ivv8Fh5EvSpX+WtOs5LXzgSRVg7FdhNzT4S/y56IML0RR39vALc4w7irTnaHSCA==" />
+            <description>&lt;h2&gt;新功能&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;已存储的搜索支持重命名与删除&lt;/li&gt;&lt;li&gt;新增注释与脚本搜索规则&lt;/li&gt;&lt;li&gt;结果页显示搜索进行中 / 已停止状态&lt;/li&gt;&lt;li&gt;偏好设置新增「权限」页，可检测完全磁盘访问权限&lt;/li&gt;&lt;li&gt;补齐主菜单（新建搜索、显示、帮助、隐藏与服务），并新增「检查更新…」入口&lt;/li&gt;&lt;li&gt;搜索范围预设会解析为实际的搜索位置&lt;/li&gt;&lt;/ul&gt;
+&lt;h2&gt;改进&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;搜索整个磁盘卷且只按名称查找时，速度明显提升&lt;/li&gt;&lt;li&gt;文件夹遍历改为批量读取、并行处理，文本内容匹配更快&lt;/li&gt;&lt;li&gt;搜索过程中结果持续刷新时，保持当前选中项，结果窗口也不再反复跳到最前&lt;/li&gt;&lt;li&gt;结果字号范围调整为 10–16pt，列表图标与网格大小随字号缩放&lt;/li&gt;&lt;li&gt;重新设计应用图标，优化主界面布局与控件对齐&lt;/li&gt;&lt;li&gt;改进特殊文件夹编辑器的界面&lt;/li&gt;&lt;li&gt;每种芯片单独提供安装包（Apple 芯片 / Intel），应用内更新只会下载与本机匹配的版本&lt;/li&gt;&lt;li&gt;最低系统要求提升至 macOS 12.0&lt;/li&gt;&lt;/ul&gt;
+&lt;h2&gt;修复&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;文本内容搜索中文或带标点的内容（如「05-屏幕截图」）时，Spotlight 查不到结果，改为逐个文件查找后非常慢&lt;/li&gt;&lt;li&gt;使用 Spotlight 搜索时，可能漏掉最后一批结果&lt;/li&gt;&lt;li&gt;搜索进度有时不再更新，结果数长时间停在旧数字&lt;/li&gt;&lt;li&gt;已结束或已取消的搜索又显示为「搜索中」&lt;/li&gt;&lt;li&gt;关闭「显示包内容」时，包本身也被隐藏，导致结果数与主界面不一致&lt;/li&gt;&lt;li&gt;移到废纸篓的项目「放回原处」后，仍未在结果中重新显示&lt;/li&gt;&lt;li&gt;只剩一个搜索条件时，删除按钮仍可点击&lt;/li&gt;&lt;li&gt;「仅在访达中」唤起快捷键需要辅助功能权限才生效&lt;/li&gt;&lt;li&gt;结果列表未应用字号与隐藏项淡化偏好；结果窗口激活时会自动重新搜索&lt;/li&gt;&lt;li&gt;结果界面本地化，并补充打开、移到废纸篓、拷贝的快捷键&lt;/li&gt;&lt;li&gt;设置标签、替身命名与简介窗口的行为与访达保持一致&lt;/li&gt;&lt;li&gt;暗色外观的颜色值在保存后发生偏移&lt;/li&gt;&lt;li&gt;设置中的「立即检查更新」不可用&lt;/li&gt;&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;完整变更&lt;/strong&gt;: &lt;a href="https://github.com/wangwanjie/FileHound/compare/v1.1.0...v1.2.0"&gt;https://github.com/wangwanjie/FileHound/compare/v1.1.0...v1.2.0&lt;/a&gt;&lt;/p&gt;</description>
+        </item>
+        <item>
+            <title>1.2.0</title>
+            <pubDate>Fri, 02 Oct 2026 18:02:45 +0800</pubDate>
+            <link>https://github.com/wangwanjie/FileHound/releases/tag/v1.2.0</link>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/wangwanjie/FileHound/releases/download/v1.2.0/FileHound_v1.2.0_3_x86_64.dmg" length="2708873" type="application/octet-stream" sparkle:edSignature="61MWAP02Ejrs0BMDLnCCO21Etf/vyM9XEt4otlSvxRrM59ZuhgpEtUD7fhoAhhlNfgt+hlGR4c/BGcxyvr7VAg==" />
+            <description>&lt;h2&gt;新功能&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;已存储的搜索支持重命名与删除&lt;/li&gt;&lt;li&gt;新增注释与脚本搜索规则&lt;/li&gt;&lt;li&gt;结果页显示搜索进行中 / 已停止状态&lt;/li&gt;&lt;li&gt;偏好设置新增「权限」页，可检测完全磁盘访问权限&lt;/li&gt;&lt;li&gt;补齐主菜单（新建搜索、显示、帮助、隐藏与服务），并新增「检查更新…」入口&lt;/li&gt;&lt;li&gt;搜索范围预设会解析为实际的搜索位置&lt;/li&gt;&lt;/ul&gt;
+&lt;h2&gt;改进&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;搜索整个磁盘卷且只按名称查找时，速度明显提升&lt;/li&gt;&lt;li&gt;文件夹遍历改为批量读取、并行处理，文本内容匹配更快&lt;/li&gt;&lt;li&gt;搜索过程中结果持续刷新时，保持当前选中项，结果窗口也不再反复跳到最前&lt;/li&gt;&lt;li&gt;结果字号范围调整为 10–16pt，列表图标与网格大小随字号缩放&lt;/li&gt;&lt;li&gt;重新设计应用图标，优化主界面布局与控件对齐&lt;/li&gt;&lt;li&gt;改进特殊文件夹编辑器的界面&lt;/li&gt;&lt;li&gt;每种芯片单独提供安装包（Apple 芯片 / Intel），应用内更新只会下载与本机匹配的版本&lt;/li&gt;&lt;li&gt;最低系统要求提升至 macOS 12.0&lt;/li&gt;&lt;/ul&gt;
+&lt;h2&gt;修复&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;文本内容搜索中文或带标点的内容（如「05-屏幕截图」）时，Spotlight 查不到结果，改为逐个文件查找后非常慢&lt;/li&gt;&lt;li&gt;使用 Spotlight 搜索时，可能漏掉最后一批结果&lt;/li&gt;&lt;li&gt;搜索进度有时不再更新，结果数长时间停在旧数字&lt;/li&gt;&lt;li&gt;已结束或已取消的搜索又显示为「搜索中」&lt;/li&gt;&lt;li&gt;关闭「显示包内容」时，包本身也被隐藏，导致结果数与主界面不一致&lt;/li&gt;&lt;li&gt;移到废纸篓的项目「放回原处」后，仍未在结果中重新显示&lt;/li&gt;&lt;li&gt;只剩一个搜索条件时，删除按钮仍可点击&lt;/li&gt;&lt;li&gt;「仅在访达中」唤起快捷键需要辅助功能权限才生效&lt;/li&gt;&lt;li&gt;结果列表未应用字号与隐藏项淡化偏好；结果窗口激活时会自动重新搜索&lt;/li&gt;&lt;li&gt;结果界面本地化，并补充打开、移到废纸篓、拷贝的快捷键&lt;/li&gt;&lt;li&gt;设置标签、替身命名与简介窗口的行为与访达保持一致&lt;/li&gt;&lt;li&gt;暗色外观的颜色值在保存后发生偏移&lt;/li&gt;&lt;li&gt;设置中的「立即检查更新」不可用&lt;/li&gt;&lt;/ul&gt;
+&lt;p&gt;&lt;strong&gt;完整变更&lt;/strong&gt;: &lt;a href="https://github.com/wangwanjie/FileHound/compare/v1.1.0...v1.2.0"&gt;https://github.com/wangwanjie/FileHound/compare/v1.1.0...v1.2.0&lt;/a&gt;&lt;/p&gt;</description>
+        </item>
+        <item>
             <title>1.1.0</title>
             <pubDate>Mon, 13 Apr 2026 16:36:25 +0800</pubDate>
             <link>https://github.com/wangwanjie/FileHound/releases/tag/v1.1.0</link>
