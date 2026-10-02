@@ -120,7 +120,7 @@ final class SpecialFoldersEditorViewController: NSViewController, NSTableViewDat
         }
         tableContainerView.snp.makeConstraints { make in
             make.top.equalTo(sectionView.contentGuide)
-            make.leading.trailing.equalTo(sectionView.contentGuide).inset(6)
+            make.leading.trailing.equalTo(sectionView.contentGuide)
             make.bottom.equalTo(addButton.snp.top).offset(-12)
             make.height.equalTo(defaultListHeight)
         }
@@ -583,7 +583,7 @@ private final class SpecialFolderPathCellView: NSTableCellView {
         pathLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         addSubview(pathLabel)
         pathLabel.snp.makeConstraints { make in
-            make.leading.trailing.equalToSuperview().inset(10)
+            make.leading.trailing.equalToSuperview()
             make.centerY.equalToSuperview()
         }
     }
@@ -636,39 +636,33 @@ private final class SpecialFolderDispositionCellView: NSTableCellView {
 }
 
 private final class SpecialFoldersControlButton: NSButton {
+    private let symbolName: String
+
     init(symbolName: String) {
+        self.symbolName = symbolName
         super.init(frame: .zero)
 
         cell = CenteredImageButtonCell()
-        let configuration = NSImage.SymbolConfiguration(pointSize: 10, weight: .regular, scale: .small)
-        image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)?.withSymbolConfiguration(configuration)
-        image?.size = NSSize(width: 10, height: 10)
-        imageScaling = .scaleProportionallyDown
+        image = Self.makeImage(symbolName: symbolName, color: .labelColor)
+        imageScaling = .scaleNone
         imagePosition = .imageOnly
         isBordered = false
         setButtonType(.momentaryPushIn)
         focusRingType = .none
         wantsLayer = true
         layer?.cornerRadius = 6
-        layer?.borderWidth = 1
         updateAppearance()
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
+    required init?(coder: NSCoder) { fatalError() }
 
-    override var isEnabled: Bool {
-        didSet {
-            updateAppearance()
-        }
-    }
+    override var isEnabled: Bool { didSet { updateAppearance() } }
+    override var isHighlighted: Bool { didSet { updateAppearance() } }
 
-    override var isHighlighted: Bool {
-        didSet {
-            updateAppearance()
-        }
+    override func mouseUp(with event: NSEvent) {
+        super.mouseUp(with: event)
+        DispatchQueue.main.async { [weak self] in self?.updateAppearance() }
     }
 
     override func viewDidChangeEffectiveAppearance() {
@@ -677,18 +671,44 @@ private final class SpecialFoldersControlButton: NSButton {
     }
 
     private func updateAppearance() {
-        layer?.borderColor = NSColor.separatorColor.fhResolvedCGColor(for: effectiveAppearance)
-        layer?.backgroundColor = (isHighlighted ? NSColor.controlAccentColor.withAlphaComponent(0.1) : NSColor.controlBackgroundColor)
-            .fhResolvedCGColor(for: effectiveAppearance)
-        contentTintColor = isEnabled ? .labelColor : .disabledControlTextColor
+        layer?.borderWidth = 0
+        layer?.borderColor = NSColor.clear.cgColor
+        layer?.backgroundColor = NSColor.clear.cgColor
+
+        let iconColor: NSColor = isEnabled ? .labelColor : .disabledControlTextColor
+        image = Self.makeImage(symbolName: symbolName, color: iconColor)
+    }
+
+    /// 用 Core Graphics 手绘 + 和 -，尺寸、线宽完全一致
+    private static func makeImage(symbolName: String, color: NSColor) -> NSImage {
+        let size = NSSize(width: 14, height: 14)
+        return NSImage(size: size, flipped: false) { rect in
+            color.setStroke()
+            let path = NSBezierPath()
+            path.lineWidth = 1.5
+            path.lineCapStyle = .round
+
+            let mid = rect.width / 2
+            let arm: CGFloat = 4.5 // 横线半长，两者完全相同
+
+            // 横线（+ 和 - 都有）
+            path.move(to: NSPoint(x: mid - arm, y: mid))
+            path.line(to: NSPoint(x: mid + arm, y: mid))
+
+            // 竖线（只有 + 有）
+            if symbolName == "plus" {
+                path.move(to: NSPoint(x: mid, y: mid - arm))
+                path.line(to: NSPoint(x: mid, y: mid + arm))
+            }
+
+            path.stroke()
+            return true
+        }
     }
 
     #if DEBUG
     var debugImageAlignmentOffset: CGFloat {
-        guard let cell = cell as? CenteredImageButtonCell else {
-            return .greatestFiniteMagnitude
-        }
-
+        guard let cell = cell as? CenteredImageButtonCell else { return .greatestFiniteMagnitude }
         let imageRect = cell.imageRect(forBounds: bounds)
         return max(abs(imageRect.midX - bounds.midX), abs(imageRect.midY - bounds.midY))
     }
@@ -696,19 +716,19 @@ private final class SpecialFoldersControlButton: NSButton {
 }
 
 private final class CenteredImageButtonCell: NSButtonCell {
+    private static let iconSize = NSSize(width: 14, height: 14)
+
     override func imageRect(forBounds rect: NSRect) -> NSRect {
-        let imageSize = image?.size ?? NSSize(width: 10, height: 10)
+        let size = Self.iconSize
         return NSRect(
-            x: round((rect.width - imageSize.width) / 2),
-            y: round((rect.height - imageSize.height) / 2),
-            width: imageSize.width,
-            height: imageSize.height
+            x: round((rect.width - size.width) / 2),
+            y: round((rect.height - size.height) / 2),
+            width: size.width,
+            height: size.height
         )
     }
 
-    override func titleRect(forBounds rect: NSRect) -> NSRect {
-        .zero
-    }
+    override func titleRect(forBounds rect: NSRect) -> NSRect { .zero }
 }
 
 private extension SpecialFolderDisposition {
