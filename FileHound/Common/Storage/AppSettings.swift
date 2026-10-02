@@ -55,8 +55,11 @@ final class MMKVKeyValueStore: KeyValueStoring {
     private let mmkv: MMKV
 
     static func initializeStore() {
+        // UI 测试会通过启动参数改写偏好，使用独立目录，避免污染用户真实的设置
+        let directoryName = ProcessInfo.processInfo.arguments.contains("--uitesting") ? "MMKV-UITesting" : "MMKV"
         let rootURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("FileHound/MMKV", isDirectory: true)
+            .appendingPathComponent("FileHound", isDirectory: true)
+            .appendingPathComponent(directoryName, isDirectory: true)
         try? FileManager.default.createDirectory(at: rootURL, withIntermediateDirectories: true)
         MMKV.initialize(rootDir: rootURL.path)
     }
