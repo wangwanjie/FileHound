@@ -124,6 +124,8 @@
 "search_window.choose" = "选择";
 "search_window.action.find" = "查找";
 "search_window.action.stop" = "停止";
+"search_window.action.show_last_results" = "显示上次结果";
+"search_window.action.show_results" = "显示结果";
 "search_window.status.items_found" = "找到项目：%d";
 "search_window.status.searching" = "正在搜索：%@（已匹配 %d 项）";
 "results.empty" = "没有结果";

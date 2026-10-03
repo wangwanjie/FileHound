@@ -124,6 +124,8 @@
 "search_window.choose" = "Choose";
 "search_window.action.find" = "Find";
 "search_window.action.stop" = "Stop";
+"search_window.action.show_last_results" = "Show Last Results";
+"search_window.action.show_results" = "Show Results";
 "search_window.status.items_found" = "Items Found: %d";
 "search_window.status.searching" = "Searching: %@ (%d matched)";
 "results.empty" = "No Results";

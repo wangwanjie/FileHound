@@ -48,6 +48,8 @@ final class SearchWorkflowController {
     private var latestItems: [SearchResultItem] = []
     private var latestTitle = ""
     private var latestScopeDescription = ""
+    /// 用户在搜索中点击「显示结果」后置为 true：即使未开启「提前显示搜索结果」，本次搜索后续进度也持续推送结果
+    private var revealsResultsForCurrentSearch = false
     /// 每次开始、取消或完成搜索时递增；进度回调异步回到主线程，用它丢弃已结束搜索的迟到进度
     private var generation = 0
 
@@ -66,6 +68,7 @@ final class SearchWorkflowController {
         latestItems = []
         latestTitle = request.queryTitle
         latestScopeDescription = request.scopeDescription
+        revealsResultsForCurrentSearch = false
         onStateChange?(.init(phase: .searching(scopeDescription: request.scopeDescription, matchCount: 0)))
 
         searchTask = Task(priority: .userInitiated) { [weak self, executor] in
@@ -76,19 +79,11 @@ final class SearchWorkflowController {
                     return
                 }
 
-                self.latestMatchCount = progress.matchedCount
-                self.latestItems = progress.items
-                self.latestTitle = progress.title
-                self.onStateChange?(.init(
-                    phase: .searching(
-                        scopeDescription: request.scopeDescription,
-                        matchCount: progress.matchedCount
-                    )
-                ))
-
-                if preferences.showResultsEarly, progress.items.isEmpty == false {
-                    self.onResults?(progress.title, progress.items)
-                }
+                self.deliverProgress(
+                    progress,
+                    scopeDescription: request.scopeDescription,
+                    showResultsEarly: preferences.showResultsEarly
+                )
             }
 
             if ProcessInfo.processInfo.arguments.contains("--fixture-delayed-search") {
@@ -152,6 +147,37 @@ final class SearchWorkflowController {
         }
     }
 
+    @MainActor
+    private func deliverProgress(
+        _ progress: SearchExecutionProgress,
+        scopeDescription: String,
+        showResultsEarly: Bool
+    ) {
+        latestMatchCount = progress.matchedCount
+        latestItems = progress.items
+        latestTitle = progress.title
+        onStateChange?(.init(
+            phase: .searching(
+                scopeDescription: scopeDescription,
+                matchCount: progress.matchedCount
+            )
+        ))
+
+        if showResultsEarly || revealsResultsForCurrentSearch,
+           progress.items.isEmpty == false {
+            onResults?(progress.title, progress.items)
+        }
+    }
+
+    /// 搜索进行中立即推送已找到的结果，并让本次搜索剩余的进度继续刷新结果页
+    func revealResults() {
+        revealsResultsForCurrentSearch = true
+        guard latestItems.isEmpty == false else {
+            return
+        }
+        onResults?(latestTitle, latestItems)
+    }
+
     func cancel() {
         searchTask?.cancel()
         searchTask = nil
@@ -176,3 +202,13 @@ final class SearchWorkflowController {
         ]
     }
 }
+
+#if DEBUG
+extension SearchWorkflowController {
+    /// 绕过真实搜索，直接投递一次进度，用于测试搜索中的界面联动
+    @MainActor
+    func debugDeliverProgress(_ progress: SearchExecutionProgress, scopeDescription: String, showResultsEarly: Bool) {
+        deliverProgress(progress, scopeDescription: scopeDescription, showResultsEarly: showResultsEarly)
+    }
+}
+#endif

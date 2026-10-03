@@ -26,6 +26,7 @@ final class SearchFormViewController: NSViewController {
     private let statusLabel = NSTextField(labelWithString: "")
     private let activityIndicator = NSProgressIndicator()
     private let primaryButton = NSButton(title: "", target: nil, action: nil)
+    private let showLastResultsButton = NSButton(title: "", target: nil, action: nil)
     private let titleLabel = NSTextField(labelWithString: "")
     private let whereLabel = NSTextField(labelWithString: "")
     private let workflowController: SearchWorkflowController
@@ -38,6 +39,17 @@ final class SearchFormViewController: NSViewController {
     private var scopeItems: [SearchScopeMenuItem] = []
     private var scopeItemsByIdentifier: [String: SearchScopeMenuItem] = [:]
     private var resultsWindowController: SearchResultsWindowController?
+    /// 最近一次搜索的结果窗口；不随「结果窗口绑定查找窗口」偏好释放，关闭后可通过「显示上次结果」重新打开
+    private var latestResultsWindowController: SearchResultsWindowController? {
+        didSet {
+            guard oldValue !== latestResultsWindowController else { return }
+            observeLatestResultsWindow(old: oldValue?.window, new: latestResultsWindowController?.window)
+        }
+    }
+    private var statusTrailingToShowLastResultsConstraint: Constraint?
+    /// 搜索中按钮与转圈指示器同时显示时，指示器让到按钮左侧
+    private var activityIndicatorTrailingToShowLastResultsConstraint: Constraint?
+    private var activityIndicatorTrailingToPrimaryConstraint: Constraint?
     private var lastSearchRequest: SearchRequest?
     private var lastConfirmedScopeIdentifier: String?
     private var rulesHeightConstraint: Constraint?
@@ -101,6 +113,12 @@ final class SearchFormViewController: NSViewController {
         scopePopup.controlSize = .large
         primaryButton.controlSize = .large
         primaryButton.font = .systemFont(ofSize: 14, weight: .medium)
+        showLastResultsButton.controlSize = .large
+        showLastResultsButton.font = .systemFont(ofSize: 14, weight: .regular)
+        showLastResultsButton.isHidden = true
+        showLastResultsButton.setContentHuggingPriority(.required, for: .horizontal)
+        showLastResultsButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+        showLastResultsButton.setAccessibilityIdentifier("ShowLastResultsButton")
         scopePopup.imagePosition = .imageLeft
         statusLabel.setAccessibilityIdentifier("SearchStatusLabel")
         primaryButton.setAccessibilityIdentifier("PrimarySearchButton")
@@ -110,6 +128,8 @@ final class SearchFormViewController: NSViewController {
         primaryButton.target = self
         primaryButton.action = #selector(primaryButtonPressed)
         primaryButton.keyEquivalent = "\r"
+        showLastResultsButton.target = self
+        showLastResultsButton.action = #selector(showLastResultsPressed)
         scopePopup.target = self
         scopePopup.action = #selector(scopeSelectionChanged)
 
@@ -118,7 +138,7 @@ final class SearchFormViewController: NSViewController {
         activityIndicator.isDisplayedWhenStopped = false
 
         addChild(rulesViewController)
-        [titleLabel, scopePopup, whereLabel, rulesViewController.view, statusLabel, activityIndicator, primaryButton].forEach(rootView.addSubview)
+        [titleLabel, scopePopup, whereLabel, rulesViewController.view, statusLabel, activityIndicator, showLastResultsButton, primaryButton].forEach(rootView.addSubview)
 
         titleLabel.snp.makeConstraints { make in
             make.leading.equalToSuperview().inset(Layout.horizontalMargin)
@@ -146,14 +166,30 @@ final class SearchFormViewController: NSViewController {
             make.height.equalTo(Layout.barHeight)
         }
         activityIndicator.snp.makeConstraints { make in
-            make.trailing.equalTo(primaryButton.snp.leading).offset(-10)
+            self.activityIndicatorTrailingToPrimaryConstraint = make.trailing
+                .equalTo(primaryButton.snp.leading).offset(-10)
+                .constraint
             make.centerY.equalTo(primaryButton)
+            self.activityIndicatorTrailingToShowLastResultsConstraint = make.trailing
+                .equalTo(showLastResultsButton.snp.leading).offset(-10)
+                .constraint
+        }
+        activityIndicatorTrailingToShowLastResultsConstraint?.deactivate()
+        // 与转圈指示器共用同一位置；显示按钮时指示器改为贴在按钮左侧，两条指示器约束互斥切换
+        showLastResultsButton.snp.makeConstraints { make in
+            make.trailing.equalTo(primaryButton.snp.leading).offset(-8)
+            make.centerY.equalTo(primaryButton)
+            make.height.equalTo(Layout.barHeight)
         }
         statusLabel.snp.makeConstraints { make in
             make.leading.equalToSuperview().inset(Layout.horizontalMargin)
             make.trailing.lessThanOrEqualTo(activityIndicator.snp.leading).offset(-12)
             make.centerY.equalTo(primaryButton)
+            self.statusTrailingToShowLastResultsConstraint = make.trailing
+                .lessThanOrEqualTo(showLastResultsButton.snp.leading).offset(-12)
+                .constraint
         }
+        statusTrailingToShowLastResultsConstraint?.deactivate()
 
         workflowController.onStateChange = { [weak self] state in
             self?.state = state
@@ -346,6 +382,26 @@ final class SearchFormViewController: NSViewController {
         selectScopeItem(withIdentifier: lastConfirmedScopeIdentifier)
     }
 
+    @objc
+    private func showLastResultsPressed() {
+        // 搜索中：本次搜索尚未展示过结果时，先展示已找到的条目，后续进度继续刷新结果页
+        if state.phase.isSearching, didOpenResultsForCurrentSearch == false {
+            workflowController.revealResults()
+            renderShowLastResultsButton()
+            return
+        }
+
+        guard let window = latestResultsWindowController?.window else {
+            return
+        }
+
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
+        latestResultsWindowController?.showWindow(nil)
+        render(state)
+    }
+
     private func selectedScopeItem() -> SearchScopeMenuItem {
         guard
             let identifier = scopePopup.selectedItem?.identifier?.rawValue,
@@ -377,12 +433,74 @@ final class SearchFormViewController: NSViewController {
         scopePopup.isEnabled = state.isEditingEnabled
         rulesViewController.setEnabled(state.isEditingEnabled)
         primaryButton.isEnabled = state.phase.isSearching || rulesViewController.validationSummary.canSearch
+        renderShowLastResultsButton()
 
         if state.showsActivityIndicator {
             activityIndicator.startAnimation(nil)
         } else {
             activityIndicator.stopAnimation(nil)
         }
+    }
+
+    /// 非搜索状态：上次结果窗口被关闭或最小化时显示「显示上次结果」。
+    /// 搜索中：已有匹配项但本次搜索的结果窗口不可见时显示「显示结果」。
+    /// willClose 发出时窗口仍处于可见状态，此时由调用方传入 latestWindowIsClosing 视为已关闭
+    private func renderShowLastResultsButton(latestWindowIsClosing: Bool = false) {
+        func isOnScreen(_ window: NSWindow?) -> Bool {
+            guard let window else { return false }
+            return latestWindowIsClosing == false && window.isVisible && window.isMiniaturized == false
+        }
+
+        let isHidden: Bool
+        switch state.phase {
+        case .searching(_, let matchCount):
+            isHidden = matchCount == 0 || (
+                didOpenResultsForCurrentSearch && isOnScreen(latestResultsWindowController?.window)
+            )
+        case .idle, .editing:
+            isHidden = latestResultsWindowController == nil || isOnScreen(latestResultsWindowController?.window)
+        }
+
+        let title = L10n.string(
+            state.phase.isSearching ? "search_window.action.show_results" : "search_window.action.show_last_results"
+        )
+        showLastResultsButton.title = title
+        showLastResultsButton.setAccessibilityLabel(title)
+        showLastResultsButton.isHidden = isHidden
+        showLastResultsButton.toolTip = state.phase.isSearching ? nil : latestResultsWindowController?.window?.title
+        if isHidden {
+            statusTrailingToShowLastResultsConstraint?.deactivate()
+            activityIndicatorTrailingToShowLastResultsConstraint?.deactivate()
+            activityIndicatorTrailingToPrimaryConstraint?.activate()
+        } else {
+            activityIndicatorTrailingToPrimaryConstraint?.deactivate()
+            statusTrailingToShowLastResultsConstraint?.activate()
+            activityIndicatorTrailingToShowLastResultsConstraint?.activate()
+        }
+    }
+
+    private func observeLatestResultsWindow(old oldWindow: NSWindow?, new newWindow: NSWindow?) {
+        let center = NotificationCenter.default
+        let names: [NSNotification.Name] = [
+            NSWindow.willCloseNotification,
+            NSWindow.didMiniaturizeNotification,
+            NSWindow.didDeminiaturizeNotification
+        ]
+
+        if let oldWindow {
+            names.forEach { center.removeObserver(self, name: $0, object: oldWindow) }
+        }
+        if let newWindow {
+            names.forEach {
+                center.addObserver(self, selector: #selector(latestResultsWindowVisibilityChanged(_:)), name: $0, object: newWindow)
+            }
+        }
+        render(state)
+    }
+
+    @objc
+    private func latestResultsWindowVisibilityChanged(_ notification: Notification) {
+        renderShowLastResultsButton(latestWindowIsClosing: notification.name == NSWindow.willCloseNotification)
     }
 
     private func handleStateTransition(from oldValue: SearchWindowState, to newValue: SearchWindowState) {
@@ -392,6 +510,9 @@ final class SearchFormViewController: NSViewController {
 
         if didOpenResultsForCurrentSearch {
             resultsWindowController?.searchStatus = didCancelCurrentSearch ? .stopped : .finished
+        } else if didCancelCurrentSearch == false {
+            // 本次搜索正常结束但没有结果，「上次结果」不应再指向更早的搜索
+            latestResultsWindowController = nil
         }
 
         defer {
@@ -446,6 +567,8 @@ final class SearchFormViewController: NSViewController {
     }
 
     private func openResultsWindow(title: String, items: [SearchResultItem]) {
+        defer { renderShowLastResultsButton() }
+
         let shouldReuseExistingWindow = resultsWindowController != nil && (
             settings.tieResultsWindowToFindWindow || state.phase.isSearching
         )
@@ -464,6 +587,7 @@ final class SearchFormViewController: NSViewController {
                 existing.showWindow(nil)
             }
             didOpenResultsForCurrentSearch = true
+            latestResultsWindowController = existing
             return
         }
 
@@ -489,6 +613,7 @@ final class SearchFormViewController: NSViewController {
         )
         controller.showWindow(nil)
         resultsWindowController = controller
+        latestResultsWindowController = controller
         didOpenResultsForCurrentSearch = true
     }
 
@@ -522,7 +647,7 @@ final class SearchFormViewController: NSViewController {
 
     /// 判断窗口是否为本查找窗口打开的结果窗口，用于从结果窗口反查当前活跃的查找窗口
     func ownsResultsWindow(_ window: NSWindow) -> Bool {
-        resultsWindowController?.window === window
+        resultsWindowController?.window === window || latestResultsWindowController?.window === window
     }
 
     func applyRuleAreaLayout(height: CGFloat, shouldScroll: Bool) {
@@ -668,6 +793,29 @@ extension SearchFormViewController {
 
     var debugResultsWindowIdentifier: ObjectIdentifier? {
         resultsWindowController.map(ObjectIdentifier.init)
+    }
+
+    var debugShowLastResultsButtonVisible: Bool {
+        showLastResultsButton.isHidden == false
+    }
+
+    var debugShowLastResultsButtonTitle: String {
+        showLastResultsButton.title
+    }
+
+    /// 布局后按钮、转圈指示器与主按钮的实际 frame（同一坐标系），用于校验按钮未被挤压
+    func debugStatusBarFrames() -> (showResults: NSRect, activity: NSRect, primary: NSRect, fittingWidth: CGFloat) {
+        view.layoutSubtreeIfNeeded()
+        return (
+            showLastResultsButton.frame,
+            activityIndicator.frame,
+            primaryButton.frame,
+            showLastResultsButton.fittingSize.width
+        )
+    }
+
+    func debugShowLastResults() {
+        showLastResultsPressed()
     }
 
     var debugResultsPresentationState: ResultPresentationState? {

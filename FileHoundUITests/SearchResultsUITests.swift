@@ -55,6 +55,56 @@ final class SearchResultsUITests: XCTestCase {
     }
 
     @MainActor
+    func testShowResultsButtonOpensPartialResultsAndKeepsUpdatingDuringSearch() throws {
+        let app = XCUIApplication()
+        AppLaunchHelper.prepareForLaunch(app)
+        // 断言依赖英文文案，固定界面语言避免受系统语言影响
+        app.launchArguments = [
+            "--uitesting",
+            "--fixture-streaming-search-slow",
+            "--disable-show-results-early",
+            "-AppleLanguages", "(en)"
+        ]
+        app.launch()
+
+        let primaryButton = app.buttons["PrimarySearchButton"]
+        let showResultsButton = app.buttons["ShowLastResultsButton"]
+        XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
+
+        // 不依赖上次会话恢复出的规则值，自行填入条件让「查找」可用
+        let valueField = app.textFields["SearchRuleValueField"]
+        XCTAssertTrue(valueField.waitForExistence(timeout: 3))
+        valueField.click()
+        valueField.typeKey("a", modifierFlags: .command)
+        valueField.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
+        valueField.typeText("report")
+        XCTAssertTrue(waitUntil(timeout: 2) { primaryButton.isEnabled })
+
+        primaryButton.click()
+
+        // 找到第一条结果后出现「Show Results」，此时结果窗口尚未打开
+        XCTAssertTrue(waitUntil(timeout: 3) { showResultsButton.exists && showResultsButton.isHittable })
+        XCTAssertEqual(showResultsButton.label, "Show Results")
+        XCTAssertEqual(primaryButton.label, "Stop")
+        XCTAssertEqual(app.windows.count, 1)
+
+        showResultsButton.click()
+
+        XCTAssertTrue(waitUntil(timeout: 1) { app.windows.count > 1 })
+        XCTAssertTrue(app.staticTexts["report.txt"].waitForExistence(timeout: 1))
+        XCTAssertFalse(showResultsButton.exists && showResultsButton.isHittable)
+        let statusLabel = app.staticTexts["SearchResultsStatusLabel"]
+        XCTAssertTrue(statusLabel.waitForExistence(timeout: 1))
+        XCTAssertTrue(statusLabel.label.hasPrefix("Searching"))
+
+        // 剩余搜索继续把新条目刷新到已打开的结果页
+        XCTAssertTrue(app.staticTexts["archive.txt"].waitForExistence(timeout: 3))
+        XCTAssertTrue(waitUntil(timeout: 4) { primaryButton.label == "Find" })
+        XCTAssertTrue(waitUntil(timeout: 1) { statusLabel.label == "3 matched" })
+        XCTAssertEqual(app.windows.count, 2)
+    }
+
+    @MainActor
     func testTieResultsWindowReuseKeepsSingleResultsWindowAcrossRepeatedSearches() throws {
         let app = XCUIApplication()
         AppLaunchHelper.prepareForLaunch(app)
