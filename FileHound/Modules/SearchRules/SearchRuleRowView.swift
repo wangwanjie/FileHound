@@ -235,6 +235,13 @@ final class SearchRuleRowView: NSView {
     }
 
     func reloadLocalizedStrings() {
+        // "+" / "−" 只是符号，旁白需要朗读出按钮的实际作用
+        let addTitle = L10n.string("search_rule.accessibility.add")
+        let removeTitle = L10n.string("search_rule.accessibility.remove")
+        addButton.setAccessibilityLabel(addTitle)
+        addButton.toolTip = addTitle
+        removeButton.setAccessibilityLabel(removeTitle)
+        removeButton.toolTip = removeTitle
         let selection = self.selection
         populateFieldPopup(selecting: selection.field)
         updateEditor(for: selection.field, preferredOperator: selection.operator, preferredValue: selection.value)

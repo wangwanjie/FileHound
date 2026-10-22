@@ -299,3 +299,9 @@
 "search_rule.kind.unix_executable" = "UNIX 可執行檔";
 "search_rule.kind.video" = "影片";
 "search_rule.kind.word_pages" = "Word 與 Pages";
+/* 查找窗口 */
+"search_window.accessibility.scope" = "搜尋範圍";
+"search_window.accessibility.rules" = "搜尋條件";
+"search_window.accessibility.searching" = "正在搜尋";
+"search_rule.accessibility.add" = "加入條件";
+"search_rule.accessibility.remove" = "移除條件";

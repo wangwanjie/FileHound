@@ -51,6 +51,8 @@ final class SearchFormViewController: NSViewController {
     private var activityIndicatorTrailingToShowLastResultsConstraint: Constraint?
     private var activityIndicatorTrailingToPrimaryConstraint: Constraint?
     private var lastSearchRequest: SearchRequest?
+    /// 每个结果窗口各自记住产生它的搜索条件，⌘R 按该窗口自己的条件重新搜索（绑定复用时随新搜索更新）
+    private var searchesByResultsWindow: [ObjectIdentifier: ResultsWindowSearch] = [:]
     private var lastConfirmedScopeIdentifier: String?
     private var rulesHeightConstraint: Constraint?
     private var customFolderScopeItem: SearchScopeMenuItem?
@@ -94,8 +96,7 @@ final class SearchFormViewController: NSViewController {
     }
 
     override func loadView() {
-        let rootView = AppearanceAwareView()
-        rootView.backgroundColorProvider = { _ in .windowBackgroundColor }
+        let rootView = SearchFormDropView()
 
         titleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
         whereLabel.font = .systemFont(ofSize: 16, weight: .regular)
@@ -107,8 +108,8 @@ final class SearchFormViewController: NSViewController {
         statusLabel.font = .systemFont(ofSize: 13, weight: .regular)
         statusLabel.textColor = .secondaryLabelColor
 
+        // identifier 留给 UI 测试定位，无障碍标签在 reloadLocalizedStrings 中使用本地化文案
         scopePopup.setAccessibilityIdentifier("SearchScopePopup")
-        scopePopup.setAccessibilityLabel("SearchScopePopup")
         scopePopup.font = .systemFont(ofSize: 14, weight: .regular)
         scopePopup.controlSize = .large
         primaryButton.controlSize = .large
@@ -123,7 +124,6 @@ final class SearchFormViewController: NSViewController {
         statusLabel.setAccessibilityIdentifier("SearchStatusLabel")
         primaryButton.setAccessibilityIdentifier("PrimarySearchButton")
         activityIndicator.setAccessibilityIdentifier("SearchActivityIndicator")
-        activityIndicator.setAccessibilityLabel("SearchActivityIndicator")
 
         primaryButton.target = self
         primaryButton.action = #selector(primaryButtonPressed)
@@ -139,6 +139,14 @@ final class SearchFormViewController: NSViewController {
 
         addChild(rulesViewController)
         [titleLabel, scopePopup, whereLabel, rulesViewController.view, statusLabel, activityIndicator, showLastResultsButton, primaryButton].forEach(rootView.addSubview)
+        // 高亮层需盖在所有控件之上，必须在控件添加完之后安装
+        rootView.installDropHighlight()
+        rootView.canAcceptDrop = { [weak self] in
+            self?.state.isEditingEnabled ?? false
+        }
+        rootView.onDropURLs = { [weak self] urls in
+            self?.applyDroppedURLs(urls) ?? false
+        }
 
         titleLabel.snp.makeConstraints { make in
             make.leading.equalToSuperview().inset(Layout.horizontalMargin)
@@ -211,6 +219,7 @@ final class SearchFormViewController: NSViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         configureScopePopup()
+        observeMountedVolumeChanges()
 
         if restoresPreviousSession,
            settings.restorePreviousSearch,
@@ -364,22 +373,57 @@ final class SearchFormViewController: NSViewController {
         panel.prompt = L10n.string("search_window.choose")
 
         if panel.runModal() == .OK, let url = panel.url {
-            let title = L10n.format("search_scope.inside_named_folder", url.lastPathComponent)
-            let updated = SearchScopeMenuItem(
-                title: title,
-                representedPath: url.path,
-                scopeDescription: url.lastPathComponent,
-                kind: .folderPicker,
-                sourceKind: .folder
-            )
-            customFolderScopeItem = updated
-            configureScopePopup(selecting: updated)
-            lastConfirmedScopeIdentifier = scopePopup.selectedItem?.identifier?.rawValue
-            searchCriteriaDidChange()
+            applyChosenFolder(url)
             return
         }
 
         selectScopeItem(withIdentifier: lastConfirmedScopeIdentifier)
+    }
+
+    /// 「选择其他文件夹…」与拖放共用：把文件夹设为搜索范围，开始搜索时与其他范围一样记入最近位置
+    private func applyChosenFolder(_ url: URL) {
+        let folderName = url.lastPathComponent
+        let title = L10n.format("search_scope.inside_named_folder", folderName)
+        let updated = SearchScopeMenuItem(
+            title: title,
+            representedPath: url.path,
+            scopeDescription: folderName,
+            kind: .folderPicker,
+            sourceKind: .folder
+        )
+        customFolderScopeItem = updated
+        configureScopePopup(selecting: updated)
+        lastConfirmedScopeIdentifier = scopePopup.selectedItem?.identifier?.rawValue
+        searchCriteriaDidChange()
+    }
+
+    /// 处理从访达拖入的文件 URL；搜索中不可修改范围，返回 false 表示拒绝本次拖放
+    @discardableResult
+    func applyDroppedURLs(_ urls: [URL]) -> Bool {
+        guard state.isEditingEnabled,
+              let folderURL = SearchScopeDropResolver.folderURL(from: urls) else {
+            return false
+        }
+
+        applyChosenFolder(folderURL)
+        return true
+    }
+
+    /// 插拔磁盘、卷宗改名后重建范围菜单，保持当前选择不变（被卸载的卷宗除外）
+    private func observeMountedVolumeChanges() {
+        let workspaceCenter = NSWorkspace.shared.notificationCenter
+        [
+            NSWorkspace.didMountNotification,
+            NSWorkspace.didUnmountNotification,
+            NSWorkspace.didRenameVolumeNotification
+        ].forEach {
+            workspaceCenter.addObserver(self, selector: #selector(mountedVolumesDidChange(_:)), name: $0, object: nil)
+        }
+    }
+
+    @objc
+    private func mountedVolumesDidChange(_ notification: Notification) {
+        configureScopePopup(selecting: selectedScopeItem())
     }
 
     @objc
@@ -407,7 +451,7 @@ final class SearchFormViewController: NSViewController {
             let identifier = scopePopup.selectedItem?.identifier?.rawValue,
             let item = scopeItemsByIdentifier[identifier]
         else {
-            return scopeItems.first ?? SearchScopeMenuProvider().sections().flatMap(\.items).first!
+            return scopeItems.first ?? SearchScopeMenuProvider(mountedVolumes: { [] }).sections().flatMap(\.items).first!
         }
 
         return item
@@ -511,8 +555,7 @@ final class SearchFormViewController: NSViewController {
         if didOpenResultsForCurrentSearch {
             resultsWindowController?.searchStatus = didCancelCurrentSearch ? .stopped : .finished
         } else if didCancelCurrentSearch == false {
-            // 本次搜索正常结束但没有结果，「上次结果」不应再指向更早的搜索
-            latestResultsWindowController = nil
+            showEmptyResultsInBoundWindowIfNeeded()
         }
 
         defer {
@@ -544,6 +587,22 @@ final class SearchFormViewController: NSViewController {
         // 「最近搜索」子菜单在 menuNeedsUpdate 中按需从历史读取，这里不需要重建主菜单
     }
 
+    /// 本次搜索正常结束但没有结果：已绑定的结果窗口仍显示上一次搜索的条目和标题，
+    /// 这里把它清空为本次搜索的空状态，避免误以为是本次结果；「上次结果」不再指向更早的搜索
+    private func showEmptyResultsInBoundWindowIfNeeded() {
+        guard let existing = resultsWindowController, let lastSearchRequest else {
+            latestResultsWindowController = nil
+            return
+        }
+
+        existing.searchStatus = .finished
+        existing.update(title: lastSearchRequest.queryTitle, items: [])
+        bindCurrentSearch(to: existing)
+        // 窗口仍打开（含最小化）时它已代表本次搜索；已被关闭的窗口不再作为「上次结果」
+        let isWindowOpen = existing.window.map { $0.isVisible || $0.isMiniaturized } ?? false
+        latestResultsWindowController = isWindowOpen ? existing : nil
+    }
+
     private func resultCount(from phase: SearchWindowPhase) -> Int? {
         switch phase {
         case .idle(let matchCount):
@@ -558,6 +617,8 @@ final class SearchFormViewController: NSViewController {
     func reloadLocalizedStrings() {
         titleLabel.stringValue = L10n.string("search_window.find_items")
         whereLabel.stringValue = L10n.string("search_window.where")
+        scopePopup.setAccessibilityLabel(L10n.string("search_window.accessibility.scope"))
+        activityIndicator.setAccessibilityLabel(L10n.string("search_window.accessibility.searching"))
         rulesViewController.reloadLocalizedStrings()
         let currentScope = scopeItems.isEmpty ? nil : selectedScopeItem()
         configureScopePopup(selecting: currentScope)
@@ -565,7 +626,12 @@ final class SearchFormViewController: NSViewController {
     }
 
     private func openResultsWindow(title: String, items: [SearchResultItem]) {
-        defer { renderShowLastResultsButton() }
+        defer {
+            if didOpenResultsForCurrentSearch, let resultsWindowController {
+                bindCurrentSearch(to: resultsWindowController)
+            }
+            renderShowLastResultsButton()
+        }
 
         let shouldReuseExistingWindow = resultsWindowController != nil && (
             settings.tieResultsWindowToFindWindow || state.phase.isSearching
@@ -601,14 +667,21 @@ final class SearchFormViewController: NSViewController {
         viewModel.items = items
         viewModel.searchStatus = searchStatusForResultsWindow
 
+        // 闭包在控制器创建前构造，借助弱引用局部变量拿到「自己」所在的结果窗口
+        weak var createdController: SearchResultsWindowController?
         let controller = SearchResultsWindowController(
             viewModel: viewModel,
             title: title,
             expandFoldersWhenShowingResults: settings.expandFoldersWhenShowingResults,
             refreshHandler: { [weak self] in
-                self?.refreshLastSearchIfNeeded()
+                self?.refreshSearch(for: createdController)
+            },
+            refreshAvailability: { [weak self] in
+                // 查找窗口释放后重新搜索不可用
+                self?.canRefreshSearch(for: createdController) ?? false
             }
         )
+        createdController = controller
         controller.showWindow(nil)
         resultsWindowController = controller
         latestResultsWindowController = controller
@@ -620,14 +693,41 @@ final class SearchFormViewController: NSViewController {
         state.phase.isSearching ? .searching : .finished
     }
 
-    private func refreshLastSearchIfNeeded() {
-        guard state.phase.isSearching == false,
-              let lastSearchRequest,
-              resultsWindowController?.window?.isVisible == true else {
+    /// 记录结果窗口当前展示的是哪次搜索
+    private func bindCurrentSearch(to controller: SearchResultsWindowController) {
+        guard let lastSearchRequest else {
+            return
+        }
+        searchesByResultsWindow[ObjectIdentifier(controller)] = ResultsWindowSearch(
+            request: lastSearchRequest,
+            sessionSnapshot: lastSubmittedSessionSnapshot
+        )
+    }
+
+    /// 结果窗口的「重新搜索」（⌘R）是否可用：查找窗口空闲且该窗口记录过搜索条件
+    private func canRefreshSearch(for controller: SearchResultsWindowController?) -> Bool {
+        guard state.phase.isSearching == false, let controller else {
+            return false
+        }
+        return searchesByResultsWindow[ObjectIdentifier(controller)] != nil
+    }
+
+    /// 按结果窗口自己的条件重新搜索，结果回到发起重新搜索的这个窗口
+    private func refreshSearch(for controller: SearchResultsWindowController?) {
+        guard canRefreshSearch(for: controller),
+              let controller,
+              let search = searchesByResultsWindow[ObjectIdentifier(controller)] else {
             return
         }
 
-        workflowController.start(request: lastSearchRequest, preferences: settings.searchExecutionPreferences)
+        var sessionSnapshot = search.sessionSnapshot
+        // 沿用结果窗口当前的显示方式，避免重新搜索后被重置为提交时的状态
+        sessionSnapshot?.presentationState = controller.currentPresentationState
+        lastSearchRequest = search.request
+        lastSubmittedSessionSnapshot = sessionSnapshot
+        didOpenResultsForCurrentSearch = false
+        resultsWindowController = controller
+        workflowController.start(request: search.request, preferences: settings.searchExecutionPreferences)
     }
 
     var isSearching: Bool {
@@ -780,6 +880,23 @@ extension SearchFormViewController {
         rulesViewController.applySelections(selections)
     }
 
+    /// 不启动真实搜索，直接让表单进入「搜索中」状态
+    func debugSimulateSearching() {
+        workflowController.onStateChange?(.init(phase: .searching(scopeDescription: "Fixture", matchCount: 0)))
+    }
+
+    func debugSetLastSearchRequest(_ request: SearchRequest) {
+        lastSearchRequest = request
+    }
+
+    var debugResultsWindowController: SearchResultsWindowController? {
+        resultsWindowController
+    }
+
+    var debugLatestResultsWindowController: SearchResultsWindowController? {
+        latestResultsWindowController
+    }
+
     func debugOpenResultsWindow(
         title: String = "Name contains report",
         items: [SearchResultItem] = [
@@ -829,3 +946,150 @@ extension SearchFormViewController {
     }
 }
 #endif
+
+/// 结果窗口对应的一次搜索：请求本身与提交时的会话快照（用于重新搜索后写入历史）
+private struct ResultsWindowSearch {
+    let request: SearchRequest
+    let sessionSnapshot: SearchSessionSnapshot?
+}
+
+/// 拖放设置搜索范围的纯逻辑：拖入文件夹（或卷宗）直接作为范围，拖入文件取其所在文件夹。
+/// 范围快照只支持单一根路径，拖入多项时取第一个文件 URL
+enum SearchScopeDropResolver {
+    static func folderURL(from urls: [URL], isFolder: (URL) -> Bool = SearchScopeDropResolver.isFolder) -> URL? {
+        guard let url = urls.first(where: \.isFileURL)?.standardizedFileURL else {
+            return nil
+        }
+        return isFolder(url) ? url : url.deletingLastPathComponent()
+    }
+
+    /// 文件夹与卷宗根目录视为文件夹；应用等包虽然是目录，但在访达中表现为文件，按文件处理
+    static func isFolder(_ url: URL) -> Bool {
+        guard let values = try? url.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey]) else {
+            return false
+        }
+        return values.isDirectory == true && values.isPackage != true
+    }
+
+    /// 从拖放剪贴板读取文件 URL
+    static func fileURLs(from pasteboard: NSPasteboard) -> [URL] {
+        let objects = pasteboard.readObjects(
+            forClasses: [NSURL.self],
+            options: [.urlReadingFileURLsOnly: true]
+        )
+        return (objects as? [URL]) ?? []
+    }
+}
+
+/// 查找窗口的根视图：接收访达拖入的文件夹 / 文件来设置搜索范围，拖入时在内容区四周显示强调色边框
+final class SearchFormDropView: NSView {
+    /// 是否允许拖放（搜索中范围不可修改）
+    var canAcceptDrop: () -> Bool = { true }
+    /// 松手后处理拖入的 URL，返回是否接受
+    var onDropURLs: (([URL]) -> Bool)?
+
+    private let backgroundView = AppearanceAwareView()
+    private let highlightView = SearchFormDropHighlightView()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        backgroundView.backgroundColorProvider = { _ in .windowBackgroundColor }
+        addSubview(backgroundView)
+        backgroundView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        highlightView.isHidden = true
+        registerForDraggedTypes([.fileURL])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    /// 在所有控件添加完成后调用，让高亮边框位于最上层
+    func installDropHighlight() {
+        addSubview(highlightView)
+        highlightView.snp.makeConstraints { make in
+            make.edges.equalToSuperview().inset(3)
+        }
+    }
+
+    var isDropHighlighted: Bool {
+        highlightView.isHidden == false
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let operation = dragOperation(for: sender)
+        setDropHighlighted(operation.isEmpty == false)
+        return operation
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let operation = dragOperation(for: sender)
+        setDropHighlighted(operation.isEmpty == false)
+        return operation
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        setDropHighlighted(false)
+    }
+
+    override func draggingEnded(_ sender: NSDraggingInfo) {
+        setDropHighlighted(false)
+    }
+
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        dragOperation(for: sender).isEmpty == false
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        setDropHighlighted(false)
+        let urls = SearchScopeDropResolver.fileURLs(from: sender.draggingPasteboard)
+        return onDropURLs?(urls) ?? false
+    }
+
+    private func dragOperation(for sender: NSDraggingInfo) -> NSDragOperation {
+        guard canAcceptDrop(),
+              SearchScopeDropResolver.fileURLs(from: sender.draggingPasteboard).isEmpty == false else {
+            return []
+        }
+        return .generic
+    }
+
+    func setDropHighlighted(_ highlighted: Bool) {
+        highlightView.isHidden = highlighted == false
+        if highlighted {
+            highlightView.refreshBorderColor()
+        }
+    }
+}
+
+/// 拖放高亮边框：不参与点击命中，避免挡住下面的控件
+private final class SearchFormDropHighlightView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.borderWidth = 3
+        layer?.cornerRadius = 8
+        refreshBorderColor()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        refreshBorderColor()
+    }
+
+    func refreshBorderColor() {
+        layer?.borderColor = NSColor.controlAccentColor.fhResolvedCGColor(for: effectiveAppearance)
+    }
+}

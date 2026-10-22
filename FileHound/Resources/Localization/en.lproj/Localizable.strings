@@ -299,3 +299,9 @@
 "search_rule.kind.unix_executable" = "UNIX executable";
 "search_rule.kind.video" = "Video";
 "search_rule.kind.word_pages" = "Word & Pages";
+/* 查找窗口 */
+"search_window.accessibility.scope" = "Search scope";
+"search_window.accessibility.rules" = "Search criteria";
+"search_window.accessibility.searching" = "Searching";
+"search_rule.accessibility.add" = "Add criterion";
+"search_rule.accessibility.remove" = "Remove criterion";

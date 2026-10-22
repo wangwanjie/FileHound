@@ -7,12 +7,15 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
     private let resultsViewController: SearchResultsViewController
     private let viewModel: SearchResultsViewModel
     private let refreshHandler: (() -> Void)?
+    /// 「重新搜索」当前是否可用（例如所属查找窗口已释放或正在搜索时不可用）；nil 表示只要有 refreshHandler 即可用
+    private let refreshAvailability: (() -> Bool)?
 
     init(
         viewModel: SearchResultsViewModel,
         title: String,
         expandFoldersWhenShowingResults: Bool = false,
-        refreshHandler: (() -> Void)? = nil
+        refreshHandler: (() -> Void)? = nil,
+        refreshAvailability: (() -> Bool)? = nil
     ) {
         self.viewModel = viewModel
         self.resultsViewController = SearchResultsViewController(
@@ -20,6 +23,7 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
             expandsFoldersWhenShowingResults: expandFoldersWhenShowingResults
         )
         self.refreshHandler = refreshHandler
+        self.refreshAvailability = refreshAvailability
         let window = NSWindow(contentViewController: resultsViewController)
         window.setAccessibilityIdentifier("SearchResultsWindow")
         window.title = title
@@ -70,7 +74,7 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
         case #selector(refreshSearchResults(_:)):
-            return refreshHandler != nil
+            return refreshHandler != nil && (refreshAvailability?() ?? true)
         case #selector(showResultsAsIcons(_:)):
             menuItem.state = viewModel.mode == .grid ? .on : .off
         case #selector(showResultsAsList(_:)):

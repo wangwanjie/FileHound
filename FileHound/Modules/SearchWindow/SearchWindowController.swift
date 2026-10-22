@@ -16,17 +16,22 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
         width: 760,
         height: SearchFormViewController.Layout.chromeHeight + SearchFormViewController.Layout.minimumRuleAreaHeight
     )
-    private let layoutCoordinator: SearchWindowLayoutCoordinator
+    private var layoutCoordinator: SearchWindowLayoutCoordinator
     /// 窗口即将关闭时回调，由 SearchWindowManager 决定是否释放该查找窗口
     var onWindowWillClose: ((SearchWindowController) -> Void)?
 
-    init(
-        layoutCoordinator: SearchWindowLayoutCoordinator = SearchWindowLayoutCoordinator(
-            visibleFrameProvider: { NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 720) }
-        )
-    ) {
-        self.layoutCoordinator = layoutCoordinator
+    /// layoutCoordinator 为 nil 时按窗口当前所在屏幕计算可用区域
+    init(layoutCoordinator: SearchWindowLayoutCoordinator? = nil) {
+        self.layoutCoordinator = layoutCoordinator ?? SearchWindowLayoutCoordinator(visibleFrameProvider: {
+            SearchWindowController.visibleFrame(for: nil)
+        })
         super.init(window: nil)
+        if layoutCoordinator == nil {
+            // 多显示器下增删规则时以窗口所在屏幕为准，避免窗口被夹回主屏范围
+            self.layoutCoordinator.visibleFrameProvider = { [weak self] in
+                SearchWindowController.visibleFrame(for: self?.window)
+            }
+        }
     }
 
     convenience init() {
@@ -34,10 +39,12 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
     }
 
     convenience init(restoresPreviousSession: Bool) {
-        self.init(layoutCoordinator: SearchWindowLayoutCoordinator(
-            visibleFrameProvider: { NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 720) }
-        ))
-        let formController = SearchFormViewController(restoresPreviousSession: restoresPreviousSession)
+        self.init(formController: SearchFormViewController(restoresPreviousSession: restoresPreviousSession))
+    }
+
+    /// 使用外部构造的查找表单，测试可注入内存存储与执行器
+    convenience init(formController: SearchFormViewController, layoutCoordinator: SearchWindowLayoutCoordinator? = nil) {
+        self.init(layoutCoordinator: layoutCoordinator)
         formController.windowLayoutDelegate = self
         let window = NSWindow(contentViewController: formController)
         window.title = "FileHound"
@@ -54,6 +61,11 @@ final class SearchWindowController: NSWindowController, SearchWindowLayoutDelega
         )
         _ = formController.view
         searchFormViewController(formController, desiredRulesContentHeight: formController.preferredRulesContentHeight)
+    }
+
+    /// 窗口所在屏幕的可用区域；窗口尚未上屏时退回主屏
+    static func visibleFrame(for window: NSWindow?) -> NSRect {
+        window?.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1280, height: 720)
     }
 
     @available(*, unavailable)
