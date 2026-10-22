@@ -48,6 +48,20 @@ struct SearchRuleValidationTests {
     }
 
     @Test
+    func invalidRegexIsRejectedWhileEditing() {
+        let validator = SearchRuleValidator()
+
+        for field in [SearchRuleField.name, .textContent, .script] {
+            #expect(validator.validate(SearchRuleSelection(field: field, operator: .matchesRegex, value: "(")) == .invalid(messageKey: "search_rule.validation.regex_invalid"))
+            #expect(validator.validate(SearchRuleSelection(field: field, operator: .doesNotMatchRegex, value: "[a-")) == .invalid(messageKey: "search_rule.validation.regex_invalid"))
+            #expect(validator.validate(SearchRuleSelection(field: field, operator: .matchesRegex, value: "^a.+z$")) == .valid)
+        }
+        // 只有正则运算符才校验正则语法
+        #expect(validator.validate(SearchRuleSelection(field: .name, operator: .contains, value: "(")) == .valid)
+        #expect(L10n.string("search_rule.validation.regex_invalid") != "search_rule.validation.regex_invalid")
+    }
+
+    @Test
     func commentsAndScriptRulesValidate() {
         let validator = SearchRuleValidator()
 

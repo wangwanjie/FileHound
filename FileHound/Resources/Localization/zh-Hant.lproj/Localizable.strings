@@ -326,3 +326,6 @@
 "results.export.column.size_bytes" = "大小（位元組）";
 "results.export.column.modified" = "修改日期";
 "results.export.column.kind" = "種類";
+
+/* engine */
+"search_rule.validation.regex_invalid" = "請輸入有效的正規表示式";

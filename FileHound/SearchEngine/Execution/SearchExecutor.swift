@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import UniformTypeIdentifiers
 
@@ -16,16 +17,17 @@ struct SearchExecutionProgress: Sendable {
     let matchedCount: Int
 }
 
+/// 执行一次搜索。executeStreaming 会阻塞调用线程直到搜索结束，应在专用线程上调用（见 SearchWorkflowController），
+/// 不要放进 Swift 并发的协作线程池：内部的等待会占住线程，多个窗口同时搜索时会饿死线程池
 struct SearchExecutor: Sendable {
-    private let walker: DirectoryWalker
-    private let provider: any FilesystemAccessProviding
-    private let spotlightSearchService: SpotlightSearchService
-    private let catalogSearcher: (any VolumeCatalogSearching)?
+    fileprivate let walker: DirectoryWalker
+    fileprivate let provider: any FilesystemAccessProviding
+    fileprivate let spotlightSearchService: SpotlightSearchService
+    fileprivate let catalogSearcher: (any VolumeCatalogSearching)?
     private let specialFoldersStore: SpecialFoldersStore
     private let specialFolderPlanner: SpecialFolderPlanner
     private let fileKindResolver: FileKindResolver
     private let nowProvider: @Sendable () -> Date
-    private let metadataEvaluator = MetadataEvaluator()
     private let contentMatcher = ContentMatcher()
     private let scriptSourceReader = ScriptSourceReader()
 
@@ -52,281 +54,34 @@ struct SearchExecutor: Sendable {
 
     func execute(
         request: SearchRequest,
-        options: SearchExecutionOptions = SearchExecutionOptions()
+        options: SearchExecutionOptions = SearchExecutionOptions(),
+        cancellation: SearchCancellationToken = SearchCancellationToken()
     ) -> SearchExecutionResult {
-        executeStreaming(request: request, options: options)
+        executeStreaming(request: request, options: options, cancellation: cancellation)
     }
 
+    /// 流程：Spotlight 预取（可选）在后台线程与卷目录搜索 / 遍历并行，结果都汇总到同一个 collector 按路径去重。
+    /// cancellation 被取消后尽快返回；达到数量上限时停止所有阶段并返回已找到的结果
     func executeStreaming(
         request: SearchRequest,
         options: SearchExecutionOptions = SearchExecutionOptions(),
+        cancellation: SearchCancellationToken = SearchCancellationToken(),
         onProgress: (@Sendable (SearchExecutionProgress) -> Void)? = nil
     ) -> SearchExecutionResult {
-        let title = request.queryTitle
-        let rules = Self.preparedRules(request.rules)
-        let specialFolderPlanning = mergedSpecialFolderPlanning(for: request.rootPaths)
-        let behavior = SearchRuleExecutionBehavior(rules: rules)
-        let highlight = highlightMetadata(for: request.rules)
-        let matchReasons = MatchReasons(highlight: highlight)
-        let preview = request.rules.first?.value ?? ""
-        let collector = SearchResultCollector(
-            title: title,
-            limit: behavior.limitAmount,
+        let run = SearchRun(
+            executor: self,
+            request: request,
+            includeSpotlight: options.includeSpotlightResults,
+            cancellation: cancellation,
             onProgress: onProgress
         )
-        let prefersSpotlightTextResults = options.includeSpotlightResults && spotlightSearchService.canSatisfyTextContentSearch(
-            rules: request.rules,
-            caseSensitive: behavior.caseSensitive,
-            diacriticsSensitive: behavior.diacriticsSensitive
-        )
-
-        if options.includeSpotlightResults,
-           let spotlightItems = executeSpotlightSearchIfPossible(
-                request: request,
-                rules: rules,
-                specialFolderPlanning: specialFolderPlanning,
-                behavior: behavior,
-                highlight: highlight,
-                matchReasons: matchReasons
-           ) {
-            for item in spotlightItems where behavior.allows(item: item) {
-                if collector.append(item) == .reachedLimit {
-                    return collector.result()
-                }
-            }
-
-            if prefersSpotlightTextResults, collector.isEmpty == false {
-                return collector.result()
-            }
-        }
-
-        // 规则之间是“且”关系，先判定只看路径的廉价规则，读属性、读内容的规则放到最后
-        let matchingRules = Self.orderedByEvaluationCost(rules)
-        let catalogPlan = catalogSearchPlan(
-            request: request,
-            rules: rules,
-            behavior: behavior,
-            specialFolderPlanning: specialFolderPlanning
-        )
-        let checksDuplicates = collector.isEmpty == false || catalogPlan != nil
-
-        // 遍历与卷目录搜索共用的逐项判定，可在多个线程上并发调用
-        let evaluate: @Sendable (DirectoryEntry) -> DirectoryWalkControl = { entry in
-            if checksDuplicates, collector.contains(entry.path) {
-                return collector.hasReachedLimit ? .stop : .continue
-            }
-
-            let rootPath = Self.rootPath(containing: entry.path, in: request.rootPaths)
-            guard Self.isExcluded(entry.path, by: request.excludedPaths, rootPath: rootPath) == false else {
-                return .skipDescendants
-            }
-
-            let descendControl: DirectoryWalkControl =
-                behavior.shouldDescend(into: entry, rootPath: rootPath) ? .continue : .skipDescendants
-
-            guard behavior.allows(entry: entry, rootPath: rootPath) else {
-                return descendControl
-            }
-
-            do {
-                // 属性只在规则需要或条目命中后才读取，绝大多数不命中的条目不再多一次 stat
-                var cachedAttributes: [FileAttributeKey: Any]?
-                func attributes() throws -> [FileAttributeKey: Any] {
-                    if let cachedAttributes {
-                        return cachedAttributes
-                    }
-                    let loaded = try provider.attributesOfItem(atPath: entry.path)
-                    cachedAttributes = loaded
-                    return loaded
-                }
-
-                for rule in matchingRules {
-                    let ruleAttributes = Self.attributeDependentFields.contains(rule.field) ? try attributes() : [:]
-                    guard try matches(entry: entry, attributes: ruleAttributes, rule: rule, behavior: behavior) else {
-                        return descendControl
-                    }
-                }
-
-                let item = try makeResultItem(
-                    for: entry,
-                    attributes: attributes(),
-                    preview: preview,
-                    highlight: highlight,
-                    matchReasons: matchReasons
-                )
-                guard behavior.allows(item: item) else {
-                    return descendControl
-                }
-                return collector.append(item) == .reachedLimit ? .stop : descendControl
-            } catch {
-                return descendControl
-            }
-        }
-
-        var walkRoots = request.rootPaths
-        if let catalogPlan {
-            guard let fallbackRoots = runCatalogSearch(
-                catalogPlan,
-                request: request,
-                behavior: behavior,
-                specialFolderPlanning: specialFolderPlanning,
-                evaluate: evaluate
-            ) else {
-                return collector.result()
-            }
-            walkRoots = Self.removingNestedPaths(catalogPlan.walkRoots + fallbackRoots)
-        }
-
-        guard walkRoots.isEmpty == false, Task.isCancelled == false else {
-            return collector.result()
-        }
-
-        let plan = SearchPlan(
-            rootPaths: walkRoots,
-            rootGroup: .all([]),
-            excludedPathFragments: [],
-            providerKind: .local,
-            shouldScanContents: rules.contains(where: { $0.field == .textContent }),
-            includedPathRoots: specialFolderPlanning.includedPathRoots,
-            specialFolderExclusions: specialFolderPlanning.specialFolderExclusions,
-            slowSearchPaths: specialFolderPlanning.slowSearchPaths
-        )
-        do {
-            try walker.walk(plan: plan, includeHiddenFiles: behavior.includeInvisibleItems, visit: evaluate)
-            return collector.result()
-        } catch {
-            return SearchExecutionResult(title: title, items: [])
-        }
+        return run.execute()
     }
 
-    // MARK: - 卷目录搜索
+    // MARK: - 卷目录搜索的名称片段
 
-    /// 以整个卷为搜索根、且至少有一条规则要求名称包含某段文字时，用 searchfs 在卷目录中按名称预筛选，
-    /// 代替逐个目录遍历；候选项仍按完整规则复核。不满足条件的根目录照常遍历
-    private func catalogSearchPlan(
-        request: SearchRequest,
-        rules: [SearchRuleSelection],
-        behavior: SearchRuleExecutionBehavior,
-        specialFolderPlanning: SpecialFolderPlanningResult
-    ) -> CatalogSearchPlan? {
-        // 深度限制依赖遍历时逐层剪枝，卷目录搜索无法提前排除深层目录
-        guard let catalogSearcher,
-              behavior.maximumFolderDepth == nil,
-              let nameFragment = Self.catalogNameFragment(for: rules, diacriticsSensitive: behavior.diacriticsSensitive) else {
-            return nil
-        }
-
-        let mountPoints = Set(catalogSearcher.mountPoints().map(Self.trimmingTrailingSlash))
-        var targets: [CatalogSearchTarget] = []
-        var walkRoots: [String] = []
-
-        for rootPath in request.rootPaths {
-            let volumePath = Self.trimmingTrailingSlash(rootPath)
-            // Data 卷上的条目经固件链接映射到 /Users 等位置，fsgetpath 返回的是映射后的路径，不在 Data 卷挂载点之下
-            guard mountPoints.contains(volumePath), volumePath != Self.dataVolumePath else {
-                walkRoots.append(rootPath)
-                continue
-            }
-
-            var rootTargets = [CatalogSearchTarget(volumePath: volumePath, scopeRoot: rootPath, fallbackRoot: rootPath)]
-            if volumePath == "/", mountPoints.contains(Self.dataVolumePath) {
-                // 启动卷的用户数据在 Data 卷上。只有遍历时也跳过 /System/Volumes/Data（同一文件不会再以该前缀出现），
-                // 按固件链接路径返回的 Data 卷结果才与遍历等价
-                guard Self.isExcluded(Self.dataVolumePath, by: request.excludedPaths, rootPath: rootPath) else {
-                    walkRoots.append(rootPath)
-                    continue
-                }
-                rootTargets.append(CatalogSearchTarget(volumePath: Self.dataVolumePath, scopeRoot: rootPath, fallbackRoot: rootPath))
-            }
-
-            // searchfs 不跨越挂载点，遍历会进入的嵌套卷需要单独搜索
-            for mountPoint in mountPoints.sorted()
-            where mountPoint != Self.dataVolumePath && Self.isStrictDescendant(mountPoint, of: volumePath) {
-                guard Self.isExcluded(mountPoint, by: request.excludedPaths, rootPath: rootPath) == false,
-                      specialFolderPlanning.allows(path: mountPoint),
-                      behavior.includeInvisibleItems || Self.hasHiddenComponent(mountPoint, below: rootPath) == false else {
-                    continue
-                }
-                rootTargets.append(CatalogSearchTarget(volumePath: mountPoint, scopeRoot: rootPath, fallbackRoot: mountPoint))
-            }
-            targets += rootTargets
-        }
-
-        guard targets.isEmpty == false else {
-            return nil
-        }
-        return CatalogSearchPlan(nameFragment: nameFragment, targets: targets, walkRoots: walkRoots)
-    }
-
-    /// 并发搜索各个卷，返回需要改为遍历的根目录（搜索失败的卷）；被取消或达到数量上限时返回 nil
-    private func runCatalogSearch(
-        _ plan: CatalogSearchPlan,
-        request: SearchRequest,
-        behavior: SearchRuleExecutionBehavior,
-        specialFolderPlanning: SpecialFolderPlanningResult,
-        evaluate: @escaping @Sendable (DirectoryEntry) -> DirectoryWalkControl
-    ) -> [String]? {
-        guard let catalogSearcher, Task.isCancelled == false else {
-            return nil
-        }
-
-        let state = CatalogSearchState()
-        let group = DispatchGroup()
-        for target in plan.targets {
-            group.enter()
-            DispatchQueue.global(qos: .userInitiated).async {
-                defer { group.leave() }
-                let scopePrefix = Self.directoryPrefix(target.scopeRoot)
-                do {
-                    try catalogSearcher.search(
-                        volumePath: target.volumePath,
-                        nameFragment: plan.nameFragment,
-                        shouldStop: { state.isStopped }
-                    ) { matches in
-                        for match in matches {
-                            guard state.isStopped == false else {
-                                return
-                            }
-                            // 与遍历保持一致：只要搜索根之下的条目，跳过特殊文件夹与隐藏目录中的内容
-                            guard match.path.utf8.count > scopePrefix.utf8.count, match.path.hasPrefix(scopePrefix) else {
-                                continue
-                            }
-                            let rootPath = Self.rootPath(containing: match.path, in: request.rootPaths)
-                            guard specialFolderPlanning.allows(path: match.path),
-                                  behavior.includeInvisibleItems || Self.hasHiddenComponent(match.path, below: rootPath) == false else {
-                                continue
-                            }
-                            let entry = DirectoryEntry(
-                                path: match.path,
-                                isDirectory: match.isDirectory,
-                                isHidden: (match.path as NSString).lastPathComponent.hasPrefix(".")
-                            )
-                            if evaluate(entry) == .stop {
-                                state.stop()
-                            }
-                        }
-                    }
-                } catch {
-                    // 已回调的结果保留，整个卷改为遍历，重复项由结果汇总去重
-                    state.recordFailure(fallbackRoot: target.fallbackRoot)
-                }
-            }
-        }
-
-        // 搜索线程不在 Task 上下文中，取消状态由调用线程轮询后转发
-        while group.wait(timeout: .now() + .milliseconds(50)) == .timedOut {
-            if Task.isCancelled {
-                state.stop()
-            }
-        }
-
-        guard state.isStopped == false, Task.isCancelled == false else {
-            return nil
-        }
-        return state.fallbackRoots
-    }
-
-    /// 从名称类规则中取一段名称必然包含的文字（规则之间是“且”关系，任取一条都成立），取最长的一段以减少候选项
+    /// 从名称类规则中取一段名称必然包含的文字（规则之间是“且”关系，任取一条都成立），取最长的一段以减少候选项。
+    /// 规则值需已规范化（去掉首尾空白，扩展名去掉首尾的 “.”）
     static func catalogNameFragment(for rules: [SearchRuleSelection], diacriticsSensitive: Bool) -> String? {
         rules
             .flatMap(requiredNameSubstrings(of:))
@@ -362,18 +117,28 @@ struct SearchExecutor: Sendable {
         }
     }
 
-    /// searchfs 按卷自身的规则（分解为 NFD 后折叠大小写）做子串匹配，并不忽略变音符号。
-    /// 忽略变音符号时，规则里带变音符号的字符在名称中可能是另一种写法，以它们为界切开；
-    /// 大小写映射会改变长度的字符（如 ß、İ）在两边的折叠规则不一致，同样切开
+    /// searchfs 把双方分解为 NFD 后折叠大小写再做子串匹配，区分变音符号：组合符号插在基本字母之后，
+    /// 名称里任何一个字母带了变音，都会把片段在名称中的连续出现打断（“Resume” 命中不了 “Résumé”）。
+    /// 所以忽略变音符号时，可能带变音的字母（各拼音文字的字母）都不能放进片段，只用数字、标点、汉字等组成的片段；
+    /// 大小写映射会改变长度的字符（如 ß、İ）在两边的折叠规则不一致，也要切开。
+    /// 这意味着默认设置下纯字母的名称搜索不会用 searchfs，改为遍历（约慢 1.5 倍）；区分变音符号时照常使用
     private static func catalogSafeRuns(of value: String, diacriticsSensitive: Bool) -> [String] {
         var runs: [String] = []
         var current = ""
         for character in value {
             let text = String(character)
             let scalarCount = text.unicodeScalars.count
-            let isSafe = (diacriticsSensitive || text.folding(options: .diacriticInsensitive, locale: nil) == text)
-                && text.lowercased().unicodeScalars.count == scalarCount
+            let keepsLength = text.lowercased().unicodeScalars.count == scalarCount
                 && text.uppercased().unicodeScalars.count == scalarCount
+            let isSafe: Bool
+            if keepsLength == false {
+                isSafe = false
+            } else if diacriticsSensitive {
+                isSafe = true
+            } else {
+                isSafe = DiacriticFolding.mayCarryDiacritics(character) == false
+                    && text.folding(options: .diacriticInsensitive, locale: nil) == text
+            }
             if isSafe {
                 current.append(character)
             } else if current.isEmpty == false {
@@ -387,9 +152,11 @@ struct SearchExecutor: Sendable {
         return runs
     }
 
-    private static let dataVolumePath = "/System/Volumes/Data"
+    // MARK: - 路径工具
 
-    private static func trimmingTrailingSlash(_ path: String) -> String {
+    fileprivate static let dataVolumePath = "/System/Volumes/Data"
+
+    fileprivate static func trimmingTrailingSlash(_ path: String) -> String {
         var trimmed = path
         while trimmed.count > 1, trimmed.hasSuffix("/") {
             trimmed.removeLast()
@@ -397,152 +164,18 @@ struct SearchExecutor: Sendable {
         return trimmed
     }
 
-    private static func directoryPrefix(_ path: String) -> String {
+    fileprivate static func directoryPrefix(_ path: String) -> String {
         path.hasSuffix("/") ? path : path + "/"
     }
 
-    private static func isStrictDescendant(_ path: String, of ancestor: String) -> Bool {
+    fileprivate static func isStrictDescendant(_ path: String, of ancestor: String) -> Bool {
         path != ancestor && path.hasPrefix(directoryPrefix(ancestor))
     }
 
-    /// 遍历不会进入名称以 “.” 开头的目录，卷目录搜索的结果需要按路径中搜索根以下的每一级补做同样的判断
-    private static func hasHiddenComponent(_ path: String, below rootPath: String) -> Bool {
-        let prefix = directoryPrefix(rootPath)
-        guard path.hasPrefix(prefix) else {
-            return false
-        }
-        return path.dropFirst(prefix.count).split(separator: "/").contains { $0.hasPrefix(".") }
-    }
-
-    /// 去掉重复和已被其他根目录覆盖的路径，避免同一棵子树被遍历两次
-    private static func removingNestedPaths(_ paths: [String]) -> [String] {
-        var result: [String] = []
-        for path in paths where paths.contains(where: { isStrictDescendant(path, of: trimmingTrailingSlash($0)) }) == false {
-            if result.contains(path) == false {
-                result.append(path)
-            }
-        }
-        return result
-    }
-
-    private func executeSpotlightSearchIfPossible(
-        request: SearchRequest,
-        rules: [SearchRuleSelection],
-        specialFolderPlanning: SpecialFolderPlanningResult,
-        behavior: SearchRuleExecutionBehavior,
-        highlight: (kind: SearchResultHighlightKind, query: String)?,
-        matchReasons: MatchReasons
-    ) -> [SearchResultItem]? {
-        var trustedPaths = Set<String>()
-        var candidatePaths = Set<String>()
-        for rootPath in request.rootPaths {
-            guard let rootPaths = try? spotlightSearchService.search(rootPath: rootPath, rules: request.rules) else {
-                return nil
-            }
-            trustedPaths.formUnion(rootPaths)
-            if let candidates = try? spotlightSearchService.searchTextContentCandidates(rootPath: rootPath, rules: request.rules) {
-                candidatePaths.formUnion(candidates)
-            }
-        }
-
-        let uniquePaths = trustedPaths.union(candidatePaths).sorted()
-        guard Task.isCancelled == false else {
-            return nil
-        }
-        let preview = request.rules.first?.value ?? ""
-
-        return uniquePaths.compactMap { path in
-            let rootPath = Self.rootPath(containing: path, in: request.rootPaths)
-            guard specialFolderPlanning.allows(path: path),
-                  Self.isExcluded(path, by: request.excludedPaths, rootPath: rootPath) == false else {
-                return nil
-            }
-
-            guard FileManager.default.fileExists(atPath: path),
-                  let attributes = try? provider.attributesOfItem(atPath: path) else {
-                return nil
-            }
-
-            let entry = DirectoryEntry(
-                path: path,
-                isDirectory: attributes[.type] as? FileAttributeType == .typeDirectory,
-                isHidden: (path as NSString).lastPathComponent.hasPrefix(".")
-            )
-
-            guard behavior.allows(entry: entry, rootPath: rootPath) else {
-                return nil
-            }
-
-            do {
-                // Spotlight 查询是不区分大小写的近似结果，这里按完整规则复核；
-                // 短语查询命中的文本内容由 Spotlight 索引判定（可覆盖 PDF 等非纯文本格式），不再重复读取文件，
-                // 只按分词查到的候选需要读取文件确认
-                let trustsTextContent = trustedPaths.contains(path)
-                guard try rules.allSatisfy({ rule in
-                    if rule.field == .textContent, trustsTextContent { return true }
-                    return try matches(entry: entry, attributes: attributes, rule: rule, behavior: behavior)
-                }) else {
-                    return nil
-                }
-                return try makeResultItem(
-                    for: entry,
-                    attributes: attributes,
-                    preview: preview,
-                    highlight: highlight,
-                    matchReasons: matchReasons
-                )
-            } catch {
-                return nil
-            }
-        }
-    }
-
-    /// 匹配时反复用到的规则值只规范化一次：去掉首尾空白，扩展名再去掉首尾的 “.”
-    private static func preparedRules(_ rules: [SearchRuleSelection]) -> [SearchRuleSelection] {
-        rules.map { rule in
-            var prepared = rule
-            prepared.value = rule.value.trimmingCharacters(in: .whitespacesAndNewlines)
-            if rule.field == .extensionName {
-                prepared.value = prepared.value.trimmingCharacters(in: CharacterSet(charactersIn: "."))
-            }
-            return prepared
-        }
-    }
-
-    /// 需要读取 attributesOfItem 结果才能判定的字段
-    private static let attributeDependentFields: Set<SearchRuleField> = [
-        .lastModifiedDate, .createdDate, .fileSize, .kind, .script
-    ]
-
-    private static func orderedByEvaluationCost(_ rules: [SearchRuleSelection]) -> [SearchRuleSelection] {
-        func cost(of field: SearchRuleField) -> Int {
-            switch field {
-            case .name, .extensionName, .nameWithoutExtension, .path, .folderNames,
-                 .caseSensitive, .diacriticsSensitive, .invisibleItems, .packageContents,
-                 .trashedContents, .limitFolderDepth, .limitAmount:
-                return 0
-            case .lastModifiedDate, .createdDate, .fileSize, .kind:
-                return 1
-            case .lastOpenedDate, .tag, .comments:
-                return 2
-            case .script, .textContent:
-                return 3
-            }
-        }
-
-        return rules.enumerated()
-            .sorted { (cost(of: $0.element.field), $0.offset) < (cost(of: $1.element.field), $1.offset) }
-            .map(\.element)
-    }
-
-    private func mergedSpecialFolderPlanning(for rootPaths: [String]) -> SpecialFolderPlanningResult {
-        let configuration = specialFoldersStore.load()
-        let plans = rootPaths.map { specialFolderPlanner.plan(rootPath: $0, configuration: configuration) }
-        return SpecialFolderPlanningResult(
-            includedPathRoots: plans.reduce(into: Set<String>()) { $0.formUnion($1.includedPathRoots) },
-            specialFolderExclusions: plans.reduce(into: Set<String>()) { $0.formUnion($1.specialFolderExclusions) },
-            slowSearchPaths: plans.reduce(into: Set<String>()) { $0.formUnion($1.slowSearchPaths) }
-        )
+    /// 去掉重复的根目录（忽略末尾的 “/”），保留首次出现的顺序。嵌套的根目录由遍历器负责不重复进入
+    fileprivate static func uniquePaths(_ paths: [String]) -> [String] {
+        var seen = Set<String>()
+        return paths.filter { seen.insert(trimmingTrailingSlash($0)).inserted }
     }
 
     /// 多根搜索时，条目的深度、包内容判断都相对于包含它的最深根目录
@@ -557,18 +190,45 @@ struct SearchExecutor: Sendable {
         excludedPaths.contains { isSameOrDescendant(path, of: $0) && isSameOrDescendant(rootPath, of: $0) == false }
     }
 
-    private static func isSameOrDescendant(_ path: String, of ancestor: String) -> Bool {
+    fileprivate static func isSameOrDescendant(_ path: String, of ancestor: String) -> Bool {
         path == ancestor || path.hasPrefix(ancestor.hasSuffix("/") ? ancestor : ancestor + "/")
     }
 
-    private func matches(
+    // MARK: - 规则判定
+
+    /// 规则之间是“且”关系，先判定只看路径的廉价规则，读属性、读内容的规则放到最后
+    fileprivate static func evaluationCost(of field: SearchRuleField) -> Int {
+        switch field {
+        case .name, .extensionName, .nameWithoutExtension, .path, .folderNames,
+             .caseSensitive, .diacriticsSensitive, .invisibleItems, .packageContents,
+             .trashedContents, .limitFolderDepth, .limitAmount:
+            return 0
+        case .lastModifiedDate, .createdDate, .fileSize, .kind:
+            return 1
+        case .lastOpenedDate, .tag, .comments:
+            return 2
+        case .script, .textContent:
+            return 3
+        }
+    }
+
+    fileprivate static func orderedByEvaluationCost(_ rules: [PreparedSearchRule]) -> [PreparedSearchRule] {
+        rules.enumerated()
+            .sorted { (evaluationCost(of: $0.element.field), $0.offset) < (evaluationCost(of: $1.element.field), $1.offset) }
+            .map(\.element)
+    }
+
+    fileprivate func matches(
         entry: DirectoryEntry,
         attributes: [FileAttributeKey: Any],
-        rule: SearchRuleSelection,
+        rule: PreparedSearchRule,
         behavior: SearchRuleExecutionBehavior
     ) throws -> Bool {
-        // 规则值已在 preparedRules 中规范化
-        guard rule.value.isEmpty == false || SearchRuleExecutionBehavior.globalFields.contains(rule.field) else {
+        // 没填值的规则不参与判定；“今天”“昨天”本来就没有值，不能因此被当成恒成立
+        guard rule.value.isEmpty == false
+                || SearchRuleExecutionBehavior.globalFields.contains(rule.field)
+                || rule.operator == .isToday
+                || rule.operator == .isYesterday else {
             return true
         }
 
@@ -608,13 +268,20 @@ struct SearchExecutor: Sendable {
             guard entry.isDirectory == false else {
                 return false
             }
+            // 非“包含”类运算符要整份解码，超大文件直接判为不命中，连读取（映射与预读）也省掉
+            if ContentMatcher.isContainsOperator(rule.operator) == false,
+               let size = (attributes[.size] as? NSNumber)?.int64Value,
+               size > Int64(ContentMatcher.maximumDecodedContentSize) {
+                return false
+            }
 
             let data = try provider.contentsOfFile(atPath: entry.path)
             return try contentMatcher.matches(
                 data: data,
-                rule: rule,
+                rule: rule.selection,
                 compareOptions: behavior.stringCompareOptions,
-                caseSensitive: behavior.caseSensitive
+                caseSensitive: behavior.caseSensitive,
+                regex: rule.regex
             )
         case .script:
             let source = scriptSourceReader.source(
@@ -632,13 +299,11 @@ struct SearchExecutor: Sendable {
         }
     }
 
-    private func makeResultItem(
+    fileprivate func makeResultItem(
         for entry: DirectoryEntry,
         attributes: [FileAttributeKey: Any],
-        preview: String,
-        highlight: (kind: SearchResultHighlightKind, query: String)?,
-        matchReasons: MatchReasons
-    ) throws -> SearchResultItem {
+        presentation: ResultPresentation
+    ) -> SearchResultItem {
         let url = URL(fileURLWithPath: entry.path, isDirectory: entry.isDirectory)
         let resourceValues = try? url.resourceValues(forKeys: [
             .isPackageKey,
@@ -656,10 +321,10 @@ struct SearchExecutor: Sendable {
         let kind = fileKindResolver.displayTitle(for: entry.path, isDirectory: entry.isDirectory, attributes: attributes)
         return SearchResultItem(
             path: entry.path,
-            matchReason: matchReasons.reason(isDirectory: entry.isDirectory),
-            previewSnippet: preview,
-            highlightKind: highlight?.kind,
-            highlightQuery: highlight?.query,
+            matchReason: presentation.matchReasons.reason(isDirectory: entry.isDirectory),
+            previewSnippet: presentation.preview,
+            highlightKind: presentation.highlight?.kind,
+            highlightQuery: presentation.highlight?.query,
             kind: kind,
             modifiedText: Self.displayDate(modifiedDate),
             createdText: Self.displayDate(createdDate),
@@ -680,18 +345,17 @@ struct SearchExecutor: Sendable {
         )
     }
 
-    private func highlightMetadata(for rules: [SearchRuleSelection]) -> (kind: SearchResultHighlightKind, query: String)? {
+    fileprivate static func highlightMetadata(for rules: [PreparedSearchRule]) -> (kind: SearchResultHighlightKind, query: String)? {
         for rule in rules {
-            let query = rule.value.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard query.isEmpty == false, Self.isPositiveHighlightOperator(rule.operator) else {
+            guard rule.value.isEmpty == false, isPositiveHighlightOperator(rule.operator) else {
                 continue
             }
 
             switch rule.field {
             case .name:
-                return (.name, query)
+                return (.name, rule.value)
             case .extensionName:
-                return (.extensionName, query)
+                return (.extensionName, rule.value)
             default:
                 continue
             }
@@ -700,43 +364,31 @@ struct SearchExecutor: Sendable {
         return nil
     }
 
-    /// 每次搜索只查一次本地化文案：L10n 每次调用都会重新加载语言包，不适合在遍历中逐项调用
-    fileprivate struct MatchReasons: Sendable {
-        private let highlighted: String?
-        private let folder: String
-        private let name: String
-
-        init(highlight: (kind: SearchResultHighlightKind, query: String)?) {
-            switch highlight?.kind {
-            case .name:
-                highlighted = L10n.string("search_result.match_reason.name")
-            case .extensionName:
-                highlighted = L10n.string("search_result.match_reason.extension")
-            case nil:
-                highlighted = nil
-            }
-            folder = L10n.string("search_result.match_reason.folder")
-            name = L10n.string("search_result.match_reason.name")
+    /// 结果行的预览文字：取第一条有值的普通条件，按界面上的显示方式转换（类型显示为本地化名称），开关类条件不参与
+    fileprivate static func previewText(for rules: [PreparedSearchRule]) -> String {
+        guard let rule = rules.first(where: {
+            SearchRuleExecutionBehavior.globalFields.contains($0.field) == false && $0.value.isEmpty == false
+        }) else {
+            return ""
         }
-
-        func reason(isDirectory: Bool) -> String {
-            highlighted ?? (isDirectory ? folder : name)
-        }
+        return rule.field.definition.displayValue(for: rule.value, operator: rule.operator)
     }
 
+    /// 字符串匹配。op 用于多值字段把否定运算符换成对应的肯定运算符，默认使用规则自身的运算符
     private func matchString(
         _ candidate: String,
-        using rule: SearchRuleSelection,
-        behavior: SearchRuleExecutionBehavior
+        using rule: PreparedSearchRule,
+        behavior: SearchRuleExecutionBehavior,
+        operator op: SearchRuleOperator? = nil
     ) -> Bool {
         let value = rule.value
         let options = behavior.stringCompareOptions
 
-        switch rule.operator {
+        switch op ?? rule.operator {
         case .contains:
             return candidate.range(of: value, options: options) != nil
-        case .containsPhrase:
-            return matchWholeWords(candidate, phrase: value, behavior: behavior)
+        case .containsPhrase, .containsWords:
+            return matchWholeWords(candidate, regexes: rule.wordRegexes, behavior: behavior)
         case .beginsWith:
             return candidate.range(of: value, options: options.union(.anchored)) != nil
         case .endsWith:
@@ -747,24 +399,21 @@ struct SearchExecutor: Sendable {
             return candidate.compare(value, options: options) != .orderedSame
         case .doesNotContain:
             return candidate.range(of: value, options: options) == nil
-        case .containsWords:
-            return splitTerms(from: value).allSatisfy { matchWholeWords(candidate, phrase: $0, behavior: behavior) }
-        case .matchesPattern:
-            return matchRegex(candidate, pattern: wildcardPattern(from: value), behavior: behavior)
         case .containsAnyOf:
-            return splitTerms(from: value).contains { candidate.range(of: $0, options: options) != nil }
+            return rule.terms.contains { candidate.range(of: $0, options: options) != nil }
         case .beginsWithAnyOf:
-            return splitTerms(from: value).contains { candidate.range(of: $0, options: options.union(.anchored)) != nil }
+            return rule.terms.contains { candidate.range(of: $0, options: options.union(.anchored)) != nil }
         case .endsWithAnyOf:
-            return splitTerms(from: value).contains {
+            return rule.terms.contains {
                 candidate.range(of: $0, options: options.union(.backwards))?.upperBound == candidate.endIndex
             }
         case .isAnyOf:
-            return splitTerms(from: value).contains { candidate.compare($0, options: options) == .orderedSame }
-        case .matchesRegex:
-            return matchRegex(candidate, pattern: value, behavior: behavior)
+            return rule.terms.contains { candidate.compare($0, options: options) == .orderedSame }
+        case .matchesPattern, .matchesRegex:
+            return rule.regex.map { Self.firstMatch($0, in: candidate) } ?? false
         case .doesNotMatchRegex:
-            return matchRegex(candidate, pattern: value, behavior: behavior) == false
+            // 非法正则无法判定，按不命中处理，而不是让“不匹配”命中所有条目
+            return rule.regex.map { Self.firstMatch($0, in: candidate) == false } ?? false
         case .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
             return false
         }
@@ -773,7 +422,7 @@ struct SearchExecutor: Sendable {
     /// 多值字段（标签、各级文件夹名）：肯定类运算符任一值命中即可，否定类运算符要求所有值都不命中
     private func matchAnyComponent(
         _ components: [String],
-        using rule: SearchRuleSelection,
+        using rule: PreparedSearchRule,
         behavior: SearchRuleExecutionBehavior
     ) -> Bool {
         let positiveOperator: SearchRuleOperator?
@@ -783,6 +432,10 @@ struct SearchExecutor: Sendable {
         case .doesNotContain:
             positiveOperator = .contains
         case .doesNotMatchRegex:
+            // 非法正则无法判定，不命中
+            guard rule.regex != nil else {
+                return false
+            }
             positiveOperator = .matchesRegex
         default:
             positiveOperator = nil
@@ -791,35 +444,33 @@ struct SearchExecutor: Sendable {
         guard let positiveOperator else {
             return components.contains { matchString($0, using: rule, behavior: behavior) }
         }
-
-        var positiveRule = rule
-        positiveRule.operator = positiveOperator
-        return components.contains { matchString($0, using: positiveRule, behavior: behavior) } == false
+        return components.contains { matchString($0, using: rule, behavior: behavior, operator: positiveOperator) } == false
     }
 
-    /// 以单词边界匹配短语，避免 “port” 命中 “report”
+    /// 以单词边界匹配短语（正则在规则准备阶段编译）；“包含单词”要求每个词都出现
     private func matchWholeWords(
         _ candidate: String,
-        phrase: String,
+        regexes: [NSRegularExpression],
         behavior: SearchRuleExecutionBehavior
     ) -> Bool {
-        let foldingOptions: String.CompareOptions = behavior.diacriticsSensitive ? [] : [.diacriticInsensitive]
-        let foldedCandidate = candidate.folding(options: foldingOptions, locale: nil)
-        let foldedPhrase = phrase.folding(options: foldingOptions, locale: nil)
-        let words = foldedPhrase.split(whereSeparator: \.isWhitespace).map {
-            NSRegularExpression.escapedPattern(for: String($0))
-        }
-        guard words.isEmpty == false else {
+        guard regexes.isEmpty == false else {
             return false
         }
-        let pattern = "(?<![\\p{L}\\p{N}_])" + words.joined(separator: "\\s+") + "(?![\\p{L}\\p{N}_])"
-        return matchRegex(foldedCandidate, pattern: pattern, behavior: behavior)
+        let foldedCandidate = behavior.diacriticsSensitive
+            ? candidate
+            : candidate.folding(options: .diacriticInsensitive, locale: nil)
+        return regexes.allSatisfy { Self.firstMatch($0, in: foldedCandidate) }
+    }
+
+    private static func firstMatch(_ regex: NSRegularExpression, in candidate: String) -> Bool {
+        let range = NSRange(candidate.startIndex..<candidate.endIndex, in: candidate)
+        return regex.firstMatch(in: candidate, options: [], range: range) != nil
     }
 
     private func compareKind(
         entry: DirectoryEntry,
         attributes: [FileAttributeKey: Any],
-        using rule: SearchRuleSelection
+        using rule: PreparedSearchRule
     ) -> Bool {
         let kindIDs = fileKindResolver.kindIDs(for: entry.path, isDirectory: entry.isDirectory, attributes: attributes)
         let value = rule.value
@@ -837,31 +488,8 @@ struct SearchExecutor: Sendable {
         }
     }
 
-    private func splitTerms(from value: String) -> [String] {
-        value
-            .split(whereSeparator: { $0 == "," || $0.isWhitespace })
-            .map(String.init)
-            .filter { $0.isEmpty == false }
-    }
-
-    private func wildcardPattern(from value: String) -> String {
-        let escaped = NSRegularExpression.escapedPattern(for: value)
-        return "^" + escaped
-            .replacingOccurrences(of: "\\*", with: ".*")
-            .replacingOccurrences(of: "\\?", with: ".") + "$"
-    }
-
-    private func matchRegex(_ candidate: String, pattern: String, behavior: SearchRuleExecutionBehavior) -> Bool {
-        guard let regex = behavior.regexCache.regex(for: pattern, caseSensitive: behavior.caseSensitive) else {
-            return false
-        }
-
-        let range = NSRange(candidate.startIndex..<candidate.endIndex, in: candidate)
-        return regex.firstMatch(in: candidate, options: [], range: range) != nil
-    }
-
-    private func compareNumber(_ candidate: Int64?, using rule: SearchRuleSelection) -> Bool {
-        guard let candidate, let target = parseNumber(from: rule.value) else {
+    private func compareNumber(_ candidate: Int64?, using rule: PreparedSearchRule) -> Bool {
+        guard let candidate, let target = rule.byteCount else {
             return false
         }
 
@@ -877,77 +505,12 @@ struct SearchExecutor: Sendable {
         }
     }
 
-    private func compareDate(_ candidate: Date?, using rule: SearchRuleSelection) -> Bool {
-        guard let candidate else {
+    /// 日期界限在规则准备阶段已换算成区间，这里只做比较
+    private func compareDate(_ candidate: Date?, using rule: PreparedSearchRule) -> Bool {
+        guard let candidate, let range = rule.dateRange else {
             return false
         }
-
-        let calendar = Calendar(identifier: .gregorian)
-        switch rule.operator {
-        case .isExactly:
-            guard let target = parseDate(from: rule.value) else {
-                return false
-            }
-            return calendar.isDate(candidate, inSameDayAs: target)
-        case .isBefore:
-            guard let target = parseDate(from: rule.value) else {
-                return false
-            }
-            return candidate < calendar.startOfDay(for: target)
-        case .isAfter:
-            guard let target = parseDate(from: rule.value) else {
-                return false
-            }
-            let endOfDay = calendar.date(byAdding: DateComponents(day: 1, second: -1), to: calendar.startOfDay(for: target)) ?? target
-            return candidate > endOfDay
-        case .isOnOrAfter:
-            guard let target = parseDate(from: rule.value) else {
-                return false
-            }
-            return candidate >= calendar.startOfDay(for: target)
-        case .isOnOrBefore:
-            guard let target = parseDate(from: rule.value) else {
-                return false
-            }
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: target)) ?? target
-            return candidate < endOfDay
-        case .isWithinTheLast:
-            guard let relative = parseRelativeDate(from: rule.value),
-                  let cutoff = calendar.date(byAdding: relative.component, value: -relative.amount, to: nowProvider()) else {
-                return false
-            }
-            return candidate >= cutoff
-        case .isToday:
-            return calendar.isDateInToday(candidate)
-        case .isYesterday:
-            return calendar.isDateInYesterday(candidate)
-        default:
-            return false
-        }
-    }
-
-    private func parseNumber(from value: String) -> Int64? {
-        SearchRuleNumberParser.parseByteCount(value)
-    }
-
-    private func parseDate(from value: String) -> Date? {
-        SearchRuleDateParser.parse(value)
-    }
-
-    private func parseRelativeDate(from value: String) -> (amount: Int, component: Calendar.Component)? {
-        let relative = SearchRuleRelativeDateValue.parse(value)
-        guard let amount = relative.positiveAmount, let unit = relative.unit else {
-            return nil
-        }
-
-        switch unit {
-        case .day:
-            return (amount, .day)
-        case .week:
-            return (amount, .weekOfYear)
-        case .month:
-            return (amount, .month)
-        }
+        return range.contains(candidate)
     }
 
     private static func displayDate(_ date: Date?) -> String {
@@ -1001,6 +564,421 @@ struct SearchExecutor: Sendable {
     }
 }
 
+/// 结果行里与具体条目无关、每次搜索只算一次的展示信息
+private struct ResultPresentation: Sendable {
+    let preview: String
+    let highlight: (kind: SearchResultHighlightKind, query: String)?
+    let matchReasons: MatchReasons
+}
+
+/// 每次搜索只查一次本地化文案：L10n 每次调用都会重新加载语言包，不适合在遍历中逐项调用
+private struct MatchReasons: Sendable {
+    private let highlighted: String?
+    private let folder: String
+    private let name: String
+
+    init(highlight: (kind: SearchResultHighlightKind, query: String)?) {
+        switch highlight?.kind {
+        case .name:
+            highlighted = L10n.string("search_result.match_reason.name")
+        case .extensionName:
+            highlighted = L10n.string("search_result.match_reason.extension")
+        case nil:
+            highlighted = nil
+        }
+        folder = L10n.string("search_result.match_reason.folder")
+        name = L10n.string("search_result.match_reason.name")
+    }
+
+    func reason(isDirectory: Bool) -> String {
+        highlighted ?? (isDirectory ? folder : name)
+    }
+}
+
+// MARK: - 一次搜索的执行过程
+
+/// 一次搜索用到的全部状态。遍历线程、卷目录搜索线程与 Spotlight 线程并发调用其中的判定方法
+private final class SearchRun: @unchecked Sendable {
+    private let executor: SearchExecutor
+    private let request: SearchRequest
+    private let includeSpotlight: Bool
+    private let behavior: SearchRuleExecutionBehavior
+    /// 规范化、预解析后的规则，按判定成本排序
+    private let matchingRules: [PreparedSearchRule]
+    private let hasTextContentRule: Bool
+    /// 去重后的搜索根
+    private let rootPaths: [String]
+    /// 每个搜索根各自的特殊文件夹规划
+    private let planningByRoot: [String: SpecialFolderPlanningResult]
+    private let presentation: ResultPresentation
+    private let collector: SearchResultCollector
+    /// 用户取消或达到数量上限时置位，遍历、卷目录搜索与 Spotlight 都据此停止
+    private let stopToken: SearchCancellationToken
+    private let hiddenPaths = HiddenPathChecker()
+    /// 是否在判定前先查已收集的路径：多个阶段可能送来同一条目，规则需要读属性或内容时跳过重复判定更省事
+    private var checksDuplicates = false
+
+    init(
+        executor: SearchExecutor,
+        request: SearchRequest,
+        includeSpotlight: Bool,
+        cancellation: SearchCancellationToken,
+        onProgress: (@Sendable (SearchExecutionProgress) -> Void)?
+    ) {
+        self.executor = executor
+        self.request = request
+        self.includeSpotlight = includeSpotlight
+        let behavior = SearchRuleExecutionBehavior(rules: request.rules)
+        self.behavior = behavior
+        let now = executor.currentDate()
+        let preparedRules = request.rules.map {
+            PreparedSearchRule(
+                $0,
+                caseSensitive: behavior.caseSensitive,
+                diacriticsSensitive: behavior.diacriticsSensitive,
+                now: now
+            )
+        }
+        matchingRules = SearchExecutor.orderedByEvaluationCost(preparedRules)
+        hasTextContentRule = preparedRules.contains { $0.field == .textContent && $0.value.isEmpty == false }
+        rootPaths = SearchExecutor.uniquePaths(request.rootPaths)
+        planningByRoot = executor.specialFolderPlanning(for: rootPaths)
+        let highlight = SearchExecutor.highlightMetadata(for: preparedRules)
+        presentation = ResultPresentation(
+            preview: SearchExecutor.previewText(for: preparedRules),
+            highlight: highlight,
+            matchReasons: MatchReasons(highlight: highlight)
+        )
+        collector = SearchResultCollector(title: request.queryTitle, limit: behavior.limitAmount, onProgress: onProgress)
+        stopToken = SearchCancellationToken(parent: cancellation)
+    }
+
+    private var isStopped: Bool {
+        stopToken.isCancelled
+    }
+
+    func execute() -> SearchExecutionResult {
+        // “数量少于 1” 等同于不要结果
+        guard behavior.limitAmount != 0, isStopped == false else {
+            return collector.result()
+        }
+
+        let catalogPlan = catalogSearchPlan()
+        let runsSpotlight = includeSpotlight && executor.spotlightSearchService.buildQuery(from: request.rules) != nil
+        checksDuplicates = (runsSpotlight || catalogPlan != nil)
+            && matchingRules.contains { SearchExecutor.evaluationCost(of: $0.field) >= 2 }
+
+        // Spotlight 预取在后台与卷目录搜索 / 遍历并行，先给出第一屏结果，不拖慢后面的完整搜索
+        let spotlightToken = SearchCancellationToken(parent: stopToken)
+        let spotlightGroup = DispatchGroup()
+        if runsSpotlight {
+            spotlightGroup.enter()
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                defer { spotlightGroup.leave() }
+                runSpotlightPrefetch(stopToken: spotlightToken)
+            }
+        }
+
+        var walkRoots = rootPaths
+        if let catalogPlan {
+            if let fallbackRoots = runCatalogSearch(catalogPlan) {
+                walkRoots = SearchExecutor.uniquePaths(catalogPlan.walkRoots + fallbackRoots)
+            } else {
+                walkRoots = []
+            }
+        }
+
+        if walkRoots.isEmpty == false, isStopped == false {
+            let plan = SearchPlan(
+                rootPaths: walkRoots,
+                specialFolderPlanning: walkRoots.map { planning(for: $0) }
+            )
+            executor.walker.walk(
+                plan: plan,
+                includeHiddenFiles: behavior.includeInvisibleItems,
+                cancellation: stopToken
+            ) { [self] entry in
+                evaluate(entry)
+            }
+        }
+
+        // 等 Spotlight 预取结束再返回：它能补充遍历进不去的目录中的条目，以及 PDF、Office 等读取原始字节无法判定的内容命中。
+        // 它与遍历并行，通常早已结束；取消或达到数量上限时 spotlightToken 随 stopToken 一起失效，mdfind 会被立即结束
+        spotlightGroup.wait()
+
+        return collector.result()
+    }
+
+    // MARK: 逐项判定
+
+    /// 遍历与卷目录搜索共用的逐项判定，可在多个线程上并发调用
+    private func evaluate(_ entry: DirectoryEntry) -> DirectoryWalkControl {
+        let rootPath = SearchExecutor.rootPath(containing: entry.path, in: rootPaths)
+        guard SearchExecutor.isExcluded(entry.path, by: request.excludedPaths, rootPath: rootPath) == false else {
+            return .skipDescendants
+        }
+
+        // 先算是否进入子目录，已收集过的条目也要遵守深度、包内容等剪枝
+        let descendControl: DirectoryWalkControl =
+            behavior.shouldDescend(into: entry, rootPath: rootPath) ? .continue : .skipDescendants
+
+        if checksDuplicates, collector.contains(entry.path) {
+            return collector.hasReachedLimit ? .stop : descendControl
+        }
+
+        guard behavior.allows(entry: entry, rootPath: rootPath),
+              let item = matchedItem(for: entry, rootPath: rootPath, trustsTextContent: false, attributes: nil) else {
+            return descendControl
+        }
+        return append(item) ? descendControl : .stop
+    }
+
+    /// 按全部规则判定条目，命中时生成结果行。trustsTextContent 为 true 时跳过文本内容规则（已由 Spotlight 判定）
+    private func matchedItem(
+        for entry: DirectoryEntry,
+        rootPath: String,
+        trustsTextContent: Bool,
+        attributes preloaded: [FileAttributeKey: Any]?
+    ) -> SearchResultItem? {
+        do {
+            // 属性只在规则需要或条目命中后才读取，绝大多数不命中的条目不再多一次 stat
+            var cachedAttributes = preloaded
+            func attributes() throws -> [FileAttributeKey: Any] {
+                if let cachedAttributes {
+                    return cachedAttributes
+                }
+                let loaded = try executor.provider.attributesOfItem(atPath: entry.path)
+                cachedAttributes = loaded
+                return loaded
+            }
+
+            for rule in matchingRules {
+                if trustsTextContent, rule.field == .textContent {
+                    continue
+                }
+                let ruleAttributes = rule.needsAttributes ? try attributes() : [:]
+                guard try executor.matches(entry: entry, attributes: ruleAttributes, rule: rule, behavior: behavior) else {
+                    return nil
+                }
+            }
+
+            let item = executor.makeResultItem(for: entry, attributes: try attributes(), presentation: presentation)
+            guard behavior.allows(item: item, rootPath: rootPath) else {
+                return nil
+            }
+            return item
+        } catch {
+            return nil
+        }
+    }
+
+    /// 返回 false 表示已达到数量上限，各阶段都应停止
+    private func append(_ item: SearchResultItem) -> Bool {
+        guard collector.append(item) == .reachedLimit else {
+            return true
+        }
+        stopToken.cancel()
+        return false
+    }
+
+    private func planning(for path: String) -> SpecialFolderPlanningResult {
+        planningByRoot[SearchExecutor.rootPath(containing: path, in: rootPaths)] ?? SpecialFolderPlanningResult()
+    }
+
+    // MARK: Spotlight 预取
+
+    private func runSpotlightPrefetch(stopToken spotlightToken: SearchCancellationToken) {
+        let shouldStop: @Sendable () -> Bool = { spotlightToken.isCancelled }
+        let trustsTextContent = SpotlightSearchService.trustsTextContentHits(
+            caseSensitive: behavior.caseSensitive,
+            diacriticsSensitive: behavior.diacriticsSensitive
+        )
+        let service = executor.spotlightSearchService
+        for rootPath in rootPaths {
+            guard shouldStop() == false else {
+                return
+            }
+            // 查询失败（如 mdfind 超时）时已回调的结果保留，其余由遍历补全
+            _ = try? service.search(rootPath: rootPath, rules: request.rules, shouldStop: shouldStop) { [self] path in
+                handleSpotlightPath(path, trustsTextContent: trustsTextContent, stopToken: spotlightToken)
+            }
+            _ = try? service.searchTextContentCandidates(rootPath: rootPath, rules: request.rules, shouldStop: shouldStop) { [self] path in
+                handleSpotlightPath(path, trustsTextContent: false, stopToken: spotlightToken)
+            }
+        }
+    }
+
+    /// Spotlight 结果是近似的候选（不区分大小写、不收录系统目录等），按与遍历相同的条件过滤并复核每条规则
+    private func handleSpotlightPath(_ path: String, trustsTextContent: Bool, stopToken spotlightToken: SearchCancellationToken) {
+        guard spotlightToken.isCancelled == false, collector.contains(path) == false else {
+            return
+        }
+
+        let rootPath = SearchExecutor.rootPath(containing: path, in: rootPaths)
+        guard SearchExecutor.isStrictDescendant(path, of: SearchExecutor.trimmingTrailingSlash(rootPath)),
+              SearchExecutor.isExcluded(path, by: request.excludedPaths, rootPath: rootPath) == false,
+              planning(for: path).allows(path: path) else {
+            return
+        }
+        // 遍历不会进入不可见目录，这里补查搜索根以下的每一级
+        if behavior.includeInvisibleItems == false, hiddenPaths.hasHiddenComponent(path, below: rootPath) {
+            return
+        }
+
+        guard let attributes = try? executor.provider.attributesOfItem(atPath: path) else {
+            return
+        }
+        let isDirectory = attributes[.type] as? FileAttributeType == .typeDirectory
+        // 文件夹没有文本内容：Spotlight 的内容查询偶尔也会返回文件夹（如带文本属性的包），一律排除
+        if hasTextContentRule, isDirectory {
+            return
+        }
+
+        let entry = DirectoryEntry(
+            path: path,
+            isDirectory: isDirectory,
+            isHidden: (path as NSString).lastPathComponent.hasPrefix(".")
+        )
+        guard behavior.allows(entry: entry, rootPath: rootPath),
+              let item = matchedItem(for: entry, rootPath: rootPath, trustsTextContent: trustsTextContent, attributes: attributes) else {
+            return
+        }
+        _ = append(item)
+    }
+
+    // MARK: 卷目录搜索
+
+    /// 以整个卷为搜索根、且至少有一条规则要求名称包含某段文字时，用 searchfs 在卷目录中按名称预筛选，
+    /// 代替逐个目录遍历；候选项仍按完整规则复核。不满足条件的根目录照常遍历
+    private func catalogSearchPlan() -> CatalogSearchPlan? {
+        // 深度限制依赖遍历时逐层剪枝，卷目录搜索无法提前排除深层目录
+        guard let catalogSearcher = executor.catalogSearcher,
+              behavior.maximumFolderDepth == nil,
+              let nameFragment = SearchExecutor.catalogNameFragment(
+                for: matchingRules.map(\.selection),
+                diacriticsSensitive: behavior.diacriticsSensitive
+              ) else {
+            return nil
+        }
+
+        let mountPoints = Set(catalogSearcher.mountPoints().map(SearchExecutor.trimmingTrailingSlash))
+        let dataVolumePath = SearchExecutor.dataVolumePath
+        var targets: [CatalogSearchTarget] = []
+        var walkRoots: [String] = []
+
+        for rootPath in rootPaths {
+            let volumePath = SearchExecutor.trimmingTrailingSlash(rootPath)
+            // Data 卷上的条目经固件链接映射到 /Users 等位置，fsgetpath 返回的是映射后的路径，不在 Data 卷挂载点之下
+            guard mountPoints.contains(volumePath), volumePath != dataVolumePath else {
+                walkRoots.append(rootPath)
+                continue
+            }
+
+            var rootTargets = [CatalogSearchTarget(volumePath: volumePath, scopeRoot: rootPath, fallbackRoot: rootPath)]
+            if volumePath == "/", mountPoints.contains(dataVolumePath) {
+                // 启动卷的用户数据在 Data 卷上。只有遍历时也跳过 /System/Volumes/Data（同一文件不会再以该前缀出现），
+                // 按固件链接路径返回的 Data 卷结果才与遍历等价
+                guard SearchExecutor.isExcluded(dataVolumePath, by: request.excludedPaths, rootPath: rootPath) else {
+                    walkRoots.append(rootPath)
+                    continue
+                }
+                rootTargets.append(CatalogSearchTarget(volumePath: dataVolumePath, scopeRoot: rootPath, fallbackRoot: rootPath))
+            }
+
+            // searchfs 不跨越挂载点，遍历会进入的嵌套卷需要单独搜索
+            let rootPlanning = planning(for: rootPath)
+            for mountPoint in mountPoints.sorted()
+            where mountPoint != dataVolumePath && SearchExecutor.isStrictDescendant(mountPoint, of: volumePath) {
+                guard SearchExecutor.isExcluded(mountPoint, by: request.excludedPaths, rootPath: rootPath) == false,
+                      rootPlanning.allows(path: mountPoint),
+                      behavior.includeInvisibleItems || hiddenPaths.hasHiddenComponent(mountPoint, below: rootPath) == false else {
+                    continue
+                }
+                rootTargets.append(CatalogSearchTarget(volumePath: mountPoint, scopeRoot: rootPath, fallbackRoot: mountPoint))
+            }
+            targets += rootTargets
+        }
+
+        guard targets.isEmpty == false else {
+            return nil
+        }
+        return CatalogSearchPlan(nameFragment: nameFragment, targets: targets, walkRoots: walkRoots)
+    }
+
+    /// 并发搜索各个卷，返回需要改为遍历的根目录（搜索失败的卷）；被取消或达到数量上限时返回 nil
+    private func runCatalogSearch(_ plan: CatalogSearchPlan) -> [String]? {
+        guard let catalogSearcher = executor.catalogSearcher, isStopped == false else {
+            return nil
+        }
+
+        let failures = CatalogFailureRecorder()
+        let group = DispatchGroup()
+        for target in plan.targets {
+            group.enter()
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                defer { group.leave() }
+                let scopePrefix = SearchExecutor.directoryPrefix(target.scopeRoot)
+                do {
+                    try catalogSearcher.search(
+                        volumePath: target.volumePath,
+                        nameFragment: plan.nameFragment,
+                        shouldStop: { self.isStopped }
+                    ) { matches in
+                        for match in matches {
+                            guard isStopped == false else {
+                                return
+                            }
+                            // 与遍历保持一致：只要搜索根之下的条目，跳过特殊文件夹与不可见目录中的内容
+                            guard match.path.utf8.count > scopePrefix.utf8.count, match.path.hasPrefix(scopePrefix) else {
+                                continue
+                            }
+                            let rootPath = SearchExecutor.rootPath(containing: match.path, in: rootPaths)
+                            guard planning(for: match.path).allows(path: match.path),
+                                  behavior.includeInvisibleItems
+                                    || hiddenPaths.hasHiddenComponent(match.path, below: rootPath) == false else {
+                                continue
+                            }
+                            let entry = DirectoryEntry(
+                                path: match.path,
+                                isDirectory: match.isDirectory,
+                                isHidden: (match.path as NSString).lastPathComponent.hasPrefix(".")
+                            )
+                            _ = evaluate(entry)
+                        }
+                    }
+                } catch {
+                    // 已回调的结果保留，整个卷改为遍历，重复项由结果汇总去重
+                    failures.record(fallbackRoot: target.fallbackRoot)
+                }
+            }
+        }
+
+        // 各卷的 searchfs 每次最多在内核停留 200ms，之间通过 shouldStop 检查取消与数量上限
+        group.wait()
+
+        guard isStopped == false else {
+            return nil
+        }
+        return failures.fallbackRoots
+    }
+}
+
+private extension SearchExecutor {
+    func currentDate() -> Date {
+        nowProvider()
+    }
+
+    /// 每个搜索根各自规划特殊文件夹，排除规则只作用于与它相关的根
+    func specialFolderPlanning(for rootPaths: [String]) -> [String: SpecialFolderPlanningResult] {
+        let configuration = specialFoldersStore.load()
+        var result: [String: SpecialFolderPlanningResult] = [:]
+        for rootPath in rootPaths {
+            result[rootPath] = specialFolderPlanner.plan(rootPath: rootPath, configuration: configuration)
+        }
+        return result
+    }
+}
+
 private struct CatalogSearchTarget: Sendable {
     /// 传给 searchfs 的卷挂载点
     let volumePath: String
@@ -1017,17 +995,10 @@ private struct CatalogSearchPlan: Sendable {
     let walkRoots: [String]
 }
 
-/// 多个卷并发搜索时共享的停止标志与失败记录
-private final class CatalogSearchState: @unchecked Sendable {
+/// 多个卷并发搜索时记录失败、需要改为遍历的卷
+private final class CatalogFailureRecorder: @unchecked Sendable {
     private let lock = NSLock()
-    private var stopped = false
     private var failedRoots: [String] = []
-
-    var isStopped: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return stopped
-    }
 
     var fallbackRoots: [String] {
         lock.lock()
@@ -1035,16 +1006,62 @@ private final class CatalogSearchState: @unchecked Sendable {
         return failedRoots
     }
 
-    func stop() {
-        lock.lock()
-        stopped = true
-        lock.unlock()
-    }
-
-    func recordFailure(fallbackRoot: String) {
+    func record(fallbackRoot: String) {
         lock.lock()
         failedRoots.append(fallbackRoot)
         lock.unlock()
+    }
+}
+
+/// 判断路径在搜索根以下是否经过不可见的一级（名称以 “.” 开头或带 UF_HIDDEN 标志，如 ~/Library）。
+/// 卷目录搜索与 Spotlight 直接给出深层路径，需要补做遍历时逐层跳过不可见目录的判断；目录的结果会缓存
+final class HiddenPathChecker: @unchecked Sendable {
+    private let lock = NSLock()
+    private var directoryCache: [String: Bool] = [:]
+
+    init() {}
+
+    /// 检查 rootPath 以下直到 path 本身的每一级
+    func hasHiddenComponent(_ path: String, below rootPath: String) -> Bool {
+        let prefix = rootPath.hasSuffix("/") ? rootPath : rootPath + "/"
+        guard path.hasPrefix(prefix) else {
+            return false
+        }
+        let components = path.dropFirst(prefix.count).split(separator: "/")
+        var current = String(prefix.dropLast())
+        for (index, component) in components.enumerated() {
+            if component.hasPrefix(".") {
+                return true
+            }
+            current += "/" + component
+            let isLast = index == components.count - 1
+            if isLast ? Self.hasHiddenFlag(atPath: current) : cachedHiddenFlag(atPath: current) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func cachedHiddenFlag(atPath path: String) -> Bool {
+        lock.lock()
+        let cached = directoryCache[path]
+        lock.unlock()
+        if let cached {
+            return cached
+        }
+        let hidden = Self.hasHiddenFlag(atPath: path)
+        lock.lock()
+        directoryCache[path] = hidden
+        lock.unlock()
+        return hidden
+    }
+
+    static func hasHiddenFlag(atPath path: String) -> Bool {
+        var info = stat()
+        guard lstat(path, &info) == 0 else {
+            return false
+        }
+        return info.st_flags & UInt32(UF_HIDDEN) != 0
     }
 }
 
@@ -1068,9 +1085,8 @@ private struct SearchRuleExecutionBehavior: Sendable {
     let maximumFolderDepth: Int?
     /// 允许的最小相对深度（含），用于“深度大于 N”
     let minimumFolderDepth: Int?
+    /// 结果数量上限，nil 表示不限，0 表示不要任何结果
     let limitAmount: Int?
-    /// 同一次搜索内复用编译好的正则，遍历时每个条目都可能用到
-    let regexCache = RegexCache()
 
     init(rules: [SearchRuleSelection]) {
         caseSensitive = Self.booleanValue(for: .caseSensitive, in: rules) ?? false
@@ -1094,6 +1110,7 @@ private struct SearchRuleExecutionBehavior: Sendable {
         let amountRule = Self.intRule(for: .limitAmount, in: rules)
         switch amountRule?.operator {
         case .isLessThan:
+            // “少于 1 个” 得到 0，即不要任何结果
             limitAmount = amountRule.map { max($0.value - 1, 0) }
         default:
             limitAmount = amountRule?.value
@@ -1156,11 +1173,12 @@ private struct SearchRuleExecutionBehavior: Sendable {
         return true
     }
 
-    func allows(item: SearchResultItem) -> Bool {
+    /// 结果行复核：包内容按相对搜索根判断，搜索根本身位于包内（如 /Applications/Xcode.app）时其中的结果不受影响
+    func allows(item: SearchResultItem, rootPath: String) -> Bool {
         if includeInvisibleItems == false, item.isInvisible {
             return false
         }
-        if includePackageContents == false, SearchExecutor.isInsidePackageContents(item.path) {
+        if includePackageContents == false, SearchExecutor.isInsidePackageContents(item.path, relativeTo: rootPath) {
             return false
         }
         if includeTrashedContents == false, item.isTrashed {
@@ -1192,24 +1210,6 @@ private struct SearchRuleExecutionBehavior: Sendable {
     }
 }
 
-private final class RegexCache: @unchecked Sendable {
-    private let lock = NSLock()
-    private var storage: [String: NSRegularExpression?] = [:]
-
-    func regex(for pattern: String, caseSensitive: Bool) -> NSRegularExpression? {
-        let key = (caseSensitive ? "1" : "0") + pattern
-        lock.lock()
-        defer { lock.unlock() }
-        if let cached = storage[key] {
-            return cached
-        }
-        let options: NSRegularExpression.Options = caseSensitive ? [] : [.caseInsensitive]
-        let regex = try? NSRegularExpression(pattern: pattern, options: options)
-        storage[key] = regex
-        return regex
-    }
-}
-
 /// 并发遍历中汇总结果：按路径去重、执行数量上限，并把进度回调节流到约 100ms 一次
 private final class SearchResultCollector: @unchecked Sendable {
     enum AppendOutcome {
@@ -1222,6 +1222,7 @@ private final class SearchResultCollector: @unchecked Sendable {
 
     private let lock = NSLock()
     private let title: String
+    /// nil 表示不限；0 表示不接收任何结果
     private let limit: Int?
     private let onProgress: (@Sendable (SearchExecutionProgress) -> Void)?
     private var items: [SearchResultItem] = []
@@ -1232,14 +1233,8 @@ private final class SearchResultCollector: @unchecked Sendable {
 
     init(title: String, limit: Int?, onProgress: (@Sendable (SearchExecutionProgress) -> Void)?) {
         self.title = title
-        self.limit = limit.flatMap { $0 > 0 ? $0 : nil }
+        self.limit = limit
         self.onProgress = onProgress
-    }
-
-    var isEmpty: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return items.isEmpty
     }
 
     var hasReachedLimit: Bool {
@@ -1369,7 +1364,8 @@ struct FileKindResolver: Sendable {
             if contentType.conforms(to: .image) {
                 ids.insert("kind.image")
             }
-            if contentType.conforms(to: .movie) || contentType.conforms(to: .audiovisualContent) {
+            // 音频同样遵从 .audiovisualContent，只有 .movie 才是视频
+            if contentType.conforms(to: .movie) {
                 ids.insert("kind.video")
             }
             if contentType.conforms(to: .pdf) {
@@ -1512,6 +1508,7 @@ extension SearchExecutor {
 }
 
 private extension SearchExecutor {
+    /// 只看搜索根以下的各级目录：搜索根本身在包内时，不因此排除其中的条目
     static func isInsidePackageContents(_ path: String, relativeTo rootPath: String) -> Bool {
         let rootComponentCount = (rootPath as NSString).pathComponents.count
         return (path as NSString).pathComponents

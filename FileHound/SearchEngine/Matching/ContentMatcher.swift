@@ -23,11 +23,17 @@ struct ContentMatcher: Sendable {
         }
     }
 
+    /// 非“包含”类运算符需要把整个文件解码成字符串再比较，超过这个大小的文件不再解码（视为不匹配）：
+    /// 多个线程同时解码几百 MB 的文件会占用大量内存，而这类运算符（正则、开头是、完全是等）对超大文件几乎没有意义
+    static let maximumDecodedContentSize = 64 << 20
+
+    /// regex 为调用方预先编译好的正则（正则、通配符运算符使用），为 nil 时按规则值临时编译
     func matches(
         data: Data,
         rule: SearchRuleSelection,
         compareOptions: String.CompareOptions,
-        caseSensitive: Bool
+        caseSensitive: Bool,
+        regex: NSRegularExpression? = nil
     ) throws -> Bool {
         let trimmedValue = rule.value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmedValue.isEmpty == false else {
@@ -49,27 +55,82 @@ struct ContentMatcher: Sendable {
             return splitTerms(from: trimmedValue).contains {
                 containsText($0, in: content, compareOptions: compareOptions)
             }
-        case .isAnyOf:
-            let terms = splitTerms(from: trimmedValue)
-            if terms.contains(where: { fastContains(data: data, needle: $0) }) {
-                return true
-            }
         default:
             break
         }
 
-        let candidates = decodedCandidates(from: data)
-        guard candidates.isEmpty == false else {
+        guard data.count <= Self.maximumDecodedContentSize else {
             return false
         }
 
-        return candidates.contains {
-            matches(
-                candidate: $0,
-                rule: rule,
-                compareOptions: compareOptions,
-                caseSensitive: caseSensitive
-            )
+        // 只解码一次：编码由 LazyTextContent 识别，不再按多种编码各解码出一份完整副本
+        let text: String
+        switch content.form {
+        case .binary:
+            // 二进制文件没有可比较的文字：肯定类运算符不命中，否定类运算符视为满足（与“不包含”一致）
+            return Self.isNegativeOperator(rule.operator)
+        case .ascii:
+            text = String(decoding: data, as: UTF8.self)
+        case .utf8(let string), .unicodeWithBOM(let string), .latin1(let string):
+            text = string
+        }
+
+        let compiledRegex: NSRegularExpression?
+        switch rule.operator {
+        case .matchesRegex, .doesNotMatchRegex, .matchesPattern:
+            compiledRegex = regex ?? Self.compileRegex(for: rule.operator, value: trimmedValue, caseSensitive: caseSensitive)
+        default:
+            compiledRegex = nil
+        }
+
+        return matches(
+            candidate: text,
+            value: trimmedValue,
+            operator: rule.operator,
+            compareOptions: compareOptions,
+            regex: compiledRegex
+        )
+    }
+
+    /// 编译正则 / 通配符运算符使用的正则；非法正则返回 nil
+    static func compileRegex(for searchOperator: SearchRuleOperator, value: String, caseSensitive: Bool) -> NSRegularExpression? {
+        let pattern: String
+        switch searchOperator {
+        case .matchesPattern:
+            pattern = wildcardPattern(from: value)
+        case .matchesRegex, .doesNotMatchRegex:
+            pattern = value
+        default:
+            return nil
+        }
+        let options: NSRegularExpression.Options = caseSensitive ? [] : [.caseInsensitive]
+        return try? NSRegularExpression(pattern: pattern, options: options)
+    }
+
+    /// 把 “*”“?” 通配符转换为整串匹配的正则
+    static func wildcardPattern(from value: String) -> String {
+        let escaped = NSRegularExpression.escapedPattern(for: value)
+        return "^" + escaped
+            .replacingOccurrences(of: "\\*", with: ".*")
+            .replacingOccurrences(of: "\\?", with: ".") + "$"
+    }
+
+    /// 按字节查找即可判定、不需要整份解码的“包含”类运算符，不受 maximumDecodedContentSize 限制
+    static func isContainsOperator(_ searchOperator: SearchRuleOperator) -> Bool {
+        switch searchOperator {
+        case .contains, .containsPhrase, .doesNotContain, .containsWords, .containsAnyOf:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private static func isNegativeOperator(_ searchOperator: SearchRuleOperator) -> Bool {
+        switch searchOperator {
+        case .isNot, .doesNotContain, .doesNotMatchRegex:
+            return true
+        default:
+            return false
         }
     }
 
@@ -77,20 +138,20 @@ struct ContentMatcher: Sendable {
     /// 先找原样编码的 needle；再用其中不受大小写、变音符号影响的连续字符预筛，宽松比较下能命中的内容必然逐字节含有它；
     /// 都无法定论时才按内容的实际形态比较
     private func containsText(_ needle: String, in content: LazyTextContent, compareOptions: String.CompareOptions) -> Bool {
-        let data = content.data
-        if fastContains(data: data, needle: needle) {
+        if containsEncoded(needle, in: content) {
             return true
         }
 
         if let invariantRun = Self.longestFoldInvariantRun(of: needle, compareOptions: compareOptions) {
             // 整个 needle 都不受折叠影响时，按字节查找已经是最终结果
-            if invariantRun == needle || fastContains(data: data, needle: invariantRun) == false {
+            if invariantRun == needle || containsEncoded(invariantRun, in: content) == false {
                 return false
             }
         }
 
+        let data = content.data
         guard compareOptions.isSubset(of: [.caseInsensitive, .diacriticInsensitive]) else {
-            return decodedCandidates(from: data).contains { $0.range(of: needle, options: compareOptions) != nil }
+            return content.decodedText.map { $0.range(of: needle, options: compareOptions) != nil } ?? false
         }
 
         let caseInsensitive = compareOptions.contains(.caseInsensitive)
@@ -103,7 +164,7 @@ struct ContentMatcher: Sendable {
         }
 
         switch content.form {
-        case .text(let string):
+        case .utf8(let string), .unicodeWithBOM(let string), .latin1(let string):
             return string.range(of: needle, options: compareOptions) != nil
         case .ascii:
             // 纯 ASCII 内容里没有变音符号，折叠后的 needle 仍是 ASCII 时按字节忽略大小写查找即可
@@ -123,11 +184,34 @@ struct ContentMatcher: Sendable {
         }
     }
 
+    /// 按字节查找 needle 的各种 Unicode 编码；Latin-1 编码只在内容不是合法 UTF-8 文本时才查找：
+    /// 否则 “é”（Latin-1 为 0xE9）会命中 UTF-8 中以 0xE9 开头的汉字（U+9000–U+9FFF）
+    private func containsEncoded(_ needle: String, in content: LazyTextContent) -> Bool {
+        let data = content.data
+        if Self.unicodeEncodedNeedles(for: needle).contains(where: { encoded in
+            encoded.withUnsafeBytes { Self.bytesContain($0, in: data) }
+        }) {
+            return true
+        }
+        // 纯 ASCII 的 needle 的 Latin-1 编码与 UTF-8 相同，上面已经找过
+        guard needle.utf8.contains(where: { $0 >= 0x80 }),
+              let latin1 = needle.data(using: .isoLatin1),
+              content.mayContainLatin1Text else {
+            return false
+        }
+        return latin1.withUnsafeBytes { Self.bytesContain($0, in: data) }
+    }
+
     /// 不受当前比较选项影响的字符：既没有大小写和变音符号变体，也没有其他 Unicode 组合形式，
     /// 宽松比较下能匹配它的只有它自身的编码
     private static func isFoldInvariant(_ character: Character, compareOptions: String.CompareOptions) -> Bool {
         let value = String(character)
         if compareOptions.contains(.caseInsensitive), value.lowercased() != value || value.uppercased() != value {
+            return false
+        }
+        // 忽略变音符号时，不带变音的字母也能匹配内容中带变音的写法（“e” 匹配 “é”，希伯来文字母匹配带点的写法），
+        // 所以能带变音符号的字母一律不能用来按字节预筛
+        if compareOptions.contains(.diacriticInsensitive), DiacriticFolding.mayCarryDiacritics(character) {
             return false
         }
         if compareOptions.contains(.diacriticInsensitive), value.folding(options: .diacriticInsensitive, locale: nil) != value {
@@ -197,12 +281,6 @@ struct ContentMatcher: Sendable {
         byte &- 0x41 < 26 ? byte | 0x20 : byte
     }
 
-    private func fastContains(data: Data, needle: String) -> Bool {
-        encodedNeedles(for: needle).contains { encoded in
-            encoded.withUnsafeBytes { Self.bytesContain($0, in: data) }
-        }
-    }
-
     /// 用 memmem 查找：Data.range(of:) 在未优化的构建里每字节都要走泛型代码，大文件上慢几十倍
     private static func bytesContain(_ needle: UnsafeRawBufferPointer, in data: Data) -> Bool {
         guard let needleBase = needle.baseAddress, needle.isEmpty == false else {
@@ -216,15 +294,13 @@ struct ContentMatcher: Sendable {
         }
     }
 
-    private func encodedNeedles(for needle: String) -> [Data] {
-        // 包含 isoLatin1：慢速路径也会按它解码，按字节找到即可直接确认
+    private static func unicodeEncodedNeedles(for needle: String) -> [Data] {
         let encodings: [String.Encoding] = [
             .utf8,
             .utf16LittleEndian,
             .utf16BigEndian,
             .utf32LittleEndian,
-            .utf32BigEndian,
-            .isoLatin1
+            .utf32BigEndian
         ]
         var seen = Set<Data>()
         var encodedValues: [Data] = []
@@ -239,90 +315,59 @@ struct ContentMatcher: Sendable {
         return encodedValues
     }
 
-    private func decodedCandidates(from data: Data) -> [String] {
-        let encodings: [String.Encoding] = [
-            .utf8,
-            .utf16,
-            .utf16LittleEndian,
-            .utf16BigEndian,
-            .utf32,
-            .utf32LittleEndian,
-            .utf32BigEndian,
-            .isoLatin1
-        ]
-
-        var candidates: [String] = []
-        var seen = Set<String>()
-
-        for encoding in encodings {
-            guard let string = String(data: data, encoding: encoding),
-                  string.isEmpty == false,
-                  seen.insert(string).inserted else {
-                continue
-            }
-            candidates.append(string)
-        }
-
-        if candidates.isEmpty {
-            let fallback = String(decoding: data, as: UTF8.self)
-            if fallback.isEmpty == false {
-                candidates.append(fallback)
-            }
-        }
-
-        return candidates
-    }
-
     private func matches(
         candidate: String,
-        rule: SearchRuleSelection,
+        value: String,
+        operator searchOperator: SearchRuleOperator,
         compareOptions: String.CompareOptions,
-        caseSensitive: Bool
+        regex: NSRegularExpression?
     ) -> Bool {
-        let trimmedValue = rule.value.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        switch rule.operator {
+        switch searchOperator {
         case .contains, .containsPhrase:
-            return candidate.range(of: trimmedValue, options: compareOptions) != nil
+            return candidate.range(of: value, options: compareOptions) != nil
         case .beginsWith:
-            return candidate.range(of: trimmedValue, options: compareOptions.union(.anchored)) != nil
+            return candidate.range(of: value, options: compareOptions.union(.anchored)) != nil
         case .endsWith:
-            return candidate.range(of: trimmedValue, options: compareOptions.union(.backwards))?.upperBound == candidate.endIndex
+            return candidate.range(of: value, options: compareOptions.union(.backwards))?.upperBound == candidate.endIndex
         case .isExactly:
-            return candidate.compare(trimmedValue, options: compareOptions) == .orderedSame
+            return candidate.compare(value, options: compareOptions) == .orderedSame
         case .isNot:
-            return candidate.compare(trimmedValue, options: compareOptions) != .orderedSame
+            return candidate.compare(value, options: compareOptions) != .orderedSame
         case .doesNotContain:
-            return candidate.range(of: trimmedValue, options: compareOptions) == nil
+            return candidate.range(of: value, options: compareOptions) == nil
         case .containsWords:
-            return splitTerms(from: trimmedValue).allSatisfy {
+            return splitTerms(from: value).allSatisfy {
                 candidate.range(of: $0, options: compareOptions) != nil
             }
-        case .matchesPattern:
-            return matchRegex(candidate, pattern: wildcardPattern(from: trimmedValue), caseSensitive: caseSensitive)
         case .containsAnyOf:
-            return splitTerms(from: trimmedValue).contains {
+            return splitTerms(from: value).contains {
                 candidate.range(of: $0, options: compareOptions) != nil
             }
         case .beginsWithAnyOf:
-            return splitTerms(from: trimmedValue).contains {
+            return splitTerms(from: value).contains {
                 candidate.range(of: $0, options: compareOptions.union(.anchored)) != nil
             }
         case .endsWithAnyOf:
-            return splitTerms(from: trimmedValue).contains {
+            return splitTerms(from: value).contains {
                 candidate.range(of: $0, options: compareOptions.union(.backwards))?.upperBound == candidate.endIndex
             }
         case .isAnyOf:
-            return splitTerms(from: trimmedValue).contains {
+            return splitTerms(from: value).contains {
                 candidate.compare($0, options: compareOptions) == .orderedSame
             }
-        case .matchesRegex:
-            return matchRegex(candidate, pattern: trimmedValue, caseSensitive: caseSensitive)
+        case .matchesPattern, .matchesRegex:
+            return regex.map { Self.firstMatch($0, in: candidate) } ?? false
         case .doesNotMatchRegex:
-            return matchRegex(candidate, pattern: trimmedValue, caseSensitive: caseSensitive) == false
+            // 非法正则无法判定，按不命中处理，而不是让“不匹配”命中所有文件
+            return regex.map { Self.firstMatch($0, in: candidate) == false } ?? false
         case .isGreaterThan, .isLessThan, .isBefore, .isAfter, .isOnOrBefore, .isOnOrAfter, .isWithinTheLast, .isToday, .isYesterday:
             return false
         }
+    }
+
+    private static func firstMatch(_ regex: NSRegularExpression, in candidate: String) -> Bool {
+        let range = NSRange(candidate.startIndex..<candidate.endIndex, in: candidate)
+        return regex.firstMatch(in: candidate, options: [], range: range) != nil
     }
 
     private func splitTerms(from value: String) -> [String] {
@@ -331,22 +376,20 @@ struct ContentMatcher: Sendable {
             .map(String.init)
             .filter { $0.isEmpty == false }
     }
+}
 
-    private func wildcardPattern(from value: String) -> String {
-        let escaped = NSRegularExpression.escapedPattern(for: value)
-        return "^" + escaped
-            .replacingOccurrences(of: "\\*", with: ".*")
-            .replacingOccurrences(of: "\\?", with: ".") + "$"
-    }
-
-    private func matchRegex(_ candidate: String, pattern: String, caseSensitive: Bool) -> Bool {
-        let options: NSRegularExpression.Options = caseSensitive ? [] : [.caseInsensitive]
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: options) else {
+/// 忽略变音符号时哪些字符可能以带变音的形式出现
+enum DiacriticFolding {
+    /// 拼音文字的字母（拉丁、希腊、西里尔、希伯来、假名等）都可能带组合符号或有带变音的写法（如 “が” = “か” + 浊点）；
+    /// 汉字等表意文字与韩文音节没有变音形式，数字、标点、符号也视为不会带变音
+    static func mayCarryDiacritics(_ character: Character) -> Bool {
+        guard character.isLetter else {
             return false
         }
-
-        let range = NSRange(candidate.startIndex..<candidate.endIndex, in: candidate)
-        return regex.firstMatch(in: candidate, options: [], range: range) != nil
+        let isIdeographOrHangul = character.unicodeScalars.allSatisfy { scalar in
+            scalar.properties.isIdeographic || (0xAC00...0xD7A3).contains(scalar.value)
+        }
+        return isIdeographOrHangul == false
     }
 }
 
@@ -355,8 +398,12 @@ private final class LazyTextContent {
     enum Form {
         /// 不含 NUL 的纯 ASCII 文本
         case ascii
-        /// 能确定编码的文本（带 BOM，或不含 NUL 的 UTF-8 / Latin-1）
-        case text(String)
+        /// 不含 NUL 的合法 UTF-8 文本
+        case utf8(String)
+        /// 带 BOM 的 UTF-16 / UTF-32 文本
+        case unicodeWithBOM(String)
+        /// 不含 NUL、又不是合法 UTF-8 的内容，按 Latin-1 解码
+        case latin1(String)
         /// 含 NUL 且无 BOM，按二进制处理
         case binary
     }
@@ -377,6 +424,28 @@ private final class LazyTextContent {
         return form
     }
 
+    /// 内容中的文字可能是 Latin-1 编码：二进制文件无法确定，按 Latin-1 解码的文本则一定是
+    var mayContainLatin1Text: Bool {
+        switch form {
+        case .binary, .latin1:
+            return true
+        case .ascii, .utf8, .unicodeWithBOM:
+            return false
+        }
+    }
+
+    /// 解码后的文字；二进制内容返回 nil
+    var decodedText: String? {
+        switch form {
+        case .ascii:
+            return String(decoding: data, as: UTF8.self)
+        case .utf8(let string), .unicodeWithBOM(let string), .latin1(let string):
+            return string
+        case .binary:
+            return nil
+        }
+    }
+
     private static func detectForm(of data: Data) -> Form {
         let prefix = [UInt8](data.prefix(4))
         let bomEncoding: String.Encoding?
@@ -388,7 +457,7 @@ private final class LazyTextContent {
             bomEncoding = nil
         }
         if let bomEncoding, let string = String(data: data, encoding: bomEncoding) {
-            return .text(string)
+            return .unicodeWithBOM(string)
         }
 
         let (hasNul, isASCII) = data.withUnsafeBytes { bytes -> (Bool, Bool) in
@@ -407,8 +476,11 @@ private final class LazyTextContent {
         if isASCII {
             return .ascii
         }
-        if let string = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) {
-            return .text(string)
+        if let string = String(data: data, encoding: .utf8) {
+            return .utf8(string)
+        }
+        if let string = String(data: data, encoding: .isoLatin1) {
+            return .latin1(string)
         }
         return .binary
     }

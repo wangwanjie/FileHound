@@ -62,7 +62,7 @@ struct SearchScopeResolverTests {
             try builder.file("three/match.txt", contents: "4")
         }
         let root = fixture.path
-        let executor = SearchExecutor(spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] }))
+        let executor = SearchExecutor.hermetic()
         let request = SearchRequest(
             scopeDescription: SearchScopePreset.allDisks.rawValue,
             rootPaths: [root + "/one", root + "/two"],

@@ -1,8 +1,7 @@
 import Foundation
 
+/// 预留给“以管理员权限搜索”的文件访问实现（配合 FileHoundHelper）。目前只是骨架，行为与本地访问相同，尚未接入搜索链路
 struct PrivilegedFilesystemProvider: FilesystemAccessProviding, Sendable {
-    let kind: ProviderKind = .privileged
-
     init() {}
 
     func contentsOfDirectory(atPath path: String) throws -> [String] {

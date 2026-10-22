@@ -326,3 +326,6 @@
 "results.export.column.size_bytes" = "大小（字节）";
 "results.export.column.modified" = "修改日期";
 "results.export.column.kind" = "种类";
+
+/* engine */
+"search_rule.validation.regex_invalid" = "请输入有效的正则表达式";

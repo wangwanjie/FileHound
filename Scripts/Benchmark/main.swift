@@ -170,7 +170,6 @@ final class Counter: @unchecked Sendable {
 
 /// 不覆盖 listDirectory，使用协议默认实现：contentsOfDirectory 列名后逐项 attributesOfItem（每项一次 stat）
 struct NaiveFilesystemProvider: FilesystemAccessProviding {
-    let kind: ProviderKind = .local
     func contentsOfDirectory(atPath path: String) throws -> [String] {
         try FileManager.default.contentsOfDirectory(atPath: path)
     }
@@ -189,10 +188,10 @@ func walkerNameSearch(
     provider: @escaping @Sendable () -> any FilesystemAccessProviding = { LocalFilesystemProvider() },
     skipping skippedPaths: Set<String> = []
 ) -> Int {
-    let walker = DirectoryWalker(providerFactory: { _ in provider() }, concurrency: concurrency)
-    let plan = SearchPlan(rootPaths: roots, rootGroup: .all([]), excludedPathFragments: [], providerKind: .local, shouldScanContents: false)
+    let walker = DirectoryWalker(provider: provider(), concurrency: concurrency)
+    let plan = SearchPlan(rootPaths: roots)
     let matches = Counter()
-    _ = try? walker.walk(plan: plan, includeHiddenFiles: true) { entry in
+    walker.walk(plan: plan, includeHiddenFiles: true) { entry in
         if skippedPaths.contains(entry.path) {
             return .skipDescendants
         }
@@ -344,9 +343,9 @@ do {
             let walker = DirectoryWalker()
             let provider = LocalFilesystemProvider()
             let matcher = ContentMatcher()
-            let plan = SearchPlan(rootPaths: [root], rootGroup: .all([]), excludedPathFragments: [], providerKind: .local, shouldScanContents: true)
+            let plan = SearchPlan(rootPaths: [root])
             let matches = Counter()
-            _ = try? walker.walk(plan: plan, includeHiddenFiles: true) { entry in
+            walker.walk(plan: plan, includeHiddenFiles: true) { entry in
                 guard entry.isDirectory == false,
                       let data = try? provider.contentsOfFile(atPath: entry.path),
                       (try? matcher.matches(data: data, rule: rule, compareOptions: [], caseSensitive: true)) == true else {

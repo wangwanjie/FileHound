@@ -326,3 +326,6 @@
 "results.export.column.size_bytes" = "Size (bytes)";
 "results.export.column.modified" = "Date Modified";
 "results.export.column.kind" = "Kind";
+
+/* engine */
+"search_rule.validation.regex_invalid" = "Enter a valid regular expression.";

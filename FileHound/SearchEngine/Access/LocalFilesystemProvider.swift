@@ -2,8 +2,6 @@ import Darwin
 import Foundation
 
 struct LocalFilesystemProvider: FilesystemAccessProviding, Sendable {
-    let kind: ProviderKind = .local
-
     init() {}
 
     func contentsOfDirectory(atPath path: String) throws -> [String] {
@@ -79,7 +77,7 @@ struct LocalFilesystemProvider: FilesystemAccessProviding, Sendable {
     }
 }
 
-/// 用 getattrlistbulk 一次系统调用批量取回目录中多个子项的名称与类型，
+/// 用 getattrlistbulk 一次系统调用批量取回目录中多个子项的名称、类型与文件标志，
 /// 比 contentsOfDirectory + 逐项 attributesOfItem 快一个数量级
 enum BulkDirectoryLister {
     private static let bufferSize = 128 * 1024
@@ -97,6 +95,7 @@ enum BulkDirectoryLister {
             | attrgroup_t(ATTR_CMN_NAME)
             | attrgroup_t(ATTR_CMN_ERROR)
             | attrgroup_t(ATTR_CMN_OBJTYPE)
+            | attrgroup_t(ATTR_CMN_FLAGS)
 
         let buffer = UnsafeMutableRawPointer.allocate(byteCount: bufferSize, alignment: 8)
         defer { buffer.deallocate() }
@@ -129,7 +128,7 @@ enum BulkDirectoryLister {
         return items
     }
 
-    /// 返回的属性按 ATTR_CMN_* 位序紧密排列：returned_attrs、error、name、objtype
+    /// 返回的属性按 ATTR_CMN_* 位序紧密排列：returned_attrs、error（固定紧随 returned_attrs）、name、objtype、flags
     private static func parseEntry(_ start: UnsafeMutableRawPointer) -> DirectoryListingItem? {
         var field = start
         let returned = field.loadUnaligned(as: attribute_set_t.self)
@@ -150,6 +149,14 @@ enum BulkDirectoryLister {
             return nil
         }
         let objectType = field.loadUnaligned(as: fsobj_type_t.self)
-        return DirectoryListingItem(name: name, isDirectory: objectType == VDIR.rawValue)
+        field += MemoryLayout<fsobj_type_t>.size
+
+        // 取不到标志（某些文件系统不支持）时按无 UF_HIDDEN 处理，名称以 “.” 开头的仍会被视为不可见
+        var hasHiddenFlag = false
+        if returned.commonattr & attrgroup_t(ATTR_CMN_FLAGS) != 0 {
+            let flags = field.loadUnaligned(as: UInt32.self)
+            hasHiddenFlag = flags & UInt32(UF_HIDDEN) != 0
+        }
+        return DirectoryListingItem(name: name, isDirectory: objectType == VDIR.rawValue, hasHiddenFlag: hasHiddenFlag)
     }
 }

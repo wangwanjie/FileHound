@@ -1,18 +1,12 @@
-import CoreServices
 import Foundation
 
-/// 读取 Finder「简介」里的注释：优先读扩展属性，缺失时回退到 Spotlight 元数据
+/// 读取 Finder「简介」里的注释。访达把注释写在扩展属性 com.apple.metadata:kMDItemFinderComment 中，
+/// 该属性不存在就视为没有注释；不再回退到 MDItemCreate：它每次都要经 XPC 询问 Spotlight，逐个文件调用时整盘搜索极慢
 enum FinderCommentReader {
     static let extendedAttributeName = "com.apple.metadata:kMDItemFinderComment"
 
     static func comment(atPath path: String) -> String? {
-        if let comment = extendedAttributeComment(atPath: path) {
-            return comment
-        }
-        guard let item = MDItemCreate(kCFAllocatorDefault, path as CFString) else {
-            return nil
-        }
-        return MDItemCopyAttribute(item, kMDItemFinderComment) as? String
+        extendedAttributeComment(atPath: path)
     }
 
     static func extendedAttributeComment(atPath path: String) -> String? {
@@ -35,7 +29,7 @@ enum FinderCommentReader {
 }
 
 /// 提取脚本文件的源码：已编译的 AppleScript 经 osadecompile 反编译，文本脚本按扩展名或 shebang 识别
-struct ScriptSourceReader {
+struct ScriptSourceReader: Sendable {
     static let compiledScriptExtensions: Set<String> = ["scpt", "scptd"]
     static let textScriptExtensions: Set<String> = [
         "applescript", "sh", "bash", "zsh", "fish", "command", "tool",
@@ -43,7 +37,7 @@ struct ScriptSourceReader {
     ]
     static let maximumTextScriptSize = 1_048_576
 
-    var decompile: (String) -> String? = ScriptSourceReader.decompileWithOSA
+    var decompile: @Sendable (String) -> String? = { ScriptSourceReader.decompileWithOSA($0) }
 
     func source(
         atPath path: String,

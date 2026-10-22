@@ -43,6 +43,8 @@ final class SearchWorkflowController {
     var onResults: ((String, [SearchResultItem]) -> Void)?
 
     private var searchTask: Task<Void, Never>?
+    /// 当前搜索的取消标志：搜索在专用线程上执行，取消 Task 传递不过去，停止时直接置位
+    private var searchCancellation: SearchCancellationToken?
     private let executor: SearchExecutor
     private var latestMatchCount = 0
     private var latestItems: [SearchResultItem] = []
@@ -71,11 +73,17 @@ final class SearchWorkflowController {
         revealsResultsForCurrentSearch = false
         onStateChange?(.init(phase: .searching(scopeDescription: request.scopeDescription, matchCount: 0)))
 
+        let cancellation = SearchCancellationToken()
+        searchCancellation = cancellation
+        // 进度在后台按结果数递增的顺序产生，但每次回主线程都是独立的 Task，到达顺序不保证；
+        // 用递增序号丢弃晚到的旧快照，避免界面上的结果数回退
+        let progressOrder = ProgressOrder()
+
         searchTask = Task(priority: .userInitiated) { [weak self, executor] in
             guard let self else { return }
 
-            let emitProgress: @MainActor (SearchExecutionProgress) -> Void = { progress in
-                guard self.generation == searchGeneration else {
+            let emitProgress: @MainActor (SearchExecutionProgress, Int) -> Void = { progress, sequence in
+                guard self.generation == searchGeneration, progressOrder.acceptOnMainActor(sequence) else {
                     return
                 }
 
@@ -115,7 +123,7 @@ final class SearchWorkflowController {
                         title: request.queryTitle,
                         items: partialItems,
                         matchedCount: partialItems.count
-                    ))
+                    ), progressOrder.next())
                 }
 
                 await MainActor.run {
@@ -126,17 +134,23 @@ final class SearchWorkflowController {
                 return
             }
 
-            let result = executor.executeStreaming(
-                request: request,
-                options: SearchExecutionOptions(
-                    includeSpotlightResults: preferences.includeSpotlightResults
-                )
-            ) { progress in
-                Task { @MainActor in
-                    await emitProgress(progress)
+            let options = SearchExecutionOptions(includeSpotlightResults: preferences.includeSpotlightResults)
+            let result = await withTaskCancellationHandler {
+                await Self.runOnSearchThread {
+                    executor.executeStreaming(request: request, options: options, cancellation: cancellation) { progress in
+                        // 序号在结果汇总的锁内取得，与进度产生的顺序一致
+                        let sequence = progressOrder.next()
+                        Task { @MainActor in
+                            emitProgress(progress, sequence)
+                        }
+                    }
                 }
+            } onCancel: {
+                cancellation.cancel()
             }
-            if Task.isCancelled { return }
+            if Task.isCancelled || cancellation.isCancelled {
+                return
+            }
             await MainActor.run {
                 guard self.finish(searchGeneration) else { return }
                 if result.items.isEmpty == false {
@@ -178,9 +192,26 @@ final class SearchWorkflowController {
         onResults?(latestTitle, latestItems)
     }
 
+    /// executeStreaming 会阻塞调用线程（内部等待遍历线程、searchfs 与 mdfind），放在 Swift 并发的协作线程池里，
+    /// 多个窗口同时搜索时会占满线程池；每次搜索改用一条专用线程，结束后经 continuation 回到异步上下文
+    private static func runOnSearchThread(
+        _ work: @escaping @Sendable () -> SearchExecutionResult
+    ) async -> SearchExecutionResult {
+        await withCheckedContinuation { continuation in
+            let thread = Thread {
+                continuation.resume(returning: work())
+            }
+            thread.name = "FileHound.Search"
+            thread.qualityOfService = .userInitiated
+            thread.start()
+        }
+    }
+
     func cancel() {
         searchTask?.cancel()
         searchTask = nil
+        searchCancellation?.cancel()
+        searchCancellation = nil
         generation += 1
         onStateChange?(.init(phase: .editing(matchCount: latestMatchCount)))
     }
@@ -212,3 +243,28 @@ extension SearchWorkflowController {
     }
 }
 #endif
+
+/// 为一次搜索的进度快照编号，主线程只接受比已展示的更新的快照
+private final class ProgressOrder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var issued = 0
+    private var delivered = 0
+
+    func next() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        issued += 1
+        return issued
+    }
+
+    /// 在主线程调用：序号比已展示的旧时返回 false
+    func acceptOnMainActor(_ sequence: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard sequence > delivered else {
+            return false
+        }
+        delivered = sequence
+        return true
+    }
+}

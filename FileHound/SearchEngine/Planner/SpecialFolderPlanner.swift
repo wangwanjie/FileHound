@@ -36,6 +36,14 @@ struct SpecialFolderPlanningResult: Equatable, Sendable {
         }
     }
 
+    /// 是否为“慢速搜索”文件夹本身（遍历时延后进入）。规则路径已规范化，先按原样比较，不一致时再规范化后比较
+    func isSlowSearchPath(_ path: String) -> Bool {
+        guard slowSearchPaths.isEmpty == false else {
+            return false
+        }
+        return slowSearchPaths.contains(path) || slowSearchPaths.contains(Self.normalized(path))
+    }
+
     fileprivate static func normalized(_ path: String) -> String {
         URL(fileURLWithPath: path).standardizedFileURL.path
     }
