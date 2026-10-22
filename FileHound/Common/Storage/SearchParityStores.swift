@@ -13,12 +13,12 @@ final class SearchHistoryStore {
     }
 
     func all() -> [RecentSearchRecord] {
-        (try? storage.codableValue([RecentSearchRecord].self, forKey: key)) ?? []
+        storage.lenientArray(RecentSearchRecord.self, forKey: key).elements
     }
 
     func record(_ entry: RecentSearchRecord) throws {
         // 同一组条件只保留最新一次，避免重复搜索占满菜单
-        var entries = all().filter { $0.criteria != entry.criteria }
+        var entries = entriesForWriting().filter { $0.criteria != entry.criteria }
         entries.insert(entry, at: 0)
         if entries.count > limit {
             entries = Array(entries.prefix(limit))
@@ -27,7 +27,18 @@ final class SearchHistoryStore {
     }
 
     func removeAll() throws {
+        // 用户主动清空；若原数据有损仍先备份，保持「有损数据写回前必备份」的一致约定
+        _ = entriesForWriting()
         try storage.setCodable([RecentSearchRecord](), forKey: key)
+    }
+
+    /// 写回前读取：坏元素被跳过（或整体无法解码）时先备份原始数据，避免下一次记录覆盖全部历史
+    private func entriesForWriting() -> [RecentSearchRecord] {
+        let loaded = storage.lenientArray(RecentSearchRecord.self, forKey: key)
+        if loaded.isLossy {
+            storage.backupRawValue(forKey: key)
+        }
+        return loaded.elements
     }
 }
 
@@ -44,9 +55,10 @@ final class RecentLocationStore {
     }
 
     func all() -> [RecentLocationRecord] {
-        let entries = (try? storage.codableValue([RecentLocationRecord].self, forKey: key)) ?? []
-        let normalizedEntries = normalized(entries)
-        if normalizedEntries != entries {
+        let loaded = storage.lenientArray(RecentLocationRecord.self, forKey: key)
+        let normalizedEntries = normalized(loaded.elements)
+        // 原数据有坏元素时不在读取路径上静默改写，留给真正的写操作（先备份再写回）
+        if loaded.isLossy == false, normalizedEntries != loaded.elements {
             try? storage.setCodable(normalizedEntries, forKey: key)
         }
         return normalizedEntries
@@ -57,7 +69,12 @@ final class RecentLocationStore {
             return
         }
 
-        var entries = all()
+        let loaded = storage.lenientArray(RecentLocationRecord.self, forKey: key)
+        if loaded.isLossy {
+            // 有坏元素时写回前先备份原始数据
+            storage.backupRawValue(forKey: key)
+        }
+        var entries = normalized(loaded.elements)
         entries.removeAll { $0.scope.representedPath == representedPath }
         entries.insert(RecentLocationRecord(scope: scope, lastUsedAt: usedAt), at: 0)
         if entries.count > limit {
@@ -112,10 +129,31 @@ final class SpecialFoldersStore: @unchecked Sendable {
     }
 
     func load() -> SpecialFoldersConfiguration {
-        (try? storage.codableValue(SpecialFoldersConfiguration.self, forKey: key)) ?? .empty
+        loadConfiguration().configuration
     }
 
     func save(_ configuration: SpecialFoldersConfiguration) throws {
+        // 编辑器基于 load() 的结果保存；若原数据有坏规则被跳过（或整体无法解码），先备份原始数据，避免清空用户配置
+        if loadConfiguration().isLossy {
+            storage.backupRawValue(forKey: key)
+        }
         try storage.setCodable(configuration, forKey: key)
     }
+
+    /// 逐条宽容解码规则：跳过无法解码的单条规则，保留其余规则
+    private func loadConfiguration() -> (configuration: SpecialFoldersConfiguration, isLossy: Bool) {
+        guard let data = storage.data(forKey: key) else {
+            return (.empty, false)
+        }
+        guard let stored = try? JSONDecoder().decode(LenientSpecialFoldersConfiguration.self, from: data) else {
+            return (.empty, true)
+        }
+        let rules = stored.rules.compactMap(\.value)
+        return (SpecialFoldersConfiguration(rules: rules), rules.count != stored.rules.count)
+    }
+}
+
+/// SpecialFoldersConfiguration 的宽容解码形态，字段与其 Codable 结构保持一致
+private struct LenientSpecialFoldersConfiguration: Decodable {
+    let rules: [FailableDecodable<SpecialFolderRule>]
 }

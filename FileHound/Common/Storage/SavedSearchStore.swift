@@ -78,13 +78,13 @@ final class SavedSearchStore {
     }
 
     func save(_ search: SavedSearch) throws {
-        var searches = all()
+        var searches = searchesForWriting()
         searches.append(search)
         try storage.setCodable(searches, forKey: key)
     }
 
     func delete(_ search: SavedSearch) throws {
-        var searches = all()
+        var searches = searchesForWriting()
         guard let index = index(of: search, in: searches) else {
             return
         }
@@ -94,7 +94,7 @@ final class SavedSearchStore {
 
     func rename(_ search: SavedSearch, to newName: String) throws {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        var searches = all()
+        var searches = searchesForWriting()
         guard trimmedName.isEmpty == false, let index = index(of: search, in: searches) else {
             return
         }
@@ -108,24 +108,53 @@ final class SavedSearchStore {
     }
 
     func all() -> [SavedSearch] {
-        if let searches = try? storage.codableValue([SavedSearch].self, forKey: key) {
-            return searches
+        loadSearches().elements
+    }
+
+    /// 逐元素解码：完整条目按原样读取；条件无法解码（例如新版本写入的未知规则）的条目降级为仅摘要；
+    /// 两种方式都无法解码的坏条目被跳过，不影响其他条目
+    private func loadSearches() -> LenientDecodedArray<SavedSearch> {
+        let loaded = storage.lenientArray(StoredSavedSearch.self, forKey: key)
+        let isDowngraded = loaded.elements.contains { $0.isDowngraded }
+        return LenientDecodedArray(
+            elements: loaded.elements.map(\.search),
+            isLossy: loaded.isLossy || isDowngraded
+        )
+    }
+
+    /// 写回前读取：若原始数据有条目被跳过或降级，先备份原始数据，避免写回后永久丢失
+    private func searchesForWriting() -> [SavedSearch] {
+        let loaded = loadSearches()
+        if loaded.isLossy {
+            storage.backupRawValue(forKey: key)
+        }
+        return loaded.elements
+    }
+}
+
+/// 单个已存储搜索的宽容解码：优先按完整结构解码，失败时按旧版摘要结构降级
+private struct StoredSavedSearch: Decodable {
+    let search: SavedSearch
+    /// 完整结构解码失败、降级为仅摘要（原条件数据会在写回时丢失）
+    let isDowngraded: Bool
+
+    init(from decoder: Decoder) throws {
+        if let search = try? SavedSearch(from: decoder) {
+            self.search = search
+            self.isDowngraded = false
+            return
         }
 
-        if let legacy = try? storage.codableValue([LegacySavedSearch].self, forKey: key) {
-            return legacy.map {
-                SavedSearch(
-                    name: $0.name,
-                    querySummary: $0.querySummary,
-                    createdAt: $0.createdAt,
-                    criteria: nil,
-                    presentationState: nil,
-                    compatibilityMode: .legacySummary
-                )
-            }
-        }
-
-        return []
+        let legacy = try LegacySavedSearch(from: decoder)
+        self.search = SavedSearch(
+            name: legacy.name,
+            querySummary: legacy.querySummary,
+            createdAt: legacy.createdAt,
+            criteria: nil,
+            presentationState: nil,
+            compatibilityMode: .legacySummary
+        )
+        self.isDowngraded = true
     }
 }
 
