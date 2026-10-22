@@ -16,7 +16,8 @@ final class SearchRuleListView: NSView {
 
         setAccessibilityIdentifier("SearchRulesPanel")
         setAccessibilityElement(true)
-        setAccessibilityLabel("SearchRulesPanel")
+        // identifier 留给 UI 测试，朗读用本地化文案
+        setAccessibilityLabel(L10n.string("search_window.accessibility.rules"))
         wantsLayer = true
         layer?.cornerRadius = 16
         layer?.borderWidth = 1
@@ -33,7 +34,6 @@ final class SearchRuleListView: NSView {
         scrollView.hasVerticalScroller = false
         scrollView.autohidesScrollers = true
         scrollView.setAccessibilityIdentifier("SearchRulesScrollView")
-        scrollView.setAccessibilityLabel("SearchRulesScrollView")
         scrollView.documentView = contentView
         contentView.setContentHuggingPriority(.required, for: .vertical)
         contentView.setContentCompressionResistancePriority(.required, for: .vertical)
@@ -60,6 +60,11 @@ final class SearchRuleListView: NSView {
     var preferredContentHeight: CGFloat {
         layoutSubtreeIfNeeded()
         return stackView.fittingSize.height + Self.verticalInset * 2
+    }
+
+    /// 切换语言时刷新面板的无障碍标签
+    func reloadLocalizedStrings() {
+        setAccessibilityLabel(L10n.string("search_window.accessibility.rules"))
     }
 
     func updateLogicSummary(_ text: String) {

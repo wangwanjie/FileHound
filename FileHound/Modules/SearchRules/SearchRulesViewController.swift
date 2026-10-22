@@ -70,6 +70,7 @@ final class SearchRulesViewController: NSViewController {
     }
 
     func reloadLocalizedStrings() {
+        listView.reloadLocalizedStrings()
         rows.forEach { $0.reloadLocalizedStrings() }
         updateRowValidations()
         updateLogicSummary()
