@@ -1,7 +1,9 @@
 import AppKit
+import Combine
 import CoreServices
 import QuickLookUI
 import SnapKit
+import UniformTypeIdentifiers
 
 final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSource, QLPreviewPanelDelegate {
     private let viewModel: SearchResultsViewModel
@@ -25,13 +27,24 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     private let trashedItemsWatcher = DirectoryChangeWatcher()
     private var activationObservers: [NSObjectProtocol] = []
     private var displayedItemCount = 0
+    /// 隐藏中的视图模式：数据变化时只刷新当前可见视图，切换过去时再刷新
+    private var staleModes: Set<SearchResultsViewModel.Mode> = []
+    /// 切换视图模式期间忽略各视图的选中回调，切换完成后由视图模型的选中推给新视图
+    private var isSwitchingMode = false
+    private let localizationPublisher: AnyPublisher<AppLanguage, Never>
+    private var cancellables: Set<AnyCancellable> = []
+    /// 测试用：没有窗口时用于替代模态弹窗的导出 / 确认结果
+    var confirmationOverride: ((ResultConfirmationRequest) -> Bool)?
+    private(set) var localizationReloadCount = 0
 
     init(
         viewModel: SearchResultsViewModel,
-        expandsFoldersWhenShowingResults: Bool = false
+        expandsFoldersWhenShowingResults: Bool = false,
+        localizationPublisher: AnyPublisher<AppLanguage, Never> = LocalizationController.shared.publisher
     ) {
         self.viewModel = viewModel
         self.expandsFoldersWhenShowingResults = expandsFoldersWhenShowingResults
+        self.localizationPublisher = localizationPublisher
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -83,6 +96,8 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         toolbarView.packageButton.action = #selector(togglePackages)
         toolbarView.trashedButton.target = self
         toolbarView.trashedButton.action = #selector(toggleTrashed)
+        toolbarView.exportButton.target = self
+        toolbarView.exportButton.action = #selector(exportSearchResults(_:))
 
         rootView.addSubview(toolbarView)
         rootView.addSubview(containerView)
@@ -121,23 +136,15 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         treeController.expandsFoldersOnReload = expandsFoldersWhenShowingResults
         observeItemsPutBackFromTrash()
 
-        gridController.onSelectionChange = { [weak self] item in
-            self?.viewModel.selectedItem = item
-        }
-        tableController.onSelectionChange = { [weak self] item in
-            self?.viewModel.selectedItem = item
-        }
-        treeController.onSelectionChange = { [weak self] item in
-            self?.viewModel.selectedItem = item
-        }
+        // 只采纳当前可见视图的选中回调，隐藏视图的旧选中不能覆盖视图模型
         gridController.onSelectionSetChange = { [weak self] items in
-            self?.updateSelection(items)
+            self?.updateSelection(items, from: .grid)
         }
         tableController.onSelectionSetChange = { [weak self] items in
-            self?.updateSelection(items)
+            self?.updateSelection(items, from: .table)
         }
         treeController.onSelectionSetChange = { [weak self] items in
-            self?.updateSelection(items)
+            self?.updateSelection(items, from: .tree)
         }
         gridController.contextMenuProvider = { [weak self] items in
             self?.makeContextMenu(for: items)
@@ -180,12 +187,7 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
             self?.statusBarView.updateSelectedItem(item)
         }
         viewModel.onItemsChange = { [weak self] items in
-            self?.gridController.update(items: items)
-            self?.tableController.update(items: items)
-            self?.treeController.update(items: items)
-            self?.displayedItemCount = items.count
-            self?.renderEmptyState()
-            self?.statusBarView.updateMatchCount(items.count)
+            self?.refreshVisibleView(with: items)
         }
         viewModel.onSearchStatusChange = { [weak self] status in
             self?.renderEmptyState()
@@ -201,25 +203,79 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
             self?.applyPreviewSize(CGFloat(previewSize))
         }
 
-        toolbarView.invisiblesButton.state = viewModel.showInvisibleItems ? .on : .off
-        toolbarView.packageButton.state = viewModel.showPackageContents ? .on : .off
-        toolbarView.trashedButton.state = viewModel.showTrashedItems ? .on : .off
-        toolbarView.filterField.stringValue = viewModel.filterText
+        viewModel.onFilterChange = { [weak self] filterText in
+            self?.syncToolbarFilterState(filterText: filterText)
+        }
+
+        syncToolbarFilterState(filterText: viewModel.filterText)
         toolbarView.previewSlider.doubleValue = viewModel.previewSize
-        render(mode: viewModel.mode)
         applyPreviewSize(CGFloat(viewModel.previewSize))
         toolbarView.selectSortField(viewModel.sortField)
         tableController.applySort(field: viewModel.sortField, order: viewModel.sortOrder)
         treeController.applySort(field: viewModel.sortField, order: viewModel.sortOrder)
-        let items = viewModel.projectedItems
-        gridController.update(items: items)
-        tableController.update(items: items)
-        treeController.update(items: items)
+        // 先刷新当前模式的视图（其余标记为过期），再应用模式与选中
+        refreshVisibleView(with: viewModel.projectedItems)
+        render(mode: viewModel.mode)
+        statusBarView.updateSearchStatus(viewModel.searchStatus)
+        statusBarView.updateSelectedItem(viewModel.selectedItem)
+
+        // 应用内切换语言时自行刷新结果窗口文案；CurrentValueSubject 订阅时会立即发送当前语言，跳过这一次
+        // 语言切换由主线程的偏好设置触发，这里同步处理
+        localizationPublisher
+            .dropFirst()
+            .sink { [weak self] _ in
+                self?.reloadLocalizedStrings()
+            }
+            .store(in: &cancellables)
+    }
+
+    /// 只刷新当前可见的视图，其余视图标记为过期，切换过去时再刷新
+    private func refreshVisibleView(with items: [SearchResultItem]) {
+        let mode = viewModel.mode
+        resultsController(for: mode).update(items: items)
+        staleModes = Set([SearchResultsViewModel.Mode.grid, .table, .tree]).subtracting([mode])
         displayedItemCount = items.count
         renderEmptyState()
-        statusBarView.updateSearchStatus(viewModel.searchStatus)
         statusBarView.updateMatchCount(items.count)
-        statusBarView.updateSelectedItem(viewModel.selectedItem)
+        toolbarView.exportButton.isEnabled = items.isEmpty == false
+    }
+
+    private func resultsController(for mode: SearchResultsViewModel.Mode) -> ResultsViewUpdating {
+        switch mode {
+        case .grid:
+            return gridController
+        case .table:
+            return tableController
+        case .tree:
+            return treeController
+        }
+    }
+
+    /// 视图模型的过滤条件可能被外部修改（如恢复展示状态），同步工具栏控件
+    private func syncToolbarFilterState(filterText: String) {
+        toolbarView.invisiblesButton.state = viewModel.showInvisibleItems ? .on : .off
+        toolbarView.packageButton.state = viewModel.showPackageContents ? .on : .off
+        toolbarView.trashedButton.state = viewModel.showTrashedItems ? .on : .off
+        if toolbarView.filterField.stringValue != filterText {
+            toolbarView.filterField.stringValue = filterText
+        }
+    }
+
+    /// 应用内切换语言后刷新结果窗口的全部文案
+    func reloadLocalizedStrings() {
+        localizationReloadCount += 1
+        toolbarView.reloadLocalizedStrings()
+        toolbarView.selectSortField(viewModel.sortField)
+        tableController.reloadLocalizedStrings()
+        treeController.reloadColumnTitles()
+        emptyStateLabel.stringValue = L10n.string("results.empty")
+        statusBarView.reloadLocalizedStrings()
+        // 树视图的合成文件夹节点种类文案随语言变化：可见时立即重建，否则切换过去时再重建
+        if viewModel.mode == .tree {
+            treeController.update(items: viewModel.projectedItems)
+        } else {
+            staleModes.insert(.tree)
+        }
     }
 
     @objc
@@ -249,7 +305,8 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
     @objc
     private func sortByChanged() {
-        applySort(field: toolbarView.selectedSortField, order: .ascending)
+        // 只改变排序字段，保留当前的升序 / 降序
+        applySort(field: toolbarView.selectedSortField, order: viewModel.sortOrder)
     }
 
     @objc
@@ -268,6 +325,15 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func render(mode: SearchResultsViewModel.Mode) {
+        isSwitchingMode = true
+        // 目标视图的数据已过期时先刷新，再把视图模型的选中推给它
+        if staleModes.contains(mode) {
+            resultsController(for: mode).update(items: viewModel.projectedItems)
+            staleModes.remove(mode)
+        }
+        resultsController(for: mode).select(ids: viewModel.selectedIDs)
+        isSwitchingMode = false
+
         gridController.view.isHidden = mode != .grid
         tableController.view.isHidden = mode != .table
         treeController.view.isHidden = mode != .tree
@@ -279,9 +345,15 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         emptyStateLabel.isHidden = displayedItemCount > 0 || viewModel.searchStatus == .searching
     }
 
-    private func updateSelection(_ items: [SearchResultItem]) {
+    private func updateSelection(_ items: [SearchResultItem], from mode: SearchResultsViewModel.Mode) {
+        guard isSwitchingMode == false, mode == viewModel.mode else {
+            return
+        }
+
         viewModel.selectedIDs = Set(items.map(\.id))
-        viewModel.selectedItem = items.first
+        if viewModel.selectedItem != items.first {
+            viewModel.selectedItem = items.first
+        }
     }
 
     private func applyPreviewSize(_ previewSize: CGFloat) {
@@ -300,7 +372,12 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
         menuHandlers.removeAll()
         let menu = NSMenu(title: "ResultsContextMenu")
-        let state = actionController.menuState(for: items)
+        // 关闭自动启用：否则 NSMenu 会按 target 能否响应 action 把禁用项重新启用，isEnabled 设置无效
+        menu.autoenablesItems = false
+        // 树视图补出的上级文件夹不是匹配结果，只允许打开、显示、拷贝路径等非破坏性操作
+        let state = actionController.menuState(for: items) { [viewModel] item in
+            viewModel.containsItem(id: item.id)
+        }
 
         menu.addItem(makeMenuItem(title: openMenuTitle(for: items)) { [weak self] in
             self?.open(items: items, applicationURL: nil)
@@ -342,19 +419,30 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
         let labelItem = NSMenuItem(title: L10n.string("results.menu.set_label"), action: nil, keyEquivalent: "")
         labelItem.submenu = makeLabelMenu(for: items)
+        labelItem.isEnabled = state.canModifyAttributes
         menu.addItem(labelItem)
 
         let shouldShowAsVisible = items.allSatisfy { self.isItemHidden($0) }
-        menu.addItem(makeMenuItem(title: L10n.string(shouldShowAsVisible ? "results.menu.make_visible" : "results.menu.make_invisible")) { [weak self] in
+        menu.addItem(makeMenuItem(
+            title: L10n.string(shouldShowAsVisible ? "results.menu.make_visible" : "results.menu.make_invisible"),
+            isEnabled: state.canModifyAttributes
+        ) { [weak self] in
             self?.setHidden(shouldHide: !shouldShowAsVisible, items: items)
         })
-        menu.addItem(makeMenuItem(title: L10n.string("results.menu.unlock")) { [weak self] in
+        menu.addItem(makeMenuItem(title: L10n.string("results.menu.unlock"), isEnabled: state.canModifyAttributes) { [weak self] in
             self?.unlock(items: items)
         })
         menu.addItem(.separator())
         menu.addItem(makeMenuItem(title: L10n.string("results.menu.remove_from_results"), isEnabled: state.canRemoveFromResults) { [weak self] in
-            guard let self else { return }
+            guard let self else {
+                return
+            }
             self.actionController.removeFromResults(items: items, viewModel: self.viewModel)
+        })
+        menu.addItem(.separator())
+        // 导出的是当前视图中的全部结果，不只是选中项
+        menu.addItem(makeMenuItem(title: L10n.string("results.export.menu_title"), isEnabled: viewModel.projectedItems.isEmpty == false) { [weak self] in
+            self?.exportSearchResults(nil)
         })
 
         return menu
@@ -482,7 +570,7 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
 
         let restored = viewModel.restoreItemsPutBackFromTrash()
         if restored.isEmpty == false {
-            viewModel.replaceItems(restored.compactMap { refreshedItem(from: $0, atPath: $0.path) })
+            viewModel.replaceItems(restored.compactMap { ResultItemRefresher.refreshedItem(from: $0, atPath: $0.path) })
         }
         updateTrashedItemsWatcher()
     }
@@ -500,7 +588,9 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func rename(item: SearchResultItem?) {
-        guard let item else { return }
+        guard let item, viewModel.containsItem(id: item.id) else {
+            return
+        }
 
         let alert = NSAlert()
         alert.messageText = L10n.string("results.rename.title")
@@ -547,27 +637,35 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func setHidden(shouldHide: Bool, items: [SearchResultItem]) {
-        let updatedItems = items.compactMap { item -> SearchResultItem? in
-            do {
-                let url = try actionController.fileService.setHidden(shouldHide, for: URL(fileURLWithPath: item.path))
-                return refreshedItem(from: item, atPath: url.path)
-            } catch {
-                return nil
-            }
+        applyAttributeChange(to: items) { [actionController] url in
+            try actionController.fileService.setHidden(shouldHide, for: url)
         }
-        viewModel.replaceItems(updatedItems)
     }
 
     private func unlock(items: [SearchResultItem]) {
+        applyAttributeChange(to: items) { [actionController] url in
+            try actionController.fileService.setLocked(false, for: url)
+        }
+    }
+
+    /// 逐项修改文件属性并刷新结果；与设置标签一致，失败时弹出第一个错误，成功的项照常刷新
+    private func applyAttributeChange(to items: [SearchResultItem], change: (URL) throws -> URL) {
+        // 合成的上级文件夹节点不是匹配结果，不允许修改
+        let items = items.filter { viewModel.containsItem(id: $0.id) }
+        var failure: Error?
         let updatedItems = items.compactMap { item -> SearchResultItem? in
             do {
-                let url = try actionController.fileService.setLocked(false, for: URL(fileURLWithPath: item.path))
-                return refreshedItem(from: item, atPath: url.path)
+                let url = try change(URL(fileURLWithPath: item.path))
+                return ResultItemRefresher.refreshedItem(from: item, atPath: url.path)
             } catch {
+                failure = failure ?? error
                 return nil
             }
         }
         viewModel.replaceItems(updatedItems)
+        if let failure {
+            presentErrorAlert(failure)
+        }
     }
 
     private func showInfo(items: [SearchResultItem]) {
@@ -577,19 +675,8 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func setLabel(index: Int, items: [SearchResultItem]) {
-        var failure: Error?
-        let updatedItems = items.compactMap { item -> SearchResultItem? in
-            do {
-                let url = try actionController.fileService.setLabel(index, for: URL(fileURLWithPath: item.path))
-                return refreshedItem(from: item, atPath: url.path)
-            } catch {
-                failure = failure ?? error
-                return nil
-            }
-        }
-        viewModel.replaceItems(updatedItems)
-        if let failure {
-            presentErrorAlert(failure)
+        applyAttributeChange(to: items) { [actionController] url in
+            try actionController.fileService.setLabel(index, for: url)
         }
     }
 
@@ -607,48 +694,6 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
             let code = error[NSAppleScript.errorNumber] as? Int ?? 1
             presentErrorAlert(NSError(domain: "FinderScript", code: code, userInfo: [NSLocalizedDescriptionKey: message]))
         }
-    }
-
-    private func refreshedItem(from item: SearchResultItem, atPath path: String) -> SearchResultItem? {
-        guard FileManager.default.fileExists(atPath: path) else {
-            return nil
-        }
-
-        let url = URL(fileURLWithPath: path)
-        let attributes = (try? FileManager.default.attributesOfItem(atPath: path)) ?? [:]
-        let resourceValues = try? url.resourceValues(forKeys: [
-            .isHiddenKey,
-            .tagNamesKey,
-            .isApplicationKey,
-            .creationDateKey,
-            .contentAccessDateKey,
-            .addedToDirectoryDateKey
-        ])
-        return SearchResultItem(
-            id: item.id,
-            path: path,
-            matchReason: item.matchReason,
-            previewSnippet: item.previewSnippet,
-            highlightKind: item.highlightKind,
-            highlightQuery: item.highlightQuery,
-            kind: item.kind,
-            modifiedText: displayModifiedDate(attributes: attributes),
-            createdText: displayDate((attributes[.creationDate] as? Date) ?? resourceValues?.creationDate),
-            lastOpenedText: displayDate(resourceValues?.contentAccessDate),
-            addedText: displayDate(resourceValues?.addedToDirectoryDate),
-            sizeText: displaySize(attributes: attributes),
-            tagsText: resourceValues?.tagNames?.joined(separator: ", ") ?? item.tagsText,
-            enclosingFolder: url.deletingLastPathComponent().path,
-            isInvisible: resourceValues?.isHidden == true,
-            isPackage: resourceValues?.isApplication == true || item.isPackage,
-            isTrashed: item.isTrashed,
-            modifiedDate: attributes[.modificationDate] as? Date,
-            createdDate: (attributes[.creationDate] as? Date) ?? resourceValues?.creationDate,
-            lastOpenedDate: resourceValues?.contentAccessDate,
-            addedDate: resourceValues?.addedToDirectoryDate,
-            sizeBytes: (attributes[.size] as? NSNumber)?.int64Value,
-            tags: resourceValues?.tagNames ?? item.tags
-        )
     }
 
     private func availableApplicationURLs(for items: [SearchResultItem]) -> [URL] {
@@ -679,32 +724,6 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         return values?.isHidden ?? item.isInvisible
     }
 
-    private func displayModifiedDate(attributes: [FileAttributeKey: Any]) -> String {
-        displayDate(attributes[.modificationDate] as? Date)
-    }
-
-    private func displayDate(_ date: Date?) -> String {
-        guard let date else {
-            return ""
-        }
-
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter.string(from: date)
-    }
-
-    private func displaySize(attributes: [FileAttributeKey: Any]) -> String {
-        guard let size = attributes[.size] as? NSNumber else {
-            return ""
-        }
-
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useKB, .useMB]
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: size.int64Value)
-    }
-
     private func presentErrorAlert(_ error: Error) {
         let alert = NSAlert(error: error as NSError)
         alert.runModal()
@@ -717,17 +736,82 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
     }
 
     private func confirm(request: ResultConfirmationRequest) -> Bool {
+        if let confirmationOverride {
+            return confirmationOverride(request)
+        }
+
         switch request {
-        case .deleteImmediately(let itemCount):
+        case .deleteImmediately:
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = L10n.string("results.delete.title")
-            alert.informativeText = itemCount == 1
-                ? L10n.string("results.delete.single")
-                : L10n.format("results.delete.multiple", Int64(itemCount))
+            // 单个项目写出名称与路径，多个项目写出数量，避免误删
+            alert.informativeText = request.informativeText
             alert.addButton(withTitle: L10n.string("results.delete.confirm"))
             alert.addButton(withTitle: L10n.string("common.cancel"))
             return alert.runModal() == .alertFirstButtonReturn
+        }
+    }
+
+    /// 菜单「文件 > 导出结果…」（⇧⌘E，经响应链到达）、工具栏导出按钮与右键菜单共用：
+    /// 导出当前视图投影后（经过滤、排序、隐藏项设置）的结果
+    @objc
+    func exportSearchResults(_ sender: Any?) {
+        let items = viewModel.projectedItems
+        guard items.isEmpty == false else {
+            return
+        }
+
+        let panel = NSSavePanel()
+        panel.canCreateDirectories = true
+        panel.isExtensionHidden = false
+        panel.title = L10n.string("results.export.title")
+        panel.nameFieldStringValue = ResultExportFormatter.suggestedFileName(
+            title: viewModel.title,
+            fallback: L10n.string("results.export.default_name"),
+            format: .csv
+        )
+        panel.allowedContentTypes = [ResultExportFormat.csv.contentType]
+
+        // 保存面板附加格式选择：CSV / 纯文本，切换时同步修改扩展名
+        let formatLabel = NSTextField(labelWithString: L10n.string("results.export.format"))
+        let formatPopup = NSPopUpButton()
+        formatPopup.addItems(withTitles: ResultExportFormat.allCases.map(\.localizedTitle))
+        let formatHandler = MenuActionHandler { [weak panel, weak formatPopup] in
+            guard let panel, let formatPopup else {
+                return
+            }
+            let format = ResultExportFormat.allCases[max(formatPopup.indexOfSelectedItem, 0)]
+            panel.allowedContentTypes = [format.contentType]
+            let baseName = (panel.nameFieldStringValue as NSString).deletingPathExtension
+            panel.nameFieldStringValue = baseName + "." + format.fileExtension
+        }
+        formatPopup.target = formatHandler
+        formatPopup.action = #selector(MenuActionHandler.invoke)
+        let accessory = NSStackView(views: [formatLabel, formatPopup])
+        accessory.orientation = .horizontal
+        accessory.spacing = 8
+        accessory.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        panel.accessoryView = accessory
+
+        let completion: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            // 持有格式切换处理对象直到面板关闭
+            _ = formatHandler
+            guard response == .OK, let url = panel.url else {
+                return
+            }
+            let format = ResultExportFormat.allCases[max(formatPopup.indexOfSelectedItem, 0)]
+            do {
+                try ResultExportFormatter.data(for: items, format: format).write(to: url, options: .atomic)
+            } catch {
+                self?.presentErrorAlert(error)
+            }
+        }
+
+        if let window = view.window {
+            panel.beginSheetModal(for: window, completionHandler: completion)
+        } else {
+            completion(panel.runModal())
         }
     }
 
@@ -929,8 +1013,77 @@ extension SearchResultsViewController {
     func debugStatusBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
         statusBarView.debugBackgroundHex(for: appearanceName)
     }
+
+    var debugGridController: ResultsCollectionViewController {
+        gridController
+    }
+
+    var debugTableController: ResultsTableViewController {
+        tableController
+    }
+
+    var debugTreeController: ResultsOutlineViewController {
+        treeController
+    }
+
+    var debugPreviewLabelText: String {
+        toolbarView.debugPreviewLabelText
+    }
+
+    var debugEmptyStateText: String {
+        emptyStateLabel.stringValue
+    }
+
+    var debugExportButtonEnabled: Bool {
+        toolbarView.exportButton.isEnabled
+    }
+
+    var debugToolbarAccessibilityLabels: [String: String] {
+        let buttons: [NSButton] = [
+            toolbarView.gridButton,
+            toolbarView.tableButton,
+            toolbarView.treeButton,
+            toolbarView.invisiblesButton,
+            toolbarView.packageButton,
+            toolbarView.trashedButton
+        ]
+        var labels: [String: String] = [:]
+        for button in buttons {
+            labels[button.accessibilityIdentifier()] = button.accessibilityLabel() ?? ""
+        }
+        return labels
+    }
+
+    func debugContextMenu(for items: [SearchResultItem]) -> NSMenu? {
+        makeContextMenu(for: items)
+    }
+
+    func debugSelectSortFieldFromPopup(_ field: SearchResultsViewModel.SortField) {
+        toolbarView.selectSortField(field)
+        sortByChanged()
+    }
+
+    func debugDeleteImmediately(items: [SearchResultItem]) {
+        deleteImmediately(items: items)
+    }
+
+    /// 切换根视图外观后读取根视图、工具栏、状态栏 layer 上实际设置的背景色
+    func debugLayerBackgroundColors(appearanceName: NSAppearance.Name) -> (root: CGColor?, toolbar: CGColor?, status: CGColor?) {
+        view.appearance = NSAppearance(named: appearanceName)
+        return (view.layer?.backgroundColor, toolbarView.debugLayerBackgroundColor, statusBarView.debugLayerBackgroundColor)
+    }
 }
 #endif
+
+/// 三种结果视图共有的刷新与选中同步接口
+private protocol ResultsViewUpdating: AnyObject {
+    func update(items: [SearchResultItem])
+    func select(ids: Set<SearchResultItem.ID>)
+}
+
+extension ResultsCollectionViewController: ResultsViewUpdating {}
+extension ResultsTableViewController: ResultsViewUpdating {}
+extension ResultsOutlineViewController: ResultsViewUpdating {}
 
 private final class MenuActionHandler: NSObject {
     private let action: () -> Void
@@ -1035,6 +1188,10 @@ private final class ResultsStatusBarView: NSView {
         countLabel.stringValue
     }
 
+    func reloadLocalizedStrings() {
+        renderCountLabel()
+    }
+
     private func renderCountLabel() {
         let key: String
         switch searchStatus {
@@ -1106,6 +1263,10 @@ private final class ResultsStatusBarView: NSView {
             ?? NSApp?.effectiveAppearance
             ?? NSAppearance(named: .aqua)!
         return NSColor.fhPanelSurface(for: appearance, alpha: 0.96).fhResolvedHex(for: appearanceName)
+    }
+
+    var debugLayerBackgroundColor: CGColor? {
+        layer?.backgroundColor
     }
     #endif
 }
@@ -1282,18 +1443,25 @@ struct SearchResultNameHighlighter {
 
         return searchTerms.compactMap { term in
             let normalized = kind == .extensionName ? term.trimmingCharacters(in: CharacterSet(charactersIn: ".")) : term
-            guard normalized.isEmpty == false else {
+            guard normalized.isEmpty == false,
+                  let range = title.range(of: normalized, options: [.caseInsensitive, .diacriticInsensitive], range: candidateRange) else {
                 return nil
             }
 
-            let scopedTitle = String(title[candidateRange])
-            guard let range = scopedTitle.range(of: normalized, options: [.caseInsensitive, .diacriticInsensitive]) else {
-                return nil
-            }
+            // NSAttributedString 按 UTF-16 偏移计算，不能用 Character 距离（emoji、组合字符会错位）
+            return NSRange(range, in: title)
+        }
+    }
+}
 
-            let lowerOffset = scopedTitle.distance(from: scopedTitle.startIndex, to: range.lowerBound)
-            let location = title.distance(from: title.startIndex, to: candidateRange.lowerBound) + lowerOffset
-            return NSRange(location: location, length: scopedTitle.distance(from: range.lowerBound, to: range.upperBound))
+extension SearchResultsViewController: NSUserInterfaceValidations {
+    /// 工具栏按钮等非菜单界面元素的验证，与菜单验证保持一致
+    func validateUserInterfaceItem(_ item: NSValidatedUserInterfaceItem) -> Bool {
+        switch item.action {
+        case #selector(exportSearchResults(_:)):
+            return viewModel.projectedItems.isEmpty == false
+        default:
+            return true
         }
     }
 }
@@ -1306,6 +1474,8 @@ extension SearchResultsViewController: NSMenuItemValidation {
             return viewModel.selectedItems.isEmpty == false && (view.window?.firstResponder is NSText) == false
         case #selector(openSelectedResults(_:)), #selector(copy(_:)):
             return viewModel.selectedItems.isEmpty == false
+        case #selector(exportSearchResults(_:)):
+            return viewModel.projectedItems.isEmpty == false
         default:
             return true
         }

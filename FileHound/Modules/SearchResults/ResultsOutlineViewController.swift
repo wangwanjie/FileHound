@@ -10,6 +10,15 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
     private var currentSortField: SearchResultsViewModel.SortField = .name
     private var currentSortOrder: SearchResultsViewModel.SortOrder = .ascending
     private var rootNodes: [ResultOutlineNode] = []
+    /// 真实匹配结果节点，按结果 ID 索引，用于同步视图模型的选中
+    private var matchedNodesByID: [SearchResultItem.ID: ResultOutlineNode] = [:]
+    /// 用户（或默认规则）展开的文件夹路径；刷新重建树后据此恢复，保留用户的折叠操作
+    private var expandedPaths: Set<String> = []
+    /// 已出现过的可展开节点路径；只有新出现的节点才套用默认展开规则
+    private var knownExpandableNodePaths: Set<String> = []
+    private var isRestoringExpansion = false
+    /// 程序化修改选中时不回调，避免把旧选中写回视图模型
+    private var isUpdatingSelectionProgrammatically = false
     private(set) var resultsAppearance = ResultsAppearance.current()
     var expandsFoldersOnReload = false
 
@@ -27,8 +36,8 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         addColumn(id: "size", title: L10n.string("results.column.size"), width: 90, sortField: .size)
         outlineView.delegate = self
         outlineView.dataSource = self
+        // 选中变化统一由 outlineViewSelectionDidChange 处理，键盘 ↑↓、⌘A 与鼠标点击都会触发
         outlineView.target = self
-        outlineView.action = #selector(selectionDidChange)
         outlineView.doubleAction = #selector(doubleClicked)
         outlineView.allowsMultipleSelection = true
         outlineView.usesAlternatingRowBackgroundColors = true
@@ -68,9 +77,7 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
     func applyResultsAppearance(_ appearance: ResultsAppearance) {
         resultsAppearance = appearance
         outlineView.rowHeight = appearance.rowHeight
-        let expandedPaths = expandedNodePaths()
-        outlineView.reloadData()
-        applyExpansionState(expandedPaths)
+        reloadOutlinePreservingExpansion()
     }
 
     @objc private func resultsAppearanceDidChange(_ notification: Notification) {
@@ -97,16 +104,12 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
     }
 
     func update(items: [SearchResultItem]) {
-        let expandedPaths = expandedNodePaths()
         // 搜索进行中结果会持续刷新，按路径恢复选中项，避免选中行因新结果插入而错位
         let selectedPaths = Set(selectedItems().map(\.path))
+        isUpdatingSelectionProgrammatically = true
         self.items = items
         rootNodes = buildTree(for: items)
-        outlineView.reloadData()
-        applyExpansionState(expandedPaths)
-        guard selectedPaths.isEmpty == false else {
-            return
-        }
+        reloadOutlinePreservingExpansion()
         let rows = IndexSet((0..<outlineView.numberOfRows).filter { row in
             guard let node = outlineView.item(atRow: row) as? ResultOutlineNode else {
                 return false
@@ -115,7 +118,61 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         })
         if rows != outlineView.selectedRowIndexes {
             outlineView.selectRowIndexes(rows, byExtendingSelection: false)
+        }
+        isUpdatingSelectionProgrammatically = false
+        // 只有选中内容因结果变化真正改变时才通知
+        if Set(selectedItems().map(\.path)) != selectedPaths {
             selectionDidChange()
+        }
+    }
+
+    /// 切换视图模式时把视图模型的选中同步过来（必要时展开上级文件夹），不回调
+    func select(ids: Set<SearchResultItem.ID>) {
+        let nodes = ids.compactMap { matchedNodesByID[$0] }
+        isUpdatingSelectionProgrammatically = true
+        for node in nodes {
+            expandAncestors(of: node)
+        }
+        let rows = IndexSet(nodes.map { outlineView.row(forItem: $0) }.filter { $0 >= 0 })
+        if rows != outlineView.selectedRowIndexes {
+            outlineView.selectRowIndexes(rows, byExtendingSelection: false)
+        }
+        isUpdatingSelectionProgrammatically = false
+        if let first = rows.first {
+            outlineView.scrollRowToVisible(first)
+        }
+    }
+
+    /// 切换语言时刷新列标题；合成节点文案由调用方通过 update(items:) 重建
+    func reloadColumnTitles() {
+        let titles = [
+            "name": L10n.string("results.column.name"),
+            "kind": L10n.string("results.column.kind"),
+            "modified": L10n.string("results.column.modified"),
+            "size": L10n.string("results.column.size")
+        ]
+        for column in outlineView.tableColumns {
+            if let title = titles[column.identifier.rawValue] {
+                column.title = title
+            }
+        }
+        outlineView.headerView?.needsDisplay = true
+    }
+
+    /// 是否为真实匹配结果；树视图补出的上级文件夹节点返回 false
+    func isMatchedResult(_ item: SearchResultItem) -> Bool {
+        matchedNodesByID[item.id] != nil
+    }
+
+    private func expandAncestors(of node: ResultOutlineNode) {
+        var ancestors: [ResultOutlineNode] = []
+        var current = node.parent
+        while let ancestor = current {
+            ancestors.append(ancestor)
+            current = ancestor.parent
+        }
+        for ancestor in ancestors.reversed() where outlineView.isItemExpanded(ancestor) == false {
+            outlineView.expandItem(ancestor)
         }
     }
 
@@ -162,7 +219,43 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         onSortChange?(field, order)
     }
 
-    @objc
+    func outlineViewSelectionDidChange(_ notification: Notification) {
+        guard isUpdatingSelectionProgrammatically == false else {
+            return
+        }
+        selectionDidChange()
+    }
+
+    func outlineViewItemDidExpand(_ notification: Notification) {
+        guard let node = notification.userInfo?["NSObject"] as? ResultOutlineNode else {
+            return
+        }
+        expandedPaths.insert(node.path)
+        guard isRestoringExpansion == false else {
+            return
+        }
+        // 用户展开文件夹时恢复其子文件夹之前的展开状态（重建树后子节点是新对象，系统不会记住）
+        isRestoringExpansion = true
+        restoreExpansion(of: node.children)
+        isRestoringExpansion = false
+    }
+
+    func outlineViewItemDidCollapse(_ notification: Notification) {
+        guard isRestoringExpansion == false,
+              let node = notification.userInfo?["NSObject"] as? ResultOutlineNode else {
+            return
+        }
+        expandedPaths.remove(node.path)
+    }
+
+    /// 拖出结果：只允许真实匹配结果，合成的上级文件夹节点不可拖
+    func outlineView(_ outlineView: NSOutlineView, pasteboardWriterForItem item: Any) -> NSPasteboardWriting? {
+        guard let node = item as? ResultOutlineNode, node.isMatchedResult else {
+            return nil
+        }
+        return URL(fileURLWithPath: node.item.path) as NSURL
+    }
+
     private func selectionDidChange() {
         let selected = selectedItems()
         onSelectionSetChange?(selected)
@@ -190,8 +283,8 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         let point = outlineView.convert(event.locationInWindow, from: nil)
         let row = outlineView.row(at: point)
         if row >= 0, outlineView.selectedRowIndexes.contains(row) == false {
+            // 选中变化会经 outlineViewSelectionDidChange 通知
             outlineView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
-            selectionDidChange()
         }
 
         let selected = selectedItems()
@@ -207,24 +300,18 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         }
     }
 
+    /// 只记录排序方式并更新表头箭头；视图模型排序变化后会随即通过 update(items:) 按新顺序重建树
     func applySort(field: SearchResultsViewModel.SortField, order: SearchResultsViewModel.SortOrder) {
         currentSortField = field
         currentSortOrder = order
-        let expandedPaths = expandedNodePaths()
-
-        guard let key = sortDescriptorKeyIfSupported(for: field) else {
-            rootNodes = sortNodes(rootNodes)
-            outlineView.reloadData()
-            applyExpansionState(expandedPaths)
-            return
-        }
-
         isApplyingSortDescriptor = true
-        outlineView.sortDescriptors = [NSSortDescriptor(key: key, ascending: order == .ascending)]
+        if let key = sortDescriptorKeyIfSupported(for: field) {
+            outlineView.sortDescriptors = [NSSortDescriptor(key: key, ascending: order == .ascending)]
+        } else {
+            // 按表头没有的字段（如路径）排序时清除表头上的旧箭头
+            outlineView.sortDescriptors = []
+        }
         isApplyingSortDescriptor = false
-        rootNodes = sortNodes(rootNodes)
-        outlineView.reloadData()
-        applyExpansionState(expandedPaths)
     }
 
     private func childNodes(for item: Any?) -> [ResultOutlineNode] {
@@ -235,6 +322,7 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
     }
 
     private func buildTree(for items: [SearchResultItem]) -> [ResultOutlineNode] {
+        matchedNodesByID.removeAll(keepingCapacity: true)
         guard items.isEmpty == false else {
             return []
         }
@@ -263,6 +351,7 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
                 displayTitle: displayTitle(for: item.path, fallback: item.displayName),
                 isMatchedResult: true
             )
+            matchedNodesByID[item.id] = rootNode
             return
         }
 
@@ -270,13 +359,15 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
 
         for (index, nodePath) in nodePaths.enumerated() {
             let isLeaf = index == nodePaths.count - 1
-            if let existingNode = currentNode.children.first(where: { $0.path == nodePath }) {
+            // 子节点按路径字典查找，避免结果很多时逐个线性比较
+            if let existingNode = currentNode.child(atPath: nodePath) {
                 if isLeaf {
                     existingNode.update(
                         item: item,
                         displayTitle: displayTitle(for: item.path, fallback: item.displayName),
                         isMatchedResult: true
                     )
+                    matchedNodesByID[item.id] = existingNode
                 }
                 currentNode = existingNode
                 continue
@@ -288,7 +379,10 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
                 displayTitle: displayTitle(for: nodePath, fallback: isLeaf ? item.displayName : nil),
                 isMatchedResult: isLeaf
             )
-            currentNode.children.append(node)
+            currentNode.appendChild(node)
+            if isLeaf {
+                matchedNodesByID[item.id] = node
+            }
             currentNode = node
         }
     }
@@ -319,7 +413,11 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
             let candidateComponents = pathComponents(for: path)
             var nextSharedComponents: [String] = []
 
-            for (lhs, rhs) in zip(sharedComponents, candidateComponents) where lhs == rhs {
+            // 最长公共前缀：遇到第一个不同的组件就停止，不能跳过后继续比较
+            for (lhs, rhs) in zip(sharedComponents, candidateComponents) {
+                guard lhs == rhs else {
+                    break
+                }
                 nextSharedComponents.append(lhs)
             }
 
@@ -389,7 +487,7 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
 
     private func sortNodes(_ nodes: [ResultOutlineNode]) -> [ResultOutlineNode] {
         for node in nodes {
-            node.children = sortNodes(node.children)
+            node.replaceChildren(sortNodes(node.children))
         }
 
         return nodes.sorted(by: sortComparator(lhs:rhs:))
@@ -479,57 +577,39 @@ final class ResultsOutlineViewController: NSViewController, NSOutlineViewDataSou
         }
     }
 
-    private func expandedNodePaths() -> Set<String> {
-        var paths = Set<String>()
+    /// 重新加载并按记录恢复展开状态：已出现过的文件夹沿用用户的展开 / 折叠，新出现的套用默认规则
+    private func reloadOutlinePreservingExpansion() {
+        isRestoringExpansion = true
+        outlineView.reloadData()
+        restoreExpansion(of: rootNodes)
+        isRestoringExpansion = false
+    }
 
-        func collect(from nodes: [ResultOutlineNode]) {
-            for node in nodes {
-                if outlineView.isItemExpanded(node) {
-                    paths.insert(node.path)
+    private func restoreExpansion(of nodes: [ResultOutlineNode]) {
+        for node in nodes where node.children.isEmpty == false {
+            let shouldExpand: Bool
+            if knownExpandableNodePaths.contains(node.path) {
+                shouldExpand = expandedPaths.contains(node.path)
+            } else {
+                knownExpandableNodePaths.insert(node.path)
+                shouldExpand = shouldExpandByDefault(node)
+                if shouldExpand {
+                    expandedPaths.insert(node.path)
                 }
-                collect(from: node.children)
             }
-        }
 
-        collect(from: rootNodes)
-        return paths
-    }
-
-    private func applyExpansionState(_ expandedPaths: Set<String>) {
-        guard rootNodes.isEmpty == false else {
-            return
-        }
-
-        let defaultExpandedPaths = expandableNodePaths(in: rootNodes)
-        if expandsFoldersOnReload || expandedPaths.isEmpty {
-            outlineView.expandItem(nil, expandChildren: true)
-            return
-        }
-
-        expand(nodes: rootNodes, using: expandedPaths.union(defaultExpandedPaths))
-    }
-
-    private func expand(nodes: [ResultOutlineNode], using expandedPaths: Set<String>) {
-        for node in nodes {
-            if expandedPaths.contains(node.path) {
+            // 折叠的文件夹不再递归：其子节点的展开记录保留，用户展开时再恢复
+            if shouldExpand {
                 outlineView.expandItem(node)
+                restoreExpansion(of: node.children)
             }
-            expand(nodes: node.children, using: expandedPaths)
         }
     }
 
-    private func expandableNodePaths(in nodes: [ResultOutlineNode]) -> Set<String> {
-        var paths = Set<String>()
-
-        func collect(from nodes: [ResultOutlineNode]) {
-            for node in nodes where node.children.isEmpty == false {
-                paths.insert(node.path)
-                collect(from: node.children)
-            }
-        }
-
-        collect(from: nodes)
-        return paths
+    /// 默认展开规则：开启「显示结果时展开所有文件夹」时全部展开；否则只展开补出的上级文件夹，
+    /// 一直展开到匹配结果所在的层级，匹配到的文件夹本身保持折叠
+    private func shouldExpandByDefault(_ node: ResultOutlineNode) -> Bool {
+        expandsFoldersOnReload || node.isMatchedResult == false
     }
 
     private func sortField(for key: String) -> SearchResultsViewModel.SortField? {
@@ -587,6 +667,10 @@ private final class ContextMenuOutlineView: NSOutlineView {
         menuProvider?(event)
     }
 
+    override func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        ResultDragOperationPolicy.sourceOperationMask(for: context, modifierFlags: NSEvent.modifierFlags)
+    }
+
     override func viewDidChangeEffectiveAppearance() {
         super.viewDidChangeEffectiveAppearance()
         appearanceDidChangeHandler?()
@@ -606,20 +690,36 @@ private final class ResultOutlineNode {
     var item: SearchResultItem
     var displayTitle: String
     var isMatchedResult: Bool
-    var children: [ResultOutlineNode]
+    private(set) var children: [ResultOutlineNode] = []
+    /// 子节点按路径索引，构建大量结果的树时避免线性查找
+    private var childrenByPath: [String: ResultOutlineNode] = [:]
+    weak var parent: ResultOutlineNode?
 
     init(
         path: String,
         item: SearchResultItem,
         displayTitle: String,
-        isMatchedResult: Bool,
-        children: [ResultOutlineNode] = []
+        isMatchedResult: Bool
     ) {
         self.path = path
         self.item = item
         self.displayTitle = displayTitle
         self.isMatchedResult = isMatchedResult
-        self.children = children
+    }
+
+    func child(atPath path: String) -> ResultOutlineNode? {
+        childrenByPath[path]
+    }
+
+    func appendChild(_ node: ResultOutlineNode) {
+        node.parent = self
+        children.append(node)
+        childrenByPath[node.path] = node
+    }
+
+    /// 排序后替换子节点顺序（节点集合不变）
+    func replaceChildren(_ sortedChildren: [ResultOutlineNode]) {
+        children = sortedChildren
     }
 
     func update(item: SearchResultItem, displayTitle: String, isMatchedResult: Bool) {
@@ -797,6 +897,53 @@ extension ResultsOutlineViewController {
 
     var debugTreeRows: [(title: String, depth: Int, isMatchedResult: Bool)] {
         flatten(nodes: rootNodes, depth: 0)
+    }
+
+    var debugTreePaths: [(path: String, depth: Int)] {
+        func collect(_ nodes: [ResultOutlineNode], depth: Int) -> [(path: String, depth: Int)] {
+            nodes.flatMap { [($0.path, depth)] + collect($0.children, depth: depth + 1) }
+        }
+        return collect(rootNodes, depth: 0)
+    }
+
+    var debugOutlineView: NSOutlineView {
+        outlineView
+    }
+
+    var debugSortDescriptorKeys: [String] {
+        outlineView.sortDescriptors.compactMap(\.key)
+    }
+
+    var debugColumnTitles: [String] {
+        outlineView.tableColumns.map(\.title)
+    }
+
+    /// 按显示标题找到节点所在行（未展开的节点不在行中时返回 nil）
+    func debugRow(forTitle title: String) -> Int? {
+        (0..<outlineView.numberOfRows).first { row in
+            (outlineView.item(atRow: row) as? ResultOutlineNode)?.displayTitle == title
+        }
+    }
+
+    func debugCollapse(title: String) {
+        guard let row = debugRow(forTitle: title), let node = outlineView.item(atRow: row) else {
+            return
+        }
+        outlineView.collapseItem(node)
+    }
+
+    func debugExpand(title: String) {
+        guard let row = debugRow(forTitle: title), let node = outlineView.item(atRow: row) else {
+            return
+        }
+        outlineView.expandItem(node)
+    }
+
+    func debugPasteboardURL(forTitle title: String) -> URL? {
+        guard let row = debugRow(forTitle: title), let node = outlineView.item(atRow: row) else {
+            return nil
+        }
+        return (outlineView(outlineView, pasteboardWriterForItem: node) as? NSURL) as URL?
     }
 
     var debugExpandedTitles: Set<String> {

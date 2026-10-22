@@ -92,11 +92,16 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
         set { resultsViewController.expandsFoldersWhenShowingResults = newValue }
     }
 
-    func update(title: String, items: [SearchResultItem]) {
+    /// 更新结果。startsNewSearch 为 true 表示新一次搜索的首批结果：清空用户在旧结果上的移除 / 改名记录与废纸篓跟踪；
+    /// 为 false 表示同一次搜索的流式进度：合并时保留用户在搜索过程中做的移除、移到废纸篓、改名等修改
+    func update(title: String, items: [SearchResultItem], startsNewSearch: Bool = true) {
         window?.title = title
         viewModel.title = title
-        viewModel.discardTrashedEntries()
-        viewModel.items = items
+        if startsNewSearch {
+            viewModel.beginNewSearch(with: items)
+        } else {
+            viewModel.mergeSearchProgress(items)
+        }
     }
 
     var searchStatus: SearchResultsViewModel.SearchStatus {
@@ -112,3 +117,19 @@ final class SearchResultsWindowController: NSWindowController, NSMenuItemValidat
         viewModel.presentationState
     }
 }
+
+#if DEBUG
+extension SearchResultsWindowController {
+    /// 测试清理：关闭所有仍由静态表持有的结果窗口
+    static func debugCloseAllOpenWindows() {
+        for controller in openControllers.values {
+            controller.window?.close()
+        }
+        openControllers.removeAll()
+    }
+
+    static var debugOpenControllerCount: Int {
+        openControllers.count
+    }
+}
+#endif

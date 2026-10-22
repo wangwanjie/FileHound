@@ -645,7 +645,8 @@ final class SearchFormViewController: NSViewController {
             }
             existing.expandsFoldersWhenShowingResults = settings.expandFoldersWhenShowingResults
             existing.searchStatus = searchStatusForResultsWindow
-            existing.update(title: title, items: items)
+            // 同一次搜索的后续进度合并进结果页，保留用户在搜索中做的移除 / 改名等修改
+            existing.update(title: title, items: items, startsNewSearch: didOpenResultsForCurrentSearch == false)
             // 搜索中结果持续刷新，只在本次搜索首次展示时前置窗口，避免反复抢占焦点
             if didOpenResultsForCurrentSearch == false {
                 existing.showWindow(nil)

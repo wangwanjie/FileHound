@@ -7,6 +7,8 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     private var items: [SearchResultItem] = []
     private let iconProvider = ResultIconProvider()
     private var isApplyingSortDescriptor = false
+    /// 程序化修改选中（刷新数据、同步视图模型选中）时不回调，避免把旧选中写回视图模型
+    private var isUpdatingSelectionProgrammatically = false
     private(set) var resultsAppearance = ResultsAppearance.current()
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
@@ -23,8 +25,8 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         addColumn(id: "size", title: L10n.string("results.column.size"), width: 80, sortField: .size)
         tableView.delegate = self
         tableView.dataSource = self
+        // 选中变化统一由 tableViewSelectionDidChange 处理，键盘 ↑↓、⌘A 与鼠标点击都会触发
         tableView.target = self
-        tableView.action = #selector(selectionDidChange)
         tableView.doubleAction = #selector(doubleClicked)
         tableView.allowsMultipleSelection = true
         tableView.usesAlternatingRowBackgroundColors = true
@@ -83,16 +85,47 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     func update(items: [SearchResultItem]) {
         // 搜索进行中结果会持续刷新，按路径恢复选中项，避免选中行因新结果插入而错位
         let selectedPaths = Set(selectedItems().map(\.path))
+        isUpdatingSelectionProgrammatically = true
         self.items = items
         tableView.reloadData()
-        guard selectedPaths.isEmpty == false else {
-            return
-        }
         let rows = IndexSet(items.indices.filter { selectedPaths.contains(items[$0].path) })
         if rows != tableView.selectedRowIndexes {
             tableView.selectRowIndexes(rows, byExtendingSelection: false)
+        }
+        isUpdatingSelectionProgrammatically = false
+        // 只有选中内容因结果变化真正改变（如选中项被过滤掉）时才通知
+        if Set(selectedItems().map(\.path)) != selectedPaths {
             selectionDidChange()
         }
+    }
+
+    /// 切换视图模式时把视图模型的选中同步过来，不回调
+    func select(ids: Set<SearchResultItem.ID>) {
+        let rows = IndexSet(items.indices.filter { ids.contains(items[$0].id) })
+        guard rows != tableView.selectedRowIndexes else {
+            return
+        }
+        isUpdatingSelectionProgrammatically = true
+        tableView.selectRowIndexes(rows, byExtendingSelection: false)
+        isUpdatingSelectionProgrammatically = false
+        if let first = rows.first {
+            tableView.scrollRowToVisible(first)
+        }
+    }
+
+    func reloadLocalizedStrings() {
+        let titles = [
+            "name": L10n.string("results.column.name"),
+            "kind": L10n.string("results.column.kind"),
+            "modified": L10n.string("results.column.modified"),
+            "size": L10n.string("results.column.size")
+        ]
+        for column in tableView.tableColumns {
+            if let title = titles[column.identifier.rawValue] {
+                column.title = title
+            }
+        }
+        tableView.headerView?.needsDisplay = true
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int {
@@ -123,7 +156,20 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         onSortChange?(field, order)
     }
 
-    @objc
+    func tableViewSelectionDidChange(_ notification: Notification) {
+        guard isUpdatingSelectionProgrammatically == false else {
+            return
+        }
+        selectionDidChange()
+    }
+
+    func tableView(_ tableView: NSTableView, pasteboardWriterForRow row: Int) -> NSPasteboardWriting? {
+        guard items.indices.contains(row) else {
+            return nil
+        }
+        return URL(fileURLWithPath: items[row].path) as NSURL
+    }
+
     private func selectionDidChange() {
         let selected = selectedItems()
         onSelectionSetChange?(selected)
@@ -151,8 +197,8 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
         let point = tableView.convert(event.locationInWindow, from: nil)
         let row = tableView.row(at: point)
         if row >= 0, tableView.selectedRowIndexes.contains(row) == false {
+            // 选中变化会经 tableViewSelectionDidChange 通知
             tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
-            selectionDidChange()
         }
 
         let selected = selectedItems()
@@ -166,12 +212,13 @@ final class ResultsTableViewController: NSViewController, NSTableViewDataSource,
     }
 
     func applySort(field: SearchResultsViewModel.SortField, order: SearchResultsViewModel.SortOrder) {
-        guard let key = sortDescriptorKeyIfSupported(for: field) else {
-            return
-        }
-
         isApplyingSortDescriptor = true
-        tableView.sortDescriptors = [NSSortDescriptor(key: key, ascending: order == .ascending)]
+        if let key = sortDescriptorKeyIfSupported(for: field) {
+            tableView.sortDescriptors = [NSSortDescriptor(key: key, ascending: order == .ascending)]
+        } else {
+            // 按表头没有的字段（如路径）排序时清除表头上的旧箭头
+            tableView.sortDescriptors = []
+        }
         isApplyingSortDescriptor = false
     }
 
@@ -221,6 +268,10 @@ private final class ContextMenuTableView: NSTableView {
 
     override func menu(for event: NSEvent) -> NSMenu? {
         menuProvider?(event)
+    }
+
+    override func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        ResultDragOperationPolicy.sourceOperationMask(for: context, modifierFlags: NSEvent.modifierFlags)
     }
 
     override func viewDidChangeEffectiveAppearance() {
@@ -365,10 +416,39 @@ private final class ResultListTextFieldCell: NSTextFieldCell {
     }
 }
 
+/// 把结果拖出窗口时允许的操作：默认拷贝；按住 ⌘ 时移动，⌥⌘ 制作替身，与访达的修饰键习惯一致
+enum ResultDragOperationPolicy {
+    static func sourceOperationMask(for context: NSDraggingContext, modifierFlags: NSEvent.ModifierFlags) -> NSDragOperation {
+        guard context == .outsideApplication else {
+            return []
+        }
+        if modifierFlags.contains(.command) {
+            return [.move, .generic, .link]
+        }
+        return [.copy, .link]
+    }
+}
+
 #if DEBUG
 extension ResultsTableViewController {
     var debugRowHeight: CGFloat {
         tableView.rowHeight
+    }
+
+    var debugTableView: NSTableView {
+        tableView
+    }
+
+    var debugSortDescriptorKeys: [String] {
+        tableView.sortDescriptors.compactMap(\.key)
+    }
+
+    var debugColumnTitles: [String] {
+        tableView.tableColumns.map(\.title)
+    }
+
+    func debugPasteboardURL(forRow row: Int) -> URL? {
+        (tableView(tableView, pasteboardWriterForRow: row) as? NSURL) as URL?
     }
 
     func debugNameAttributes(for item: SearchResultItem) -> (font: NSFont?, color: NSColor?) {

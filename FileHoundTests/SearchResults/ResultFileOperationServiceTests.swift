@@ -48,19 +48,44 @@ struct ResultFileOperationServiceTests {
     }
 
     @Test
-    func trashesAndDeletesFiles() throws {
+    func moveToTrashUsesInjectedTrashHandler() throws {
+        // 不碰用户真实的废纸篓：注入假实现，验证每个 URL 都交给它处理并返回其结果
+        var trashedPaths: [String] = []
+        let service = ResultFileOperationService(trashHandler: { url in
+            trashedPaths.append(url.path)
+            return URL(fileURLWithPath: "/Trash").appendingPathComponent(url.lastPathComponent)
+        })
+
+        let results = try service.moveToTrash(urls: [
+            URL(fileURLWithPath: "/tmp/a.txt"),
+            URL(fileURLWithPath: "/tmp/b.txt")
+        ])
+
+        #expect(trashedPaths == ["/tmp/a.txt", "/tmp/b.txt"])
+        #expect(results.map(\.path) == ["/Trash/a.txt", "/Trash/b.txt"])
+    }
+
+    @Test
+    func moveToTrashPropagatesHandlerErrors() {
+        struct TrashFailure: Error {}
+        let service = ResultFileOperationService(trashHandler: { _ in throw TrashFailure() })
+
+        #expect(throws: TrashFailure.self) {
+            try service.moveToTrash(urls: [URL(fileURLWithPath: "/tmp/a.txt")])
+        }
+    }
+
+    @Test
+    func deletesFilesImmediatelyInsideFixture() throws {
         let fixture = try TemporaryFixtureTree.make { builder in
-            try builder.file("trash-me.txt", contents: "hello")
             try builder.file("delete-me.txt", contents: "bye")
         }
 
-        let service = ResultFileOperationService()
-        let trashURL = URL(fileURLWithPath: fixture.path).appendingPathComponent("trash-me.txt")
+        let service = ResultFileOperationService(trashHandler: { _ in
+            Issue.record("立即删除不应走废纸篓")
+            return URL(fileURLWithPath: "/")
+        })
         let deleteURL = URL(fileURLWithPath: fixture.path).appendingPathComponent("delete-me.txt")
-
-        let trashedURLs = try service.moveToTrash(urls: [trashURL])
-        #expect(trashedURLs.count == 1)
-        #expect(FileManager.default.fileExists(atPath: trashURL.path) == false)
 
         try service.deleteImmediately(urls: [deleteURL])
         #expect(FileManager.default.fileExists(atPath: deleteURL.path) == false)
