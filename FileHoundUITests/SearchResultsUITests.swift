@@ -35,11 +35,12 @@ final class SearchResultsUITests: XCTestCase {
     func testShowResultsEarlyOpensResultsWindowBeforeSearchCompletes() throws {
         let app = XCUIApplication()
         AppLaunchHelper.prepareForLaunch(app)
-        app.launchArguments = ["--uitesting", "--fixture-streaming-search", "--enable-show-results-early"]
+        app.launchArguments = ["--uitesting", "--fixture-streaming-search", "--enable-show-results-early", "-AppleLanguages", "(en)"]
         app.launch()
 
         let primaryButton = app.buttons["PrimarySearchButton"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
+        AppLaunchHelper.enterRuleValue("report", in: app)
 
         primaryButton.click()
 
@@ -51,7 +52,7 @@ final class SearchResultsUITests: XCTestCase {
         XCTAssertTrue(statusLabel.label.hasPrefix("Searching"))
 
         XCTAssertTrue(waitUntil(timeout: 3) { primaryButton.label == "Find" })
-        XCTAssertTrue(waitUntil(timeout: 1) { statusLabel.label == "3 matched" })
+        XCTAssertTrue(waitUntil(timeout: 1) { statusLabel.label == "3 matched" }, "实际状态：\(statusLabel.label)")
     }
 
     @MainActor
@@ -112,12 +113,15 @@ final class SearchResultsUITests: XCTestCase {
             "--uitesting",
             "--fixture-streaming-search",
             "--enable-show-results-early",
-            "--enable-tie-results-window"
+            "--enable-tie-results-window",
+            // 断言依赖英文文案，固定界面语言避免受系统语言影响
+            "-AppleLanguages", "(en)"
         ]
         app.launch()
 
         let primaryButton = app.buttons["PrimarySearchButton"]
         XCTAssertTrue(primaryButton.waitForExistence(timeout: 3))
+        AppLaunchHelper.enterRuleValue("report", in: app)
 
         primaryButton.click()
         XCTAssertTrue(waitUntil(timeout: 3) { primaryButton.label == "Find" && app.windows.count == 2 })

@@ -27,11 +27,12 @@ final class AppShellUITests: XCTestCase {
     func testSearchButtonSwitchesToStopDuringFixtureSearch() throws {
         let app = XCUIApplication()
         AppLaunchHelper.prepareForLaunch(app)
-        app.launchArguments = ["--uitesting", "--fixture-delayed-search"]
+        app.launchArguments = ["--uitesting", "--fixture-delayed-search", "-AppleLanguages", "(en)"]
         app.launch()
 
         let button = app.buttons["PrimarySearchButton"]
         XCTAssertTrue(button.waitForExistence(timeout: 5))
+        AppLaunchHelper.enterRuleValue("report", in: app)
         button.click()
 
         XCTAssertEqual(button.label, "Stop")

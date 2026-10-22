@@ -34,6 +34,17 @@ enum AppLaunchHelper {
         }
     }
 
+    /// 在第一条规则中填入值，让「查找」按钮可用。
+    /// --uitesting 使用独立的空白设置存储，不会恢复上次会话的规则值，直接点「查找」不会开始搜索
+    static func enterRuleValue(_ value: String, in app: XCUIApplication) {
+        let valueField = app.textFields["SearchRuleValueField"]
+        XCTAssertTrue(valueField.waitForExistence(timeout: 3))
+        valueField.click()
+        valueField.typeKey("a", modifierFlags: .command)
+        valueField.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
+        valueField.typeText(value)
+    }
+
     static func prepareForLaunch(_ app: XCUIApplication) {
         terminateRunningInstances(bundleIdentifier: "cn.vanjay.FileHound")
         if app.state != .notRunning {
