@@ -540,8 +540,14 @@ struct SearchRuleValidator: Sendable {
         case .none:
             break
         case .text:
-            guard selection.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
+            let trimmedValue = selection.value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmedValue.isEmpty == false else {
                 return .invalid(messageKey: "search_rule.validation.value_required")
+            }
+            // 非法正则在执行时无法判定，“不匹配正则”会因此命中所有条目，编辑时就判为无效输入
+            if selection.operator == .matchesRegex || selection.operator == .doesNotMatchRegex,
+               (try? NSRegularExpression(pattern: trimmedValue)) == nil {
+                return .invalid(messageKey: "search_rule.validation.regex_invalid")
             }
         case .number:
             guard selection.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
@@ -565,11 +571,13 @@ struct SearchRuleValidator: Sendable {
 }
 
 enum SearchRuleNumberParser {
-    /// 解析文件大小，支持 “1024”、“10 KB”、“1.5mb”、“2G” 等写法，单位按 1024 进制
+    /// 解析文件大小，支持 “1024”、“1,024”、“10 KB”、“1.5mb”、“2 GiB” 等写法。
+    /// 单位与访达一致：KB / MB / GB / TB（及单字母简写）按 1000 进制，KiB / MiB / GiB / TiB 按 1024 进制。
+    /// 超出 Int64 范围的值视为无效，返回 nil
     static func parseByteCount(_ value: String) -> Int64? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let numberPart = trimmed.prefix { $0.isNumber || $0 == "." || $0 == "," }
-        guard let numericValue = Double(numberPart.replacingOccurrences(of: ",", with: ".")), numericValue >= 0 else {
+        let numberPart = trimmed.prefix { $0.isASCII && ($0.isNumber || $0 == "." || $0 == ",") }
+        guard let numericValue = parseDecimal(String(numberPart)), numericValue >= 0 else {
             return nil
         }
 
@@ -578,41 +586,92 @@ enum SearchRuleNumberParser {
         switch unitPart {
         case "", "b", "byte", "bytes":
             multiplier = 1
-        case "k", "kb", "kib":
+        case "k", "kb":
+            multiplier = 1_000
+        case "kib":
             multiplier = 1_024
-        case "m", "mb", "mib":
+        case "m", "mb":
+            multiplier = 1_000_000
+        case "mib":
             multiplier = 1_048_576
-        case "g", "gb", "gib":
+        case "g", "gb":
+            multiplier = 1_000_000_000
+        case "gib":
             multiplier = 1_073_741_824
-        case "t", "tb", "tib":
+        case "t", "tb":
+            multiplier = 1_000_000_000_000
+        case "tib":
             multiplier = 1_099_511_627_776
         default:
             return nil
         }
 
-        return Int64(numericValue * multiplier)
+        // 编辑时每次输入都会校验，超大的值不能让 Int64 转换溢出崩溃；Double(Int64.max) 恰为 2^63，用 < 保证可以表示
+        let byteCount = (numericValue * multiplier).rounded(.towardZero)
+        guard byteCount.isFinite, byteCount < Double(Int64.max) else {
+            return nil
+        }
+        return Int64(byteCount)
+    }
+
+    /// 解析数字部分。逗号既可能是千分位（“1,024”），也可能是小数点（“1,5”）：
+    /// 同时出现逗号和点时，靠后的一个是小数点；只有逗号时，每个逗号后都恰好是三位数字才按千分位处理
+    private static func parseDecimal(_ text: String) -> Double? {
+        guard text.isEmpty == false else {
+            return nil
+        }
+        let lastComma = text.lastIndex(of: ",")
+        let lastDot = text.lastIndex(of: ".")
+        let normalized: String
+        switch (lastComma, lastDot) {
+        case (nil, _):
+            normalized = text
+        case (let comma?, let dot?):
+            if comma > dot {
+                // “1.024,5”：点是千分位，逗号是小数点
+                normalized = text.replacingOccurrences(of: ".", with: "").replacingOccurrences(of: ",", with: ".")
+            } else {
+                normalized = text.replacingOccurrences(of: ",", with: "")
+            }
+        case (.some, nil):
+            let groups = text.split(separator: ",", omittingEmptySubsequences: false)
+            let isGrouping = groups.count > 1
+                && (1...3).contains(groups[0].count)
+                && groups.dropFirst().allSatisfy { $0.count == 3 }
+            normalized = isGrouping
+                ? text.replacingOccurrences(of: ",", with: "")
+                : text.replacingOccurrences(of: ",", with: ".")
+        }
+        // 多个小数点等非法写法由 Double 解析失败兜底
+        return Double(normalized)
     }
 }
 
 enum SearchRuleDateParser {
+    // 格式化器创建开销大，搜索与编辑校验时都会调用，按格式各建一个复用；DateFormatter / ISO8601DateFormatter 的解析可跨线程调用
+    private static let formatters: [DateFormatter] = ["yyyy-MM-dd", "yyyy/MM/dd", "yyyy-MM-dd HH:mm:ss"].map { format in
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = format
+        return formatter
+    }
+
+    private static let isoFormatter = ISO8601DateFormatter()
+
     static func parse(_ value: String) -> Date? {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.isEmpty == false else {
             return nil
         }
 
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
-
-        for format in ["yyyy-MM-dd", "yyyy/MM/dd", "yyyy-MM-dd HH:mm:ss"] {
-            formatter.dateFormat = format
+        for formatter in formatters {
             if let date = formatter.date(from: trimmed) {
                 return date
             }
         }
 
-        return ISO8601DateFormatter().date(from: trimmed)
+        return isoFormatter.date(from: trimmed)
     }
 }
 

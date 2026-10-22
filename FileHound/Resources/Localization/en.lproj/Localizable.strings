@@ -299,3 +299,6 @@
 "search_rule.kind.unix_executable" = "UNIX executable";
 "search_rule.kind.video" = "Video";
 "search_rule.kind.word_pages" = "Word & Pages";
+
+/* engine */
+"search_rule.validation.regex_invalid" = "Enter a valid regular expression.";

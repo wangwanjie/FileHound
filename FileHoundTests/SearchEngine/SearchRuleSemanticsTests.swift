@@ -9,10 +9,9 @@ struct SearchRuleSemanticsTests {
         walker: DirectoryWalker = DirectoryWalker(),
         spotlight: SpotlightSearchService? = nil
     ) -> [String] {
-        let executor = SearchExecutor(
+        let executor = SearchExecutor.hermetic(
             walker: walker,
-            provider: LocalFilesystemProvider(),
-            spotlightSearchService: spotlight ?? SpotlightSearchService(runQuery: { _, _ in [] })
+            spotlight: spotlight ?? SpotlightSearchService(runQuery: { _, _ in [] })
         )
         let result = executor.execute(
             request: SearchRequest(scopeDescription: "Root", rootPath: fixture.path, rules: rules),
@@ -80,8 +79,8 @@ struct SearchRuleSemanticsTests {
             try builder.file("a/two.txt", contents: "2")
             try builder.file("a/b/three.txt", contents: "3")
         }
-        let recorder = ListingRecorder()
-        let walker = DirectoryWalker(providerFactory: { _ in recorder })
+        let recorder = ListingRecordingProvider()
+        let walker = DirectoryWalker(provider: recorder)
         let txt = SearchRuleSelection(field: .name, operator: .endsWith, value: ".txt")
 
         #expect(run([txt, SearchRuleSelection(field: .limitFolderDepth, operator: .isExactly, value: "1")], in: fixture, walker: walker) == ["one.txt"])
@@ -99,7 +98,7 @@ struct SearchRuleSemanticsTests {
         }
         let path = fixture.rootURL.appendingPathComponent("Report.txt").path
         let spotlight = SpotlightSearchService(runQuery: { _, _ in [path] })
-        let emptyWalker = DirectoryWalker(providerFactory: { _ in EmptyProvider() })
+        let emptyWalker = DirectoryWalker(provider: EmptyListingProvider())
 
         let insensitive = run(
             [SearchRuleSelection(field: .name, operator: .contains, value: "report")],
@@ -118,65 +117,52 @@ struct SearchRuleSemanticsTests {
     }
 
     @Test
-    func fileSizeParsingAndValidation() {
+    func fileSizeParsingUsesFinderUnitsAndThousandsSeparators() {
         #expect(SearchRuleNumberParser.parseByteCount("500") == 500)
-        #expect(SearchRuleNumberParser.parseByteCount("10 KB") == 10_240)
-        #expect(SearchRuleNumberParser.parseByteCount("1.5mb") == 1_572_864)
-        #expect(SearchRuleNumberParser.parseByteCount("2G") == 2_147_483_648)
+        // 与访达一致：KB/MB/GB 按 1000 进制，KiB/MiB/GiB 按 1024 进制
+        #expect(SearchRuleNumberParser.parseByteCount("10 KB") == 10_000)
+        #expect(SearchRuleNumberParser.parseByteCount("10 KiB") == 10_240)
+        #expect(SearchRuleNumberParser.parseByteCount("1.5mb") == 1_500_000)
+        #expect(SearchRuleNumberParser.parseByteCount("2G") == 2_000_000_000)
+        #expect(SearchRuleNumberParser.parseByteCount("2 GiB") == 2_147_483_648)
+        #expect(SearchRuleNumberParser.parseByteCount("1 TiB") == 1_099_511_627_776)
+        // 千分位逗号不是小数点；只有逗号且后面不是恰好三位数字时才按小数点处理
+        #expect(SearchRuleNumberParser.parseByteCount("1,024") == 1_024)
+        #expect(SearchRuleNumberParser.parseByteCount("1,024,000 bytes") == 1_024_000)
+        #expect(SearchRuleNumberParser.parseByteCount("1,5 MB") == 1_500_000)
+        #expect(SearchRuleNumberParser.parseByteCount("1,234.5 KB") == 1_234_500)
+        #expect(SearchRuleNumberParser.parseByteCount("1.234,5 KB") == 1_234_500)
         #expect(SearchRuleNumberParser.parseByteCount("abc") == nil)
         #expect(SearchRuleNumberParser.parseByteCount("10 parsecs") == nil)
+        #expect(SearchRuleNumberParser.parseByteCount("1.2.3") == nil)
+        // 超出 Int64 范围时返回 nil，不能在编辑校验时溢出崩溃
+        #expect(SearchRuleNumberParser.parseByteCount("99999999999999999999") == nil)
+        #expect(SearchRuleNumberParser.parseByteCount("10000000 TB") == nil)
+        #expect(SearchRuleNumberParser.parseByteCount("9000000 TB") == 9_000_000_000_000_000_000)
 
         let validator = SearchRuleValidator()
         #expect(validator.validate(SearchRuleSelection(field: .fileSize, operator: .isGreaterThan, value: "abc")) == .invalid(messageKey: "search_rule.validation.size_invalid"))
+        #expect(validator.validate(SearchRuleSelection(field: .fileSize, operator: .isGreaterThan, value: "99999999999999999999")) == .invalid(messageKey: "search_rule.validation.size_invalid"))
         #expect(validator.validate(SearchRuleSelection(field: .fileSize, operator: .isGreaterThan, value: "10 MB")) == .valid)
         #expect(validator.validate(SearchRuleSelection(field: .limitAmount, operator: .isExactly, value: "1.5")) == .invalid(messageKey: "search_rule.validation.integer_invalid"))
     }
-}
 
-private final class ListingRecorder: FilesystemAccessProviding, @unchecked Sendable {
-    let kind: ProviderKind = .local
-    private let lock = NSLock()
-    private var paths: [String] = []
+    @Test
+    func fileSizeRulesCompareDecimalUnits() throws {
+        let fixture = try TemporaryFixtureTree.make { builder in
+            try builder.file("thousand.bin", contents: String(repeating: "a", count: 1_000))
+            try builder.file("kibibyte.bin", contents: String(repeating: "a", count: 1_024))
+        }
 
-    var listedPaths: [String] {
-        lock.lock()
-        defer { lock.unlock() }
-        return paths
+        #expect(run([SearchRuleSelection(field: .fileSize, operator: .isExactly, value: "1 KB")], in: fixture) == ["thousand.bin"])
+        #expect(run([SearchRuleSelection(field: .fileSize, operator: .isExactly, value: "1 KiB")], in: fixture) == ["kibibyte.bin"])
+        #expect(run([SearchRuleSelection(field: .fileSize, operator: .isGreaterThan, value: "1,000")], in: fixture) == ["kibibyte.bin"])
     }
-
-    func contentsOfDirectory(atPath path: String) throws -> [String] {
-        lock.lock()
-        paths.append(path)
-        lock.unlock()
-        return try FileManager.default.contentsOfDirectory(atPath: path)
-    }
-
-    func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
-        try FileManager.default.attributesOfItem(atPath: path)
-    }
-
-    func contentsOfFile(atPath path: String) throws -> Data {
-        try Data(contentsOf: URL(fileURLWithPath: path))
-    }
-}
-
-private struct EmptyProvider: FilesystemAccessProviding {
-    let kind: ProviderKind = .local
-
-    func contentsOfDirectory(atPath path: String) throws -> [String] { [] }
-    func attributesOfItem(atPath path: String) throws -> [FileAttributeKey: Any] {
-        try FileManager.default.attributesOfItem(atPath: path)
-    }
-    func contentsOfFile(atPath path: String) throws -> Data { Data() }
 }
 
 struct CommentAndScriptRuleTests {
     private func run(_ rules: [SearchRuleSelection], in fixture: TemporaryFixtureTree) -> [String] {
-        let executor = SearchExecutor(
-            walker: DirectoryWalker(),
-            provider: LocalFilesystemProvider(),
-            spotlightSearchService: SpotlightSearchService(runQuery: { _, _ in [] })
-        )
+        let executor = SearchExecutor.hermetic()
         let result = executor.execute(
             request: SearchRequest(scopeDescription: "Root", rootPath: fixture.path, rules: rules),
             options: SearchExecutionOptions(includeSpotlightResults: false)

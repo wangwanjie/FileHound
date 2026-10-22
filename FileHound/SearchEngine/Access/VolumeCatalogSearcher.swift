@@ -13,8 +13,8 @@ enum VolumeCatalogSearchError: Error {
     case interrupted(errno: Int32)
 }
 
-/// 按文件名片段在整个卷的目录中查找。实现必须返回“名称包含该片段（不区分大小写与变音符号）”的条目的超集，
-/// 调用方会按完整规则复核每个结果
+/// 按文件名片段在整个卷的目录中查找。实现必须返回“名称包含该片段（不区分大小写）”的条目的超集，
+/// 调用方会按完整规则复核每个结果。匹配区分变音符号，调用方需自行保证片段不会因变音符号漏掉条目
 protocol VolumeCatalogSearching: Sendable {
     /// 当前所有挂载点路径
     func mountPoints() -> [String]
@@ -28,7 +28,9 @@ protocol VolumeCatalogSearching: Sendable {
 }
 
 /// 用 searchfs 直接扫描卷的目录 B 树，不需要逐个目录打开、列出，整卷按名称搜索比遍历快得多。
-/// 匹配不区分大小写，片段中不含变音符号时也能命中带变音符号的名称；不跨越挂载点，也不经过固件链接
+/// 内核把双方分解为 NFD 并折叠大小写后做子串匹配：不区分大小写，但区分变音符号——组合符号跟在基本字母之后，
+/// 所以 “cafe” 能命中 “café”，而 “Resume” 命中不了 “Résumé”（é 与 s 之间隔着组合符号）。
+/// 不跨越挂载点，也不经过固件链接
 struct LocalVolumeCatalogSearcher: VolumeCatalogSearching {
     private static let bufferSize = 256 * 1024
     private static let maximumMatchesPerCall = 4096
@@ -42,9 +44,15 @@ struct LocalVolumeCatalogSearcher: VolumeCatalogSearching {
     init() {}
 
     func mountPoints() -> [String] {
+        // getmntinfo 返回的缓冲区由系统复用，多个窗口同时搜索时可能被另一线程释放；
+        // getmntinfo_r_np 每次分配独立的缓冲区，用完由调用方释放
         var mounts: UnsafeMutablePointer<statfs>?
-        let count = getmntinfo(&mounts, MNT_NOWAIT)
-        guard count > 0, let mounts else {
+        let count = getmntinfo_r_np(&mounts, MNT_NOWAIT)
+        guard let mounts else {
+            return []
+        }
+        defer { free(mounts) }
+        guard count > 0 else {
             return []
         }
         return (0..<Int(count)).map { index in

@@ -2,11 +2,6 @@ import XCTest
 @testable import FileHound
 
 final class SpecialFolderPlannerTests: XCTestCase {
-    func testProvidersExposeConsistentKind() {
-        XCTAssertEqual(LocalFilesystemProvider().kind, .local)
-        XCTAssertEqual(PrivilegedFilesystemProvider().kind, .privileged)
-    }
-
     func testSpecialFolderPlannerExcludesConfiguredFolderUnlessItIsTheExplicitRoot() {
         let configuration = SpecialFoldersConfiguration(
             rules: [SpecialFolderRule(path: "/Users/example/Library", disposition: .exclude)]
@@ -35,6 +30,9 @@ final class SpecialFolderPlannerTests: XCTestCase {
         XCTAssertEqual(plan.includedPathRoots, ["/Users/example/Library/Mail"])
         XCTAssertEqual(plan.specialFolderExclusions, ["/Users/example/Library"])
         XCTAssertEqual(plan.slowSearchPaths, ["/Users/example/Downloads"])
+        XCTAssertTrue(plan.isSlowSearchPath("/Users/example/Downloads"))
+        XCTAssertTrue(plan.isSlowSearchPath("/Users/example/./Downloads"))
+        XCTAssertFalse(plan.isSlowSearchPath("/Users/example/Downloads/sub"))
         XCTAssertTrue(plan.allows(path: "/Users/example/Library"))
         XCTAssertTrue(plan.allows(path: "/Users/example/Library/Mail"))
         XCTAssertFalse(plan.allows(path: "/Users/example/Library/Caches"))
