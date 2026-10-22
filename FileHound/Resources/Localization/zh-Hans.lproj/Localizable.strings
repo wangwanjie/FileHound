@@ -299,3 +299,5 @@
 "search_rule.kind.unix_executable" = "UNIX 可执行文件";
 "search_rule.kind.video" = "视频";
 "search_rule.kind.word_pages" = "Word 与 Pages";
+/* App Shell */
+"menu.export_results" = "导出结果…";

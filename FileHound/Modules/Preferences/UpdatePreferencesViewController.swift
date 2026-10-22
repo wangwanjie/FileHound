@@ -73,11 +73,14 @@ final class UpdatePreferencesViewController: NSViewController {
     private func policyChanged() {
         let policies: [UpdateCheckPolicy] = [.onLaunch, .manualOnly, .dailyAutomatic]
         settings.updateCheckPolicy = policies[policyPopup.indexOfSelectedItem]
+        // 立即应用到 Sparkle，不必重启 App
+        updateManager.applySettings()
     }
 
     @objc
     private func autoDownloadChanged() {
         settings.autoDownloadUpdates = autoDownloadButton.state == .on
+        updateManager.applySettings()
     }
 
     @objc
@@ -86,6 +89,7 @@ final class UpdatePreferencesViewController: NSViewController {
         settings.autoDownloadUpdates = false
         policyPopup.selectItem(at: 0)
         autoDownloadButton.state = .off
+        updateManager.applySettings()
     }
 
     private func selectedPolicyIndex() -> Int {
@@ -127,6 +131,16 @@ extension UpdatePreferencesViewController {
 
     var debugAutoDownloadEnabled: Bool {
         autoDownloadButton.state == .on
+    }
+
+    func debugSelectPolicy(at index: Int) {
+        policyPopup.selectItem(at: index)
+        policyChanged()
+    }
+
+    func debugSetAutoDownload(_ enabled: Bool) {
+        autoDownloadButton.state = enabled ? .on : .off
+        autoDownloadChanged()
     }
 }
 #endif

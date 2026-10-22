@@ -9,7 +9,7 @@ import AppKit
 import Combine
 import MMKV
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var windowController: NSWindowController?
     private lazy var searchWindowManager: SearchWindowManager = {
         let manager = SearchWindowManager()
@@ -20,20 +20,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }()
     private lazy var preferencesWindowController = PreferencesWindowController()
     private lazy var launchShortcutController: LaunchShortcutControlling = LaunchShortcutController.shared
-    private lazy var updateManager: UpdateManager = .shared
+    /// 延迟创建：UpdateManager.shared 会创建真实的 Sparkle 控制器，测试中构造 AppDelegate 时不应触发
+    private let updateManagerProvider: () -> UpdateManager
+    private lazy var updateManager: UpdateManager = updateManagerProvider()
     private var cancellables: Set<AnyCancellable> = []
     /// 菜单构建器同时是最近 / 已存储搜索子菜单的 delegate，需要强引用
     private var mainMenuBuilder: MainMenuBuilder?
+    /// 本实例作为单元测试 test host 完成了启动（只在 applicationDidFinishLaunching 中设置，测试自行构造的实例不受影响）
+    private var isHostingUnitTests = false
+
+    init(updateManagerProvider: @escaping () -> UpdateManager = { .shared }) {
+        self.updateManagerProvider = updateManagerProvider
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MMKVKeyValueStore.initializeStore()
+
+        // 作为单元测试的 test host 运行时，只保留 MMKV 等测试需要的基础设施（且已切到独立目录），
+        // 跳过全局热键注册、更新检查、窗口恢复 / 打开等会影响用户环境的启动副作用
+        guard AppRuntimeEnvironment.isRunningUnitTests == false else {
+            isHostingUnitTests = true
+            return
+        }
+
         resetSettingsForUITestingIfNeeded()
         prepareUITestFixturesIfNeeded()
         bindAppSettings()
         launchShortcutController.configure { [weak self] in
             self?.presentSearchWindow(nil)
         }
-        updateManager.configureForLaunch()
         rebuildMainMenu()
         NotificationCenter.default.addObserver(
             self,
@@ -41,6 +57,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             name: .mainMenuNeedsRebuild,
             object: nil
         )
+
+        // 应用更新策略；「启动时检查」走后台静默检查（只有发现新版本才提示），Debug 构建不自动检查
+        updateManager.handleLaunch()
 
         if ProcessInfo.processInfo.arguments.contains("--open-preferences-on-launch") {
             let initialSegment: Int
@@ -77,10 +96,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ProcessInfo.processInfo.arguments.contains("--show-secondary-preferences-on-launch") {
             openPreferences(nil)
         }
-
-        if updateManager.shouldCheckOnLaunch() {
-            updateManager.checkForUpdates(nil)
-        }
     }
 
     @objc
@@ -109,6 +124,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc
     func checkForUpdates(_ sender: Any?) {
         updateManager.checkForUpdates(sender)
+    }
+
+    // MARK: - NSMenuItemValidation
+
+    /// 主菜单开启了 autoenablesItems，直接设置 isEnabled 无效，需要在这里校验
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(checkForUpdates(_:)) {
+            return updateManager.canCheckForUpdates
+        }
+        return true
     }
 
     @objc
@@ -182,7 +207,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        AppSettings.shared.quitWhenAllWindowsAreClosed
+        // 单元测试 test host 启动时不打开任何窗口，测试关闭自己创建的窗口后不能让宿主进程退出
+        guard isHostingUnitTests == false else {
+            return false
+        }
+        return AppSettings.shared.quitWhenAllWindowsAreClosed
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -317,9 +346,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         applyCurrentTheme()
     }
 
+    /// 主题设置在 NSApp 上：所有窗口（查找、结果、偏好设置）以及 NSAlert、NSOpenPanel 等系统面板都会继承
     private func applyCurrentTheme() {
-        let theme = ThemeController.shared.currentTheme
-        searchWindowManager.windows.forEach { ThemeController.shared.apply(theme: theme, to: $0) }
-        ThemeController.shared.apply(theme: theme, to: preferencesWindowController.window)
+        ThemeController.shared.applyToApplication(theme: ThemeController.shared.currentTheme)
     }
 }
