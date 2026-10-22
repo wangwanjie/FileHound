@@ -922,7 +922,7 @@ private final class SearchRun: @unchecked Sendable {
                     try catalogSearcher.search(
                         volumePath: target.volumePath,
                         nameFragment: plan.nameFragment,
-                        shouldStop: { [self] in isStopped }
+                        shouldStop: { self.isStopped }
                     ) { matches in
                         for match in matches {
                             guard isStopped == false else {
