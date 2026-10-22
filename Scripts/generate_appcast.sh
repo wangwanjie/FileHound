@@ -148,7 +148,8 @@ find_sparkle_bin_dir() {
             printf '%s\n' "$candidate"
             return 0
         fi
-    done < <(find "$ROOT_DIR/build/DerivedData" "$HOME/Library/Developer/Xcode/DerivedData" \
+    # build_dmg.sh 的产物位于 build/DerivedData-<arch>，优先使用与发布包同一份 Sparkle 工具
+    done < <(find "$ROOT_DIR"/build/DerivedData* "$HOME/Library/Developer/Xcode/DerivedData" \
         -path '*/SourcePackages/artifacts/sparkle/Sparkle/bin' -type d 2>/dev/null | sort -r)
 
     return 1
@@ -260,8 +261,14 @@ fi
 
 SPARKLE_BIN_DIR="$(find_sparkle_bin_dir)" || fail "未找到 Sparkle 工具，请先构建一次工程或设置 SPARKLE_BIN_DIR"
 
-if ! "$SPARKLE_BIN_DIR/generate_keys" --account "$ACCOUNT" -p >/dev/null 2>&1; then
+if ! keychain_public_key="$("$SPARKLE_BIN_DIR/generate_keys" --account "$ACCOUNT" -p 2>/dev/null)"; then
     fail "未找到 Sparkle 私钥，请先执行: $SPARKLE_BIN_DIR/generate_keys --account $ACCOUNT"
+fi
+
+# 私钥对应的公钥必须与 App 内置的 SUPublicEDKey 一致，否则所有更新都会因签名校验失败被拒绝
+project_public_key="$(sed -n 's/^[[:space:]]*INFOPLIST_KEY_SUPublicEDKey:[[:space:]]*//p' "$ROOT_DIR/project.yml" | head -1 | tr -d ' "')"
+if [[ -n "$project_public_key" && "$keychain_public_key" != "$project_public_key" ]]; then
+    fail "Keychain 中的 Sparkle 公钥（$keychain_public_key）与 project.yml 的 SUPublicEDKey（$project_public_key）不一致"
 fi
 
 mkdir -p "$ARCHIVES_DIR"
@@ -296,8 +303,10 @@ for notes_path in "$ARCHIVES_DIR"/*.md "$ARCHIVES_DIR"/*.txt "$ARCHIVES_DIR"/*.h
 done
 
 TMP_APPCAST="$TMP_DIR/appcast.xml"
+# 不生成 delta：delta 文件不会上传到 GitHub Release，生成的 sparkle:deltas 地址会 404
 "$SPARKLE_BIN_DIR/generate_appcast" \
     --account "$ACCOUNT" \
+    --maximum-deltas 0 \
     --link "https://github.com/$REPO" \
     -o "$TMP_APPCAST" \
     "$TMP_DIR"

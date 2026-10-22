@@ -21,6 +21,8 @@ GENERATE_NOTES=false
 DRAFT=false
 PRERELEASE=false
 TARGET_COMMITISH=""
+STABLE_NAMES=true
+REQUIRED_ARCHS=(arm64 x86_64)
 
 usage() {
     cat <<'EOF'
@@ -30,7 +32,7 @@ usage() {
                                      [--draft] [--prerelease]
 
 选项:
-  --dmg PATH          指定要上传的 DMG，可重复传入多个架构资产；默认选择 build/dmg/ 下最新的 FileHound_v*.dmg
+  --dmg PATH          指定要上传的 DMG，可重复传入多个架构资产；默认选择 build/dmg/ 下当前版本的 arm64 与 x86_64 两个 DMG
   --repo OWNER/REPO   指定 GitHub 仓库，例如 wangwanjie/FileHound
   --tag TAG           指定 release tag，默认根据版本号推导为 v<version>
   --title TITLE       指定 release 标题，默认 FileHound v<version>
@@ -40,6 +42,12 @@ usage() {
   --generate-notes    让 GitHub 自动生成 release notes
   --draft             创建草稿 release
   --prerelease        创建预发布 release
+  --no-stable-names   不额外上传固定文件名的副本（FileHound-arm64.dmg / FileHound-x86_64.dmg）
+  --allow-single-arch 允许只上传一个架构（默认要求 arm64 和 x86_64 都存在）
+
+说明:
+  默认会额外上传固定文件名的 DMG 副本，README 可以用
+  https://github.com/<repo>/releases/latest/download/FileHound-<arch>.dmg 作为始终指向最新版的下载链接。
   -h, --help          显示帮助
 
 前置条件:
@@ -120,6 +128,39 @@ detect_repo() {
     return 1
 }
 
+read_build_number() {
+    sed -n 's/.*CURRENT_PROJECT_VERSION = \([^;]*\);/\1/p' "$PBXPROJ" | head -1 | tr -d ' '
+}
+
+infer_arch_from_dmg() {
+    local dmg_name
+    dmg_name="$(basename "$1")"
+
+    if [[ "$dmg_name" =~ _(arm64|x86_64)\.dmg$ ]]; then
+        printf '%s\n' "${BASH_REMATCH[1]}"
+        return 0
+    fi
+
+    return 1
+}
+
+# 默认上传当前工程版本对应的全部架构 DMG，避免只传了最新生成的一个架构
+find_current_version_dmgs() {
+    local version
+    local build_number
+    local arch
+    local candidate
+
+    version="$(read_marketing_version)"
+    build_number="$(read_build_number)"
+    for arch in "${REQUIRED_ARCHS[@]}"; do
+        candidate="$DEFAULT_DMG_DIR/FileHound_v${version}_${build_number}_${arch}.dmg"
+        if [[ -f "$candidate" ]]; then
+            printf '%s\n' "$candidate"
+        fi
+    done
+}
+
 find_latest_dmg() {
     local latest_path=""
     local latest_mtime=0
@@ -156,9 +197,14 @@ read_marketing_version() {
     sed -n 's/.*MARKETING_VERSION = \([^;]*\);/\1/p' "$PBXPROJ" | head -1 | tr -d ' '
 }
 
+# mode=create 时没有说明会回落到默认文案；mode=edit 时只在显式传入说明时才覆盖，避免冲掉手写的 release notes
 build_notes_args() {
+    local mode="$1"
     NOTES_ARGS=()
     if [[ "$GENERATE_NOTES" == true ]]; then
+        if [[ "$mode" == edit ]]; then
+            fail "Release $TAG 已存在，gh release edit 不支持 --generate-notes，请改用 --notes / --notes-file 或不传说明"
+        fi
         NOTES_ARGS+=(--generate-notes)
         return
     fi
@@ -173,7 +219,9 @@ build_notes_args() {
         return
     fi
 
-    NOTES_ARGS+=(--notes "Release $TAG")
+    if [[ "$mode" == create ]]; then
+        NOTES_ARGS+=(--notes "Release $TAG")
+    fi
 }
 
 while [[ $# -gt 0 ]]; do
@@ -225,6 +273,14 @@ while [[ $# -gt 0 ]]; do
             PRERELEASE=true
             shift
             ;;
+        --no-stable-names)
+            STABLE_NAMES=false
+            shift
+            ;;
+        --allow-single-arch)
+            REQUIRED_ARCHS=()
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -259,10 +315,28 @@ if [[ ${#DMG_PATHS[@]} -gt 0 ]]; then
     for i in "${!DMG_PATHS[@]}"; do
         DMG_PATHS[$i]="$(resolve_path "${DMG_PATHS[$i]}")"
     done
+elif [[ ${#REQUIRED_ARCHS[@]} -gt 0 ]]; then
+    while IFS= read -r dmg_path; do
+        DMG_PATHS+=("$dmg_path")
+    done < <(find_current_version_dmgs)
+    [[ ${#DMG_PATHS[@]} -gt 0 ]] || fail "未找到当前版本的 DMG，请先执行 ./Scripts/build_dmg.sh --arch arm64 / x86_64"
 else
     latest_dmg="$(find_latest_dmg)"
     [[ -n "$latest_dmg" ]] || fail "未找到可上传的 DMG，请先执行 ./Scripts/build_dmg.sh"
     DMG_PATHS+=("$latest_dmg")
+fi
+
+# 校验每个必需架构恰好有一个 DMG
+if [[ ${#REQUIRED_ARCHS[@]} -gt 0 ]]; then
+    for required_arch in "${REQUIRED_ARCHS[@]}"; do
+        arch_count=0
+        for dmg_path in "${DMG_PATHS[@]}"; do
+            if [[ "$(infer_arch_from_dmg "$dmg_path" || true)" == "$required_arch" ]]; then
+                arch_count=$((arch_count + 1))
+            fi
+        done
+        [[ "$arch_count" -eq 1 ]] || fail "需要恰好一个 $required_arch 架构的 DMG，实际为 $arch_count 个（如确实只发布单一架构请加 --allow-single-arch）"
+    done
 fi
 
 for dmg_path in "${DMG_PATHS[@]}"; do
@@ -300,19 +374,35 @@ if [[ -z "$TITLE" ]]; then
     TITLE="FileHound v$VERSION"
 fi
 
+# 固定文件名副本：让 releases/latest/download/FileHound-<arch>.dmg 始终指向最新版本
+UPLOAD_PATHS=("${DMG_PATHS[@]}")
+if [[ "$STABLE_NAMES" == true ]]; then
+    STABLE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/filehound-release.XXXXXX")"
+    trap 'rm -rf "$STABLE_DIR"' EXIT
+    for dmg_path in "${DMG_PATHS[@]}"; do
+        dmg_arch="$(infer_arch_from_dmg "$dmg_path" || true)"
+        if [[ -n "$dmg_arch" ]]; then
+            cp "$dmg_path" "$STABLE_DIR/FileHound-${dmg_arch}.dmg"
+            UPLOAD_PATHS+=("$STABLE_DIR/FileHound-${dmg_arch}.dmg")
+        fi
+    done
+fi
+
 echo "仓库: $REPO"
 echo "Tag: $TAG"
 echo "标题: $TITLE"
 echo "Target: $TARGET_COMMITISH"
-for dmg_path in "${DMG_PATHS[@]}"; do
-    echo "DMG: $dmg_path"
+for dmg_path in "${UPLOAD_PATHS[@]}"; do
+    echo "上传: $dmg_path"
 done
 
 if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
     echo "Release 已存在，先更新元信息，再覆盖上传同名 DMG..."
     edit_args=(release edit "$TAG" -R "$REPO" --title "$TITLE")
-    build_notes_args
-    edit_args+=("${NOTES_ARGS[@]}")
+    build_notes_args edit
+    if [[ ${#NOTES_ARGS[@]} -gt 0 ]]; then
+        edit_args+=("${NOTES_ARGS[@]}")
+    fi
     if [[ "$DRAFT" == true ]]; then
         edit_args+=(--draft)
     fi
@@ -320,13 +410,13 @@ if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
         edit_args+=(--prerelease)
     fi
     gh "${edit_args[@]}"
-    gh release upload "$TAG" "${DMG_PATHS[@]}" -R "$REPO" --clobber
+    gh release upload "$TAG" "${UPLOAD_PATHS[@]}" -R "$REPO" --clobber
 else
     echo "Release 不存在，创建并上传 DMG..."
     create_args=(release create "$TAG")
-    create_args+=("${DMG_PATHS[@]}")
+    create_args+=("${UPLOAD_PATHS[@]}")
     create_args+=(-R "$REPO" --title "$TITLE" --target "$TARGET_COMMITISH")
-    build_notes_args
+    build_notes_args create
     create_args+=("${NOTES_ARGS[@]}")
     if [[ "$DRAFT" == true ]]; then
         create_args+=(--draft)

@@ -73,6 +73,52 @@ validate_arch() {
     esac
 }
 
+read_spec_setting() {
+    local key="$1"
+    sed -n "s/^[[:space:]]*$key:[[:space:]]*//p" "$ROOT_DIR/project.yml" | head -1 | tr -d ' "'
+}
+
+# project.yml 是工程配置的唯一来源；改了版本号却忘记 xcodegen generate 时，pbxproj 里还是旧版本，会静默打出旧版本号的包
+validate_version_consistency() {
+    local spec_version
+    local spec_build
+
+    spec_version="$(read_spec_setting "MARKETING_VERSION")"
+    spec_build="$(read_spec_setting "CURRENT_PROJECT_VERSION")"
+    if [[ -n "$spec_version" && "$spec_version" != "$VERSION" ]]; then
+        fail "project.yml 的 MARKETING_VERSION（$spec_version）与 project.pbxproj（$VERSION）不一致，请先执行 xcodegen generate"
+    fi
+    if [[ -n "$spec_build" && "$spec_build" != "$BUILD_NUMBER" ]]; then
+        fail "project.yml 的 CURRENT_PROJECT_VERSION（$spec_build）与 project.pbxproj（$BUILD_NUMBER）不一致，请先执行 xcodegen generate"
+    fi
+}
+
+# 确认主二进制只包含目标架构，避免把错误架构的包发到对应的更新源
+verify_binary_arch() {
+    local binary_path="$APP_PATH/Contents/MacOS/FileHound"
+    local archs
+
+    archs="$(lipo -archs "$binary_path" 2>/dev/null || true)"
+    if [[ "$archs" != "$ARCH" ]]; then
+        fail "主二进制架构为「$archs」，与目标架构 $ARCH 不一致"
+    fi
+}
+
+# 确认归档 Info.plist 中的版本号与 Sparkle feed 符合预期
+verify_bundle_metadata() {
+    local plist_path="$APP_PATH/Contents/Info.plist"
+    local bundle_version
+    local short_version
+    local feed_url
+
+    bundle_version="$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$plist_path")"
+    short_version="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$plist_path")"
+    feed_url="$(/usr/libexec/PlistBuddy -c "Print :SUFeedURL" "$plist_path")"
+    [[ "$bundle_version" == "$BUILD_NUMBER" ]] || fail "CFBundleVersion（$bundle_version）与构建号 $BUILD_NUMBER 不一致"
+    [[ "$short_version" == "$VERSION" ]] || fail "CFBundleShortVersionString（$short_version）与版本号 $VERSION 不一致"
+    [[ "$feed_url" == "$SPARKLE_FEED_URL" ]] || fail "SUFeedURL（$feed_url）与预期 $SPARKLE_FEED_URL 不一致"
+}
+
 read_project_setting() {
     local key="$1"
     local value
@@ -122,6 +168,7 @@ validate_release_prerequisites() {
     require_command create_pretty_dmg.sh
     require_command security
     require_command file
+    require_command lipo
     require_command sed
     require_command grep
 
@@ -186,21 +233,29 @@ create_versioned_dmg() {
     local output
     local raw_path
     local expected_path="$DMG_OUTPUT_DIR/FileHound_v${VERSION}_${BUILD_NUMBER}_${ARCH}.dmg"
+    # create_pretty_dmg.sh 生成的文件名不带架构；两个架构并行打包时先输出到各自的临时目录，避免同名文件互相覆盖
+    local staging_dir="$DMG_OUTPUT_DIR/.staging-$ARCH"
 
     mkdir -p "$DMG_OUTPUT_DIR"
     rm -f "$DMG_OUTPUT_DIR"/FileHound_v*_"$ARCH".dmg
+    rm -rf "$staging_dir"
+    mkdir -p "$staging_dir"
 
-    output="$(create_pretty_dmg.sh \
+    # set -e 下命令替换失败会直接退出，先捕获再打印，保证失败时能看到 create_pretty_dmg.sh 的诊断输出
+    if ! output="$(create_pretty_dmg.sh \
         --app-path "$APP_PATH" \
         --dmg-name "FileHound" \
         --append-version \
         --append-build \
-        --output-dir "$DMG_OUTPUT_DIR" 2>&1)"
+        --output-dir "$staging_dir" 2>&1)"; then
+        printf '%s\n' "$output" >&2
+        fail "create_pretty_dmg.sh 执行失败"
+    fi
     printf '%s\n' "$output"
 
     DMG_PATH="$(printf '%s\n' "$output" | sed -n 's/^DMG_PATH: //p' | tail -1)"
     if [[ -z "$DMG_PATH" ]]; then
-        DMG_PATH="$DMG_OUTPUT_DIR/FileHound_v${VERSION}_${BUILD_NUMBER}.dmg"
+        DMG_PATH="$staging_dir/FileHound_v${VERSION}_${BUILD_NUMBER}.dmg"
     fi
 
     raw_path="$DMG_PATH"
@@ -209,8 +264,32 @@ create_versioned_dmg() {
     if [[ "$raw_path" != "$expected_path" ]]; then
         mv -f "$raw_path" "$expected_path"
     fi
+    rm -rf "$staging_dir"
 
     DMG_PATH="$expected_path"
+}
+
+DMG_LOCK_DIR="$BUILD_DIR/.dmg-lock"
+
+acquire_dmg_lock() {
+    local waited=0
+    mkdir -p "$BUILD_DIR"
+    while ! mkdir "$DMG_LOCK_DIR" 2>/dev/null; do
+        if [[ "$waited" -eq 0 ]]; then
+            echo "等待其他架构完成 DMG 制作..."
+        fi
+        sleep 2
+        waited=$((waited + 2))
+        if [[ "$waited" -ge 900 ]]; then
+            fail "等待 DMG 制作锁超时（$DMG_LOCK_DIR），如无其他打包进程请手动删除该目录"
+        fi
+    done
+    trap 'rmdir "$DMG_LOCK_DIR" 2>/dev/null || true' EXIT
+}
+
+release_dmg_lock() {
+    rmdir "$DMG_LOCK_DIR" 2>/dev/null || true
+    trap - EXIT
 }
 
 notarize_and_staple() {
@@ -277,13 +356,15 @@ VERSION="$(read_project_setting "MARKETING_VERSION")"
 BUILD_NUMBER="$(read_project_setting "CURRENT_PROJECT_VERSION")"
 [[ -n "$VERSION" ]] || fail "无法从工程读取 MARKETING_VERSION"
 [[ -n "$BUILD_NUMBER" ]] || fail "无法从工程读取 CURRENT_PROJECT_VERSION"
+validate_version_consistency
 
 echo "架构: $ARCH"
 echo "版本号: $VERSION"
 echo "构建号: $BUILD_NUMBER"
 echo "Feed: $SPARKLE_FEED_URL"
 
-rm -rf "$ARCHIVE_PATH" "$DERIVED_DATA"
+# 保留 DerivedData（其中有已解析的 SPM 包，MMKV 子模块重新拉取容易因网络失败），下面的 clean archive 会清理构建产物
+rm -rf "$ARCHIVE_PATH"
 mkdir -p "$BUILD_DIR"
 
 echo "归档 $SCHEME (Release / $ARCH)..."
@@ -302,6 +383,8 @@ xcodebuild \
 
 [[ -d "$APP_PATH" ]] || fail "未找到归档产物 $APP_PATH"
 ensure_sparkle_bundle_metadata
+verify_binary_arch
+verify_bundle_metadata
 
 SIGNING_AUTHORITY="$(current_signing_authority "$APP_PATH")"
 [[ -n "$SIGNING_AUTHORITY" ]] || fail "归档结果未识别到 Developer ID Application 签名。请先修正 Release 签名设置。"
@@ -309,7 +392,10 @@ SIGNING_AUTHORITY="$(current_signing_authority "$APP_PATH")"
 resign_for_release "$SIGNING_AUTHORITY"
 verify_release_signature "$APP_PATH" "FileHound.app"
 
+# create_pretty_dmg.sh 会挂载名为 FileHound 的卷并用 Finder 按卷名排版，两个架构并行打包时必须串行执行这一步
+acquire_dmg_lock
 create_versioned_dmg
+release_dmg_lock
 echo "DMG 已生成: $DMG_PATH"
 
 if [[ "$SHOULD_NOTARIZE" == true ]]; then
