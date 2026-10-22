@@ -213,9 +213,9 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         toolbarView.selectSortField(viewModel.sortField)
         tableController.applySort(field: viewModel.sortField, order: viewModel.sortOrder)
         treeController.applySort(field: viewModel.sortField, order: viewModel.sortOrder)
-        staleModes = [.grid, .table, .tree]
-        render(mode: viewModel.mode)
+        // 先刷新当前模式的视图（其余标记为过期），再应用模式与选中
         refreshVisibleView(with: viewModel.projectedItems)
+        render(mode: viewModel.mode)
         statusBarView.updateSearchStatus(viewModel.searchStatus)
         statusBarView.updateSelectedItem(viewModel.selectedItem)
 
