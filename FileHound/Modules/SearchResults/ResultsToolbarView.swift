@@ -24,10 +24,16 @@ final class ResultsToolbarView: NSView {
     let filterField = NSSearchField()
     let previewSlider = NSSlider(value: 72, minValue: 32, maxValue: 128, target: nil, action: nil)
     let sortByPopup = NSPopUpButton()
+    /// 导出当前视图中的结果（CSV / 纯文本）
+    let exportButton = NSButton()
     private let topBar = NSStackView()
     private let secondaryBar = NSView()
-    private let previewLabel = NSTextField(labelWithString: "Preview Size:")
+    private let previewLabel = NSTextField(labelWithString: L10n.string("results.toolbar.preview_size"))
     private let sortLabel = NSTextField(labelWithString: L10n.string("results.toolbar.sort_by"))
+    /// 分组标题（显示 / 包括 / 过滤），切换语言时需要刷新
+    private let modeGroupLabel = NSTextField(labelWithString: "")
+    private let optionsGroupLabel = NSTextField(labelWithString: "")
+    private let filterGroupLabel = NSTextField(labelWithString: "")
     private var secondaryBarHeightConstraint: Constraint?
     private var secondaryBarTopConstraint: Constraint?
 
@@ -35,27 +41,26 @@ final class ResultsToolbarView: NSView {
         super.init(frame: frameRect)
 
         filterField.setAccessibilityIdentifier("ResultsFilterField")
-        filterField.placeholderString = L10n.string("results.toolbar.filter")
-        gridButton.toolTip = L10n.string("results.toolbar.grid")
-        tableButton.toolTip = L10n.string("results.mode.list")
-        treeButton.toolTip = L10n.string("results.mode.tree")
-        invisiblesButton.toolTip = L10n.string("results.toolbar.show_invisibles")
-        packageButton.toolTip = L10n.string("results.toolbar.show_package_contents")
-        trashedButton.toolTip = L10n.string("results.toolbar.show_trashed")
         previewSlider.controlSize = .small
         previewSlider.isContinuous = true
         previewSlider.setAccessibilityIdentifier("ResultsPreviewSlider")
         sortByPopup.setAccessibilityIdentifier("ResultsSortByPopup")
         sortByPopup.addItems(withTitles: Self.supportedSortFields.map(Self.title(for:)))
         sortByPopup.selectItem(at: 0)
+        exportButton.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: nil)
+        exportButton.imagePosition = .imageOnly
+        exportButton.bezelStyle = .texturedRounded
+        exportButton.controlSize = .small
+        exportButton.setButtonType(.momentaryPushIn)
+        exportButton.setAccessibilityIdentifier("ResultsExportButton")
         [previewLabel, sortLabel].forEach {
             $0.font = .systemFont(ofSize: 11, weight: .medium)
             $0.textColor = .secondaryLabelColor
         }
 
-        let modeGroup = makeGroupedStack(title: L10n.string("results.toolbar.view"), views: [gridButton, tableButton, treeButton])
-        let optionsGroup = makeGroupedStack(title: L10n.string("results.toolbar.show"), views: [invisiblesButton, packageButton, trashedButton])
-        let filterGroup = makeGroupedStack(title: L10n.string("results.toolbar.filter"), views: [filterField])
+        let modeGroup = makeGroupedStack(titleLabel: modeGroupLabel, views: [gridButton, tableButton, treeButton])
+        let optionsGroup = makeGroupedStack(titleLabel: optionsGroupLabel, views: [invisiblesButton, packageButton, trashedButton])
+        let filterGroup = makeGroupedStack(titleLabel: filterGroupLabel, views: [filterField])
 
         topBar.orientation = .horizontal
         topBar.alignment = .top
@@ -71,6 +76,7 @@ final class ResultsToolbarView: NSView {
         addSubview(secondaryBar)
         secondaryBar.addSubview(previewLabel)
         secondaryBar.addSubview(previewSlider)
+        secondaryBar.addSubview(exportButton)
         secondaryBar.addSubview(sortLabel)
         secondaryBar.addSubview(sortByPopup)
 
@@ -90,6 +96,10 @@ final class ResultsToolbarView: NSView {
             make.centerY.equalToSuperview()
             make.width.equalTo(150)
         }
+        exportButton.snp.makeConstraints { make in
+            make.trailing.equalTo(sortLabel.snp.leading).offset(-16)
+            make.centerY.equalToSuperview()
+        }
         sortLabel.snp.makeConstraints { make in
             make.trailing.equalTo(sortByPopup.snp.leading).offset(-8)
             make.centerY.equalToSuperview()
@@ -103,8 +113,39 @@ final class ResultsToolbarView: NSView {
             make.width.equalTo(260)
         }
 
+        reloadLocalizedStrings()
         apply(mode: .grid)
         applyBackgroundAppearance()
+    }
+
+    /// 刷新全部文案：应用内切换语言时调用。无障碍标签使用本地化文案，accessibilityIdentifier 保留给 UI 测试
+    func reloadLocalizedStrings() {
+        filterField.placeholderString = L10n.string("results.toolbar.filter")
+        previewLabel.stringValue = L10n.string("results.toolbar.preview_size")
+        sortLabel.stringValue = L10n.string("results.toolbar.sort_by")
+        modeGroupLabel.stringValue = L10n.string("results.toolbar.view")
+        optionsGroupLabel.stringValue = L10n.string("results.toolbar.show")
+        filterGroupLabel.stringValue = L10n.string("results.toolbar.filter")
+
+        let buttonTitles: [(NSButton, String)] = [
+            (gridButton, L10n.string("results.toolbar.grid")),
+            (tableButton, L10n.string("results.mode.list")),
+            (treeButton, L10n.string("results.mode.tree")),
+            (invisiblesButton, L10n.string("results.toolbar.show_invisibles")),
+            (packageButton, L10n.string("results.toolbar.show_package_contents")),
+            (trashedButton, L10n.string("results.toolbar.show_trashed")),
+            (exportButton, L10n.string("results.export.menu_title"))
+        ]
+        for (button, title) in buttonTitles {
+            button.toolTip = title
+            button.setAccessibilityLabel(title)
+        }
+
+        // 重建排序菜单标题，保持当前选中项
+        let selectedIndex = sortByPopup.indexOfSelectedItem
+        sortByPopup.removeAllItems()
+        sortByPopup.addItems(withTitles: Self.supportedSortFields.map(Self.title(for:)))
+        sortByPopup.selectItem(at: max(selectedIndex, 0))
     }
 
     @available(*, unavailable)
@@ -141,7 +182,7 @@ final class ResultsToolbarView: NSView {
         Self.supportedSortFields[safe: sortByPopup.indexOfSelectedItem] ?? .name
     }
 
-    private func makeGroupedStack(title: String?, views: [NSView]) -> NSView {
+    private func makeGroupedStack(titleLabel: NSTextField?, views: [NSView]) -> NSView {
         let container = NSView()
         let stack = NSStackView(views: views)
         stack.orientation = .horizontal
@@ -149,8 +190,7 @@ final class ResultsToolbarView: NSView {
         stack.spacing = 8
         container.addSubview(stack)
 
-        if let title {
-            let label = NSTextField(labelWithString: title)
+        if let label = titleLabel {
             label.font = .systemFont(ofSize: 11, weight: .medium)
             label.textColor = .secondaryLabelColor
             container.addSubview(label)
@@ -204,6 +244,14 @@ final class ResultsToolbarView: NSView {
 
 #if DEBUG
 extension ResultsToolbarView {
+    var debugPreviewLabelText: String {
+        previewLabel.stringValue
+    }
+
+    var debugLayerBackgroundColor: CGColor? {
+        layer?.backgroundColor
+    }
+
     func debugBackgroundHex(for appearanceName: NSAppearance.Name) -> String {
         let appearance = NSAppearance(named: appearanceName)
             ?? NSApp?.effectiveAppearance
@@ -222,14 +270,14 @@ private extension Collection {
 final class ResultsToolbarButton: NSButton {
     init(symbolName: String, accessibilityID: String) {
         super.init(frame: .zero)
-        image = NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityID)
+        // 无障碍标签由 ResultsToolbarView.reloadLocalizedStrings 设置为本地化文案，这里只设置 UI 测试使用的 identifier
+        image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
         bezelStyle = .texturedRounded
         imagePosition = .imageOnly
         setButtonType(.toggle)
         focusRingType = .none
         setAccessibilityElement(true)
         setAccessibilityIdentifier(accessibilityID)
-        setAccessibilityLabel(accessibilityID)
         updateAppearance()
     }
 
@@ -252,14 +300,14 @@ final class ResultsToolbarButton: NSButton {
 final class ResultsToolbarToggleButton: NSButton {
     init(symbolName: String, accessibilityID: String) {
         super.init(frame: .zero)
-        image = NSImage(systemSymbolName: symbolName, accessibilityDescription: accessibilityID)
+        // 无障碍标签由 ResultsToolbarView.reloadLocalizedStrings 设置为本地化文案，这里只设置 UI 测试使用的 identifier
+        image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
         bezelStyle = .texturedRounded
         imagePosition = .imageOnly
         setButtonType(.toggle)
         focusRingType = .none
         setAccessibilityElement(true)
         setAccessibilityIdentifier(accessibilityID)
-        setAccessibilityLabel(accessibilityID)
         updateAppearance()
     }
 

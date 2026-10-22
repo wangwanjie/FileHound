@@ -299,3 +299,22 @@
 "search_rule.kind.unix_executable" = "UNIX executable";
 "search_rule.kind.video" = "Video";
 "search_rule.kind.word_pages" = "Word & Pages";
+/* SearchResults */
+"results.toolbar.preview_size" = "Preview Size:";
+"results.delete.single_named" = "“%1$@” will be deleted permanently. This can’t be undone.\n\n%2$@";
+"results.rename.error.empty" = "The name can’t be empty.";
+"results.rename.error.slash" = "The name can’t contain “/”.";
+"results.rename.error.colon" = "The name can’t contain “:”.";
+"results.rename.error.reserved" = "The names “.” and “..” are reserved by the system.";
+"results.rename.error.too_long" = "The name is too long.";
+"results.export.menu_title" = "Export Results…";
+"results.export.title" = "Export Results";
+"results.export.default_name" = "Search Results";
+"results.export.format" = "Format:";
+"results.export.format.csv" = "CSV (Comma-Separated)";
+"results.export.format.text" = "Plain Text (One Path per Line)";
+"results.export.column.name" = "Name";
+"results.export.column.path" = "Path";
+"results.export.column.size_bytes" = "Size (bytes)";
+"results.export.column.modified" = "Date Modified";
+"results.export.column.kind" = "Kind";

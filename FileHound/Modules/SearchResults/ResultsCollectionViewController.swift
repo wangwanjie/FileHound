@@ -9,6 +9,10 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
     private let iconProvider = ResultIconProvider()
     private var previewSize: CGFloat = 72
     private(set) var resultsAppearance = ResultsAppearance.current()
+    /// 监听选中变化：鼠标、键盘 ↑↓、⌘A 以及程序化修改都会改变 selectionIndexPaths
+    private var selectionObservation: NSKeyValueObservation?
+    /// 程序化修改选中（刷新数据、同步视图模型选中）时不回调，避免把旧选中写回视图模型
+    private var isUpdatingSelectionProgrammatically = false
 
     var onSelectionChange: ((SearchResultItem?) -> Void)?
     var onSelectionSetChange: (([SearchResultItem]) -> Void)?
@@ -32,6 +36,12 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
         }
         collectionView.quickLookHandler = { [weak self] in
             self?.quickLookRequested()
+        }
+        selectionObservation = collectionView.observe(\.selectionIndexPaths, options: [.new]) { [weak self] _, _ in
+            guard let self, self.isUpdatingSelectionProgrammatically == false else {
+                return
+            }
+            self.notifySelectionChange()
         }
 
         applyPreviewLayout()
@@ -61,17 +71,35 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
     func update(items: [SearchResultItem]) {
         // 搜索进行中结果会持续刷新，按路径恢复选中项，避免选中项因新结果插入而错位
         let selectedPaths = Set(selectedItems().map(\.path))
+        isUpdatingSelectionProgrammatically = true
         self.items = items
         collectionView.reloadData()
-        guard selectedPaths.isEmpty == false else {
-            return
-        }
         let indexPaths = Set(items.indices
             .filter { selectedPaths.contains(items[$0].path) }
             .map { IndexPath(item: $0, section: 0) })
         if indexPaths != collectionView.selectionIndexPaths {
             collectionView.selectionIndexPaths = indexPaths
+        }
+        isUpdatingSelectionProgrammatically = false
+        // 只有选中内容因结果变化真正改变时才通知
+        if Set(selectedItems().map(\.path)) != selectedPaths {
             notifySelectionChange()
+        }
+    }
+
+    /// 切换视图模式时把视图模型的选中同步过来，不回调
+    func select(ids: Set<SearchResultItem.ID>) {
+        let indexPaths = Set(items.indices
+            .filter { ids.contains(items[$0].id) }
+            .map { IndexPath(item: $0, section: 0) })
+        guard indexPaths != collectionView.selectionIndexPaths else {
+            return
+        }
+        isUpdatingSelectionProgrammatically = true
+        collectionView.selectionIndexPaths = indexPaths
+        isUpdatingSelectionProgrammatically = false
+        if let first = indexPaths.min() {
+            collectionView.scrollToItems(at: [first], scrollPosition: .nearestHorizontalEdge)
         }
     }
 
@@ -99,12 +127,16 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
         return resultItem
     }
 
-    func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
-        notifySelectionChange()
+    func collectionView(_ collectionView: NSCollectionView, canDragItemsAt indexPaths: Set<IndexPath>, with event: NSEvent) -> Bool {
+        indexPaths.allSatisfy { items.indices.contains($0.item) }
     }
 
-    func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
-        notifySelectionChange()
+    /// 拖出结果：写入文件 URL，拖到访达或其他 App
+    func collectionView(_ collectionView: NSCollectionView, pasteboardWriterForItemAt indexPath: IndexPath) -> NSPasteboardWriting? {
+        guard items.indices.contains(indexPath.item) else {
+            return nil
+        }
+        return URL(fileURLWithPath: items[indexPath.item].path) as NSURL
     }
 
     @objc
@@ -128,8 +160,8 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
         let point = collectionView.convert(event.locationInWindow, from: nil)
         if let indexPath = collectionView.indexPathForItem(at: point),
            collectionView.selectionIndexPaths.contains(indexPath) == false {
+            // 选中变化会经 selectionIndexPaths 的 KVO 通知
             collectionView.selectionIndexPaths = [indexPath]
-            notifySelectionChange()
         }
 
         let selected = selectedItems()
@@ -184,17 +216,21 @@ private final class ResultGridItem: NSCollectionViewItem {
     private var appearance = ResultsAppearance.current()
 
     override func loadView() {
-        view = NSView()
+        let rootView = AppearanceAwareView()
+        // 切换浅色 / 深色外观时重新解析选中遮罩与边框的 CGColor（CGColor 不会随外观自动变化）
+        rootView.onAppearanceChange = { [weak self] in
+            self?.applySelectionColors()
+        }
+        view = rootView
         view.wantsLayer = true
         view.layer?.cornerRadius = 10
         view.layer?.borderWidth = 1
-        view.layer?.borderColor = NSColor.clear.cgColor
         view.layer?.backgroundColor = NSColor.clear.cgColor
 
         selectionOverlay.wantsLayer = true
         selectionOverlay.layer?.cornerRadius = 10
-        selectionOverlay.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.18).cgColor
         selectionOverlay.isHidden = true
+        applySelectionColors()
 
         iconView.imageScaling = .scaleProportionallyUpOrDown
         titleLabel.alignment = .center
@@ -221,11 +257,20 @@ private final class ResultGridItem: NSCollectionViewItem {
     override var isSelected: Bool {
         didSet {
             selectionOverlay.isHidden = isSelected == false
-            view.layer?.borderColor = isSelected
-                ? NSColor.controlAccentColor.cgColor
-                : NSColor.clear.cgColor
+            applySelectionColors()
             applyHighlightedTitle()
         }
+    }
+
+    /// 按当前外观解析选中遮罩与边框颜色
+    private func applySelectionColors() {
+        let appearance = view.effectiveAppearance
+        selectionOverlay.layer?.backgroundColor = NSColor.controlAccentColor
+            .withAlphaComponent(0.18)
+            .fhResolvedCGColor(for: appearance)
+        view.layer?.borderColor = isSelected
+            ? NSColor.controlAccentColor.fhResolvedCGColor(for: appearance)
+            : NSColor.clear.cgColor
     }
 
     func render(
@@ -294,6 +339,10 @@ private final class ContextMenuCollectionView: NSCollectionView {
         menuProvider?(event)
     }
 
+    override func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        ResultDragOperationPolicy.sourceOperationMask(for: context, modifierFlags: NSEvent.modifierFlags)
+    }
+
     override func mouseUp(with event: NSEvent) {
         super.mouseUp(with: event)
         if event.clickCount == 2 {
@@ -328,6 +377,14 @@ private extension ResultGridItem {
         titleLabel.lineBreakMode
     }
 
+    var debugSelectionOverlayColor: CGColor? {
+        selectionOverlay.layer?.backgroundColor
+    }
+
+    var debugBorderColor: CGColor? {
+        view.layer?.borderColor
+    }
+
     var debugTitleAlignmentOffset: CGFloat {
         let iconRect = iconView.convert(iconView.bounds, to: view)
         let labelRect = titleLabel.convert(titleLabel.bounds, to: view)
@@ -354,6 +411,23 @@ private extension ResultGridItem {
 extension ResultsCollectionViewController {
     var debugItemSize: NSSize {
         layout.itemSize
+    }
+
+    var debugCollectionView: NSCollectionView {
+        collectionView
+    }
+
+    func debugPasteboardURL(forItem index: Int) -> URL? {
+        (collectionView(collectionView, pasteboardWriterForItemAt: IndexPath(item: index, section: 0)) as? NSURL) as URL?
+    }
+
+    /// 生成一个选中状态的网格单元，切换到指定外观后返回其遮罩与边框的实际 layer 颜色
+    func debugSelectedGridColors(appearanceName: NSAppearance.Name) -> (overlay: CGColor?, border: CGColor?) {
+        let gridItem = ResultGridItem()
+        _ = gridItem.view
+        gridItem.isSelected = true
+        gridItem.view.appearance = NSAppearance(named: appearanceName)
+        return (gridItem.debugSelectionOverlayColor, gridItem.debugBorderColor)
     }
 
     private func debugGridItem(for item: SearchResultItem, previewSize: CGFloat) -> ResultGridItem {

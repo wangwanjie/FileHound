@@ -299,3 +299,22 @@
 "search_rule.kind.unix_executable" = "UNIX 可執行檔";
 "search_rule.kind.video" = "影片";
 "search_rule.kind.word_pages" = "Word 與 Pages";
+/* SearchResults */
+"results.toolbar.preview_size" = "預覽大小：";
+"results.delete.single_named" = "「%1$@」將被永久刪除，無法還原。\n\n%2$@";
+"results.rename.error.empty" = "名稱不能為空。";
+"results.rename.error.slash" = "名稱不能包含「/」。";
+"results.rename.error.colon" = "名稱不能包含「:」。";
+"results.rename.error.reserved" = "「.」和「..」是系統保留的名稱。";
+"results.rename.error.too_long" = "名稱過長。";
+"results.export.menu_title" = "輸出結果…";
+"results.export.title" = "輸出結果";
+"results.export.default_name" = "搜尋結果";
+"results.export.format" = "格式：";
+"results.export.format.csv" = "CSV（逗號分隔）";
+"results.export.format.text" = "純文字（每行一個路徑）";
+"results.export.column.name" = "名稱";
+"results.export.column.path" = "路徑";
+"results.export.column.size_bytes" = "大小（位元組）";
+"results.export.column.modified" = "修改日期";
+"results.export.column.kind" = "種類";

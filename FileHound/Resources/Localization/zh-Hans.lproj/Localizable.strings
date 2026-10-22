@@ -299,3 +299,22 @@
 "search_rule.kind.unix_executable" = "UNIX 可执行文件";
 "search_rule.kind.video" = "视频";
 "search_rule.kind.word_pages" = "Word 与 Pages";
+/* SearchResults */
+"results.toolbar.preview_size" = "预览大小：";
+"results.delete.single_named" = "“%1$@”将被永久删除，无法撤销。\n\n%2$@";
+"results.rename.error.empty" = "名称不能为空。";
+"results.rename.error.slash" = "名称不能包含“/”。";
+"results.rename.error.colon" = "名称不能包含“:”。";
+"results.rename.error.reserved" = "“.”和“..”是系统保留的名称。";
+"results.rename.error.too_long" = "名称过长。";
+"results.export.menu_title" = "导出结果…";
+"results.export.title" = "导出结果";
+"results.export.default_name" = "搜索结果";
+"results.export.format" = "格式：";
+"results.export.format.csv" = "CSV（逗号分隔）";
+"results.export.format.text" = "纯文本（每行一个路径）";
+"results.export.column.name" = "名称";
+"results.export.column.path" = "路径";
+"results.export.column.size_bytes" = "大小（字节）";
+"results.export.column.modified" = "修改日期";
+"results.export.column.kind" = "种类";
