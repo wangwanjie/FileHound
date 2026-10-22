@@ -7,6 +7,12 @@
 
 import AppKit
 
+extension Notification.Name {
+    /// 需要重建主菜单（例如切换「打开最近搜索」菜单开关）。由 AppDelegate 统一重建并强引用 MainMenuBuilder，
+    /// 其他模块不要自行 new 一个 builder 赋给 NSApp.mainMenu：菜单的 delegate / target 都是弱引用，builder 会立即被释放
+    static let mainMenuNeedsRebuild = Notification.Name("FileHoundMainMenuNeedsRebuild")
+}
+
 final class MainMenuBuilder: NSObject, NSMenuDelegate {
     static let projectURL = URL(string: "https://github.com/wangwanjie/FileHound")!
 

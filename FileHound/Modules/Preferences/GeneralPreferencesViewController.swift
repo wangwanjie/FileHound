@@ -111,7 +111,7 @@ final class GeneralPreferencesViewController: NSViewController {
     @objc
     private func openRecentSearchChanged() {
         settings.openRecentSearchMenu = openRecentButton.state == .on
-        NSApp.mainMenu = MainMenuBuilder(target: NSApp.delegate as AnyObject, settings: settings).build()
+        NotificationCenter.default.post(name: .mainMenuNeedsRebuild, object: nil)
     }
 
     @objc

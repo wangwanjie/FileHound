@@ -541,9 +541,7 @@ final class SearchFormViewController: NSViewController {
             )
         )
 
-        if settings.openRecentSearchMenu {
-            NSApp.mainMenu = MainMenuBuilder(target: NSApp.delegate as AnyObject, settings: settings, searchHistoryStore: searchHistoryStore).build()
-        }
+        // 「最近搜索」子菜单在 menuNeedsUpdate 中按需从历史读取，这里不需要重建主菜单
     }
 
     private func resultCount(from phase: SearchWindowPhase) -> Int? {

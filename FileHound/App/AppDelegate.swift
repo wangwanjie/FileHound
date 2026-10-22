@@ -35,6 +35,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         updateManager.configureForLaunch()
         rebuildMainMenu()
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleMainMenuNeedsRebuild(_:)),
+            name: .mainMenuNeedsRebuild,
+            object: nil
+        )
 
         if ProcessInfo.processInfo.arguments.contains("--open-preferences-on-launch") {
             let initialSegment: Int
@@ -291,6 +297,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 )
             )
         }
+    }
+
+    @objc
+    private func handleMainMenuNeedsRebuild(_ notification: Notification) {
+        rebuildMainMenu()
     }
 
     private func rebuildMainMenu() {
