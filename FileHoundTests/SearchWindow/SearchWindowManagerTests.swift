@@ -3,12 +3,21 @@ import Testing
 @testable import FileHound
 
 struct SearchWindowManagerTests {
+    /// 每个窗口使用独立的内存存储环境，不读写真实会话 / 历史
     @MainActor
     private func makeManager(orderedWindows: @escaping () -> [NSWindow] = { [] }) -> SearchWindowManager {
         SearchWindowManager(
-            makeController: { SearchWindowController(restoresPreviousSession: $0) },
+            makeController: { SearchFormTestEnvironment().makeWindowController(restoresPreviousSession: $0) },
             orderedWindowsProvider: orderedWindows
         )
+    }
+
+    /// 让窗口进入「搜索中」：直接驱动表单状态，不启动真实搜索
+    @MainActor
+    private func simulateSearching(in controller: SearchWindowController) throws {
+        let formController = try #require(controller.window?.contentViewController as? SearchFormViewController)
+        formController.debugSimulateSearching()
+        #expect(controller.isSearching)
     }
 
     @MainActor
@@ -108,5 +117,51 @@ struct SearchWindowManagerTests {
 
         #expect(manager.controllerForApplyingSnapshot() === active)
         active.window?.close()
+    }
+
+    @MainActor
+    @Test
+    func closingSearchingWindowCancelsItsSearchWhenOthersRemainOpen() throws {
+        let manager = makeManager()
+        let searching = manager.presentActiveWindow()
+        let other = manager.openNewWindow()
+        try simulateSearching(in: searching)
+
+        searching.window?.close()
+
+        #expect(manager.controllers.contains { $0 === searching } == false)
+        #expect(searching.isSearching == false)
+        other.window?.close()
+    }
+
+    @MainActor
+    @Test
+    func closingLastSearchingWindowKeepsSearchRunning() throws {
+        let manager = makeManager()
+        let controller = manager.presentActiveWindow()
+        try simulateSearching(in: controller)
+
+        controller.window?.close()
+
+        // 最后一个窗口保留，搜索继续，结束后结果窗口照常打开
+        #expect(manager.controllers.first === controller)
+        #expect(controller.isSearching)
+        controller.cancelSearchIfNeeded()
+    }
+
+    @MainActor
+    @Test
+    func snapshotOpensNewWindowWhenActiveWindowIsSearching() throws {
+        let manager = makeManager()
+        let active = manager.presentActiveWindow()
+        try simulateSearching(in: active)
+
+        let target = manager.controllerForApplyingSnapshot()
+
+        #expect(target !== active)
+        #expect(active.isSearching)
+        #expect(manager.controllers.count == 2)
+        active.cancelSearchIfNeeded()
+        manager.windows.forEach { $0.close() }
     }
 }
