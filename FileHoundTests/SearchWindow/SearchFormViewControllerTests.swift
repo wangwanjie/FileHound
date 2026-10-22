@@ -105,6 +105,8 @@ struct SearchFormViewControllerTests {
     @MainActor
     @Test
     func reusesResultsWindowWhenTiePreferenceIsEnabled() {
+        // 打开的结果窗口由静态表持有，测试结束时关闭，避免残留到其他测试
+        defer { SearchResultsWindowController.debugCloseAllOpenWindows() }
         let storage = InMemoryKeyValueStore()
         let settings = AppSettings(storage: storage)
         settings.tieResultsWindowToFindWindow = true
@@ -126,6 +128,8 @@ struct SearchFormViewControllerTests {
     @MainActor
     @Test
     func createsNewResultsWindowWhenTiePreferenceIsDisabled() {
+        // 打开的结果窗口由静态表持有，测试结束时关闭，避免残留到其他测试
+        defer { SearchResultsWindowController.debugCloseAllOpenWindows() }
         let storage = InMemoryKeyValueStore()
         let settings = AppSettings(storage: storage)
         settings.tieResultsWindowToFindWindow = false

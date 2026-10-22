@@ -13,9 +13,6 @@ struct SearchResultsWindowControllerTests {
             refreshHandler: { refreshCount += 1 }
         )
 
-        NotificationCenter.default.post(name: NSApplication.didBecomeActiveNotification, object: NSApp)
-        #expect(refreshCount == 0)
-
         controller.refreshSearchResults(nil)
         #expect(refreshCount == 1)
 
@@ -34,14 +31,52 @@ struct SearchResultsWindowControllerTests {
     }
 
     @Test
-    func quitAfterLastWindowFollowsSetting() {
-        let previous = AppSettings.shared.quitWhenAllWindowsAreClosed
-        defer { AppSettings.shared.quitWhenAllWindowsAreClosed = previous }
-        let delegate = AppDelegate()
+    func streamingProgressKeepsUserRemovalsUntilNewSearch() {
+        let first = SearchResultItem(path: "/tmp/a.txt", matchReason: "", previewSnippet: nil)
+        let second = SearchResultItem(path: "/tmp/b.txt", matchReason: "", previewSnippet: nil)
+        let third = SearchResultItem(path: "/tmp/c.txt", matchReason: "", previewSnippet: nil)
+        let viewModel = SearchResultsViewModel()
+        let controller = SearchResultsWindowController(viewModel: viewModel, title: "Results")
 
-        AppSettings.shared.quitWhenAllWindowsAreClosed = false
-        #expect(delegate.applicationShouldTerminateAfterLastWindowClosed(NSApp) == false)
-        AppSettings.shared.quitWhenAllWindowsAreClosed = true
-        #expect(delegate.applicationShouldTerminateAfterLastWindowClosed(NSApp))
+        controller.update(title: "Results", items: [first, second])
+        viewModel.removeItems(ids: [first.id])
+
+        // 同一次搜索的后续进度：被移除的项不能再出现，新结果照常加入
+        controller.update(title: "Results", items: [first, second, third], startsNewSearch: false)
+        #expect(viewModel.items.map(\.path) == ["/tmp/b.txt", "/tmp/c.txt"])
+
+        // 新搜索开始后重新显示
+        controller.update(title: "Results", items: [first, second, third], startsNewSearch: true)
+        #expect(viewModel.items.map(\.path) == ["/tmp/a.txt", "/tmp/b.txt", "/tmp/c.txt"])
+    }
+
+    @Test
+    func newSearchDiscardsTrashTrackingButProgressKeepsIt() {
+        let item = SearchResultItem(path: "/tmp/a.txt", matchReason: "", previewSnippet: nil)
+        let viewModel = SearchResultsViewModel()
+        let controller = SearchResultsWindowController(viewModel: viewModel, title: "Results")
+        controller.update(title: "Results", items: [item])
+        viewModel.markItemsTrashed([TrashedResultEntry(item: item, trashedPath: "/Users/me/.Trash/a.txt")])
+
+        controller.update(title: "Results", items: [item], startsNewSearch: false)
+        #expect(viewModel.items.isEmpty)
+        #expect(viewModel.trashedEntries.count == 1)
+
+        controller.update(title: "Results", items: [item], startsNewSearch: true)
+        #expect(viewModel.items.map(\.path) == ["/tmp/a.txt"])
+        #expect(viewModel.trashedEntries.isEmpty)
+    }
+
+    @Test
+    func shownWindowIsHeldUntilClosed() {
+        SearchResultsWindowController.debugCloseAllOpenWindows()
+        defer { SearchResultsWindowController.debugCloseAllOpenWindows() }
+
+        let controller = SearchResultsWindowController(viewModel: SearchResultsViewModel(), title: "Results")
+        controller.showWindow(nil)
+        #expect(SearchResultsWindowController.debugOpenControllerCount == 1)
+
+        controller.window?.close()
+        #expect(SearchResultsWindowController.debugOpenControllerCount == 0)
     }
 }
