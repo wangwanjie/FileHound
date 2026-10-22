@@ -1,17 +1,32 @@
 # FileHound
 
-一个使用 Swift + AppKit 开发的 macOS 文件搜索工具，目标体验接近 Find Any File。
+FileHound 是一个 macOS 文件搜索工具，体验接近 Find Any File。它不建索引，每次都直接搜索磁盘，能找到 Spotlight 不收录的文件，例如系统目录、隐藏文件和包内容。可以按名称、扩展名、日期、大小、种类、标签、注释、文本内容等条件组合搜索。
 
-## 当前能力
+![FileHound 查找窗口与结果窗口](docs/images/screenshot-main.png)
 
-- 代码化主窗口与自定义菜单
-- 查询模型与执行计划
-- Spotlight 预取、卷目录搜索（searchfs）、多线程目录遍历与文本内容搜索
-- 列表/树形结果浏览与预览面板
-- 已保存搜索与偏好设置窗口
-- 主题切换与语言热切换
-- 权限诊断与特权 Helper 骨架
-- Sparkle 更新入口与 DMG / appcast 脚本
+## 下载
+
+FileHound 为 Apple 芯片和 Intel 芯片分别提供安装包，需要 macOS 12.0 或更高版本：
+
+| 芯片 | 下载最新版 |
+| --- | --- |
+| Apple 芯片（M1 及更新） | [FileHound-arm64.dmg](https://github.com/wangwanjie/FileHound/releases/latest/download/FileHound-arm64.dmg) |
+| Intel 芯片 | [FileHound-x86_64.dmg](https://github.com/wangwanjie/FileHound/releases/latest/download/FileHound-x86_64.dmg) |
+
+不确定是哪种芯片时，打开「苹果菜单 > 关于本机」，看「芯片」或「处理器」一栏。历史版本见 [Releases](https://github.com/wangwanjie/FileHound/releases)。安装包已经过 Apple 公证，打开 DMG 后把 FileHound 拖进「应用程序」文件夹即可。应用内会自动检查更新，并且只会下载与本机芯片匹配的版本。
+
+搜索系统目录或其他 App 的数据时，建议在「系统设置 > 隐私与安全性 > 完全磁盘访问权限」中允许 FileHound。偏好设置的「权限」页可以检查当前的授权状态。
+
+## 功能
+
+- **组合条件搜索**：名称、扩展名、路径、文件夹名、修改 / 创建 / 上次打开日期、大小、种类、标签、注释、文本内容、脚本等条件，条件之间是“且”的关系。支持通配符、正则表达式、“包含任一”等运算符，也可以区分大小写和变音符号。
+- **搜索范围**：启动卷、所有磁盘、主目录、访达当前选中的文件夹、最近使用的位置，或任意文件夹（可以直接从访达拖到查找窗口）。可以设置包含或排除不可见项目、包内容和废纸篓，限制文件夹深度和结果数量。
+- **快**：多线程批量遍历目录，搜索整个卷时直接扫描卷目录，同时用 Spotlight 预取第一屏结果。详见下文[为什么查找这么快](#为什么查找这么快)。
+- **结果浏览**：提供列表、树形、网格三种视图，可以过滤、排序和 Quick Look 预览。支持打开、在访达中显示、重命名、移到废纸篓（可放回原处）、设置标签、拷贝路径，也可以把结果直接拖到访达或其他 App。
+- **导出结果**：可以把当前结果导出为 CSV（可用 Excel / Numbers 打开）或纯文本路径列表，快捷键 ⇧⌘E。
+- **多窗口**：⌘N 另开一个查找窗口，各窗口的条件和结果互不影响。搜索进行中可以提前查看已找到的结果；⌘R 会按结果窗口自己的条件重新搜索。
+- **常用操作**：存储常用搜索，查看最近的搜索记录，用全局快捷键随时唤起查找窗口。
+- **界面**：支持简体中文、繁体中文、英文，可以在应用内切换语言，无需重启；外观可选浅色、深色或跟随系统。
 
 ## 运行原理
 
@@ -32,8 +47,8 @@ flowchart LR
 ```
 
 1. **收集规则**：搜索窗口把“搜索范围 + 若干条件”组装成 `SearchRequest`。条件之间是“且”的关系；“启动卷”“所有磁盘”等范围由 `SearchScopeResolver` 展开为搜索根和排除路径（如 `/Volumes`、`/System/Volumes`）。
-2. **Spotlight 预取**（`SpotlightSearchService`，受“包含 Spotlight 结果”偏好控制）：规则能翻译成 Spotlight 查询时，先用 `mdfind -onlyin` 取回一批候选。Spotlight 不区分大小写，而且不收录系统目录、隐藏文件、包内容等，所以这批结果只用来尽快给出第一屏，每一条仍按完整规则复核。文本内容搜索如果 Spotlight 已有结果就直接返回，因为它的索引覆盖 PDF、Office 等非纯文本格式。
-3. **卷目录搜索**（`LocalVolumeCatalogSearcher`）：如果搜索根本身是一个卷（启动卷或外置磁盘），并且有一条名称类规则能提取出名称中必然出现的一段文字，就用 `searchfs` 让内核直接扫描卷的目录，取回“名称包含该片段”的候选，再用 `fsgetpath` 还原成路径。启动卷会同时搜索 System 卷、Data 卷以及遍历时会进入的嵌套卷（如 cryptex 挂载点）。某个卷不支持 `searchfs`（如网络卷、FAT）时，这个卷自动改为遍历。
+2. **Spotlight 预取**（`SpotlightSearchService`，受“包含 Spotlight 结果”偏好控制）：规则能翻译成 Spotlight 查询时，在后台线程用 `mdfind -onlyin` 流式读取候选，与后面的卷目录搜索或遍历**并行**进行。Spotlight 不区分大小写，而且不收录系统目录、隐藏文件、包内容等，所以这批结果只用来尽快给出第一屏，每一条仍按完整规则复核。文本内容规则只查询 `kMDItemTextContent`（不会因为文件名包含关键词而误报）；只有“忽略大小写且忽略变音符号”时才直接采信 Spotlight 的内容命中，这样 PDF、Office 等非纯文本格式也能命中。Spotlight 是按词前缀匹配的，也不覆盖未建索引的位置，所以有 Spotlight 结果时仍会完整遍历，由结果汇总去重。
+3. **卷目录搜索**（`LocalVolumeCatalogSearcher`）：如果搜索根本身是一个卷（启动卷或外置磁盘），并且有一条名称类规则能提取出名称中必然出现的一段文字（见下文对变音符号的说明），就用 `searchfs` 让内核直接扫描卷的目录，取回“名称包含该片段”的候选，再用 `fsgetpath` 还原成路径。启动卷会同时搜索 System 卷、Data 卷以及遍历时会进入的嵌套卷（如 cryptex 挂载点）。某个卷不支持 `searchfs`（如网络卷、FAT）时，这个卷自动改为遍历。
 4. **多线程目录遍历**（`DirectoryWalker`）：其他情况，或者设置了“限制文件夹深度”时，从搜索根开始多线程遍历目录树。遍历途中按偏好中的“特殊文件夹”（`SpecialFolderPlanner`）跳过或包含指定目录；“不可见项目”条件为否时，隐藏目录整棵跳过，不再往下列。
 5. **逐项判定**：卷目录搜索和遍历共用同一个判定函数。先看排除路径与特殊文件夹，再按“只看路径的规则 → 需要读属性的规则 → 需要读内容的规则”的顺序逐条判定，任何一条不满足就立即放弃。只有命中的条目才去读取完整属性，生成结果行。
 6. **汇总与流式展示**：`SearchResultCollector` 在多个线程之间按路径去重，执行“限制数量”，并把进度回调节流到约 100ms 一次送回主线程，所以搜索过程中结果窗口是持续刷新的，不用等全部结束。点击停止时，遍历线程每 50ms、`searchfs` 每 200ms 检查一次取消标记。
@@ -61,7 +76,7 @@ flowchart LR
 - 多个卷并发搜索，每次调用最多在内核里停留 200ms，到时先把已找到的结果交出来。这样界面可以分批刷新，也能及时响应取消。
 - APFS 的对象 ID 超过 32 位，取 64 位 `ATTR_CMN_FILEID` 交给 `fsgetpath` 还原完整路径。
 - 搜索期间卷有写入时，续搜会返回 `EBUSY`，此时从头重来，最多 3 次，重复项由结果汇总去重。
-- `searchfs` 只做“名称包含片段”的粗筛（返回超集），每个候选仍走与遍历完全相同的判定，保证两条路径的结果一致。忽略变音符号时，规则中带变音符号的字符，以及大小写映射会改变长度的字符（如 `ß`），都会作为切分点，只取安全的片段交给内核。
+- `searchfs` 只做“名称包含片段”的粗筛（返回超集），每个候选仍走与遍历完全相同的判定，保证两条路径的结果一致。实测 `searchfs` 不区分大小写，但**区分变音符号**：片段 `Resume` 找不到 `Résumé`。所以在忽略变音符号（默认）时，只有数字、标点、汉字、韩文音节等不会带变音符号的字符能组成交给内核的片段，纯字母的名称条件会改用多线程遍历；勾选“区分变音符号”后，纯字母的名称条件也会走卷目录搜索。大小写映射会改变长度的字符（如 `ß`）同样作为切分点。
 
 > 搜索整个启动卷（约 707 万个对象）时，卷目录搜索比 8 线程遍历快约 **1.5 倍**（31.9s 对 48.5s）。APFS 上 `searchfs` 是对整个卷目录的线性扫描，耗时取决于卷上的对象总数，与命中数无关。它的优势在于不依赖逐个目录的读取权限和目录缓存：遍历进不去的目录（如缺少“完全磁盘访问权限”时 `~/Library` 下的部分目录），卷目录搜索也能找到其中的条目。
 
@@ -80,7 +95,7 @@ flowchart LR
 
 ### 6. 先出结果，持续刷新
 
-Spotlight 预取能在不到一秒内给出第一批结果，随后由卷目录搜索或遍历补全。结果汇总按约 100ms 节流推送到界面：命中密集时界面不会被刷新淹没，命中稀疏时也会在间隔结束后补发，最后一批结果不会被节流吞掉。
+Spotlight 预取与卷目录搜索 / 遍历并行，通常在不到一秒内给出第一批结果，随后由卷目录搜索或遍历补全。结果汇总按约 100ms 节流推送到界面：命中密集时界面不会被刷新淹没，命中稀疏时也会在间隔结束后补发，最后一批结果不会被节流吞掉。
 
 ## Benchmark
 
@@ -116,10 +131,10 @@ Spotlight 预取能在不到一秒内给出第一批结果，随后由卷目录�
 | 实现 | 耗时 | 相对遍历 | 结果数 | 说明 |
 | --- | ---: | ---: | ---: | --- |
 | FileHound 遍历 | 48.49 s | 1.0× | 290,156 | `getattrlistbulk` + 8 线程，从 `/` 逐目录列出 |
-| **FileHound 卷目录搜索（App 默认）** | **31.89 s** | **1.5×** | 295,472 | `searchfs` 并发扫描 6 个卷 |
+| **FileHound 卷目录搜索** | **31.89 s** | **1.5×** | 295,472 | `searchfs` 并发扫描 6 个卷 |
 | `mdfind -name` | 1.06 s | 不可比 | 11,430 | 只含 Spotlight 已索引的条目 |
 
-两种方式的结果集不完全相同。遍历进不了当前进程无权访问的目录。卷目录搜索对有多个硬链接的文件只返回一个路径，在系统卷上较常见。
+`plist` 是纯字母片段，在 App 中需要勾选“区分变音符号”才会走卷目录搜索（原因见上文第 3 节）；名称条件中含数字、汉字等字符时，默认就会走卷目录搜索。两种方式的结果集不完全相同。遍历进不了当前进程无权访问的目录。卷目录搜索对有多个硬链接的文件只返回一个路径，在系统卷上较常见。
 
 ### 场景三：按文本内容搜索
 
@@ -162,40 +177,64 @@ xcodebuild test -workspace FileHound.xcworkspace -scheme FileHound -destination 
 rm -f FileHound.xcodeproj/project.xcworkspace/xcuserdata/"$USER".xcuserdatad/UserInterfaceState.xcuserstate
 ```
 
-## 打包
+## 打包与发布
+
+FileHound 为 Apple 芯片（arm64）和 Intel（x86_64）分别打包，各自使用独立的更新源，应用内更新只会下载与本机匹配的安装包。
+
+### 一键发布
+
+1. 在 `project.yml` 中更新 `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`，执行 `xcodegen generate` 后提交并推送到 `main`。
+2. 写好本次的发布说明（Markdown），例如 `docs/release-notes/v1.3.0.md`。
+3. 执行：
 
 ```bash
-./Scripts/build_dmg.sh --arch arm64
-./Scripts/build_dmg.sh --arch x86_64
-./Scripts/publish_github_release.sh \
-  --dmg build/dmg/FileHound_v1.2.0_3_arm64.dmg \
-  --dmg build/dmg/FileHound_v1.2.0_3_x86_64.dmg
-./Scripts/generate_appcast.sh --arch arm64 --archive build/dmg/FileHound_v1.2.0_3_arm64.dmg
-./Scripts/generate_appcast.sh --arch x86_64 --archive build/dmg/FileHound_v1.2.0_3_x86_64.dmg
+./Scripts/release.sh --notes-file docs/release-notes/v1.3.0.md
 ```
 
-说明：
+`release.sh` 依次完成：
 
-- `./Scripts/build_dmg.sh` 必须显式传入 `--arch arm64` 或 `--arch x86_64`，默认从 `FileHound.xcworkspace` 归档对应架构的 `Release`，并执行 notarize + staple
-- 如需仅本地测试 DMG，可使用 `./Scripts/build_dmg.sh --arch <arch> --no-notarize`
-- `./Scripts/publish_github_release.sh` 支持重复传入 `--dmg`，将同一版本的多架构 DMG 一次上传到 GitHub Release `v<版本号>`
-- `./Scripts/generate_appcast.sh` 必须显式传入 `--arch`，会把对应架构的 DMG 归档到 `build/appcast-archives/<arch>/`，并生成仓库根目录的 `appcast-<arch>.xml`
-- 发布后仍需把更新后的 `appcast-arm64.xml` 和 `appcast-x86_64.xml` 提交并推送到默认分支
-- 已安装旧 `1.0` 且缺失有效 Sparkle 元数据的机器，可能仍需要先手动升级一次，之后才会进入新的自动更新链路
+- **预检**：工作区干净、与 `origin/main` 同步、`project.yml` 与工程版本号一致、构建号大于已发布的构建号、tag 未被占用。
+- **构建**：并行构建 arm64 / x86_64 两个架构，签名、公证并 staple。构建日志在 `build/release-logs/`。
+- **校验 DMG**：挂载每个 DMG，检查其中 App 的架构、构建号、更新源与签名，以及 Gatekeeper 校验结果。
+- **上传**：创建草稿 Release，上传两个版本化 DMG，以及固定文件名的副本 `FileHound-<arch>.dmg`（README 中的“下载最新版”链接指向这两个副本）。
+- **生成 appcast**：生成 `appcast-arm64.xml`、`appcast-x86_64.xml`，并把新版本同步进旧版通用的 `appcast.xml`（1.1.0 及更早的版本仍从这里检查更新）。之后逐个核对 appcast 中的文件大小和 EdDSA 签名，以及 Release 中实际上传的资产大小。
+- **发布**：先把 Release 转为正式版，再提交并推送 appcast。顺序不能反：先推送 appcast 的话，用户会检查到新版本，但下载链接还是 404。
 
-发布前置条件：
+构建成功后如果后面的步骤失败，可以加 `--skip-build` 续跑。加 `--no-push` 时只在本地提交 appcast，Release 保持草稿状态，方便先检查。
+
+### 分步执行
+
+`release.sh` 由下面几个脚本组成，也可以单独使用：
+
+```bash
+./Scripts/build_dmg.sh --arch arm64            # 归档 Release、签名、公证 + staple；本地测试可加 --no-notarize
+./Scripts/build_dmg.sh --arch x86_64
+./Scripts/publish_github_release.sh --notes-file <说明.md>   # 默认上传当前版本的两个架构 DMG
+./Scripts/generate_appcast.sh --arch arm64 --archive build/dmg/FileHound_v<版本>_<构建号>_arm64.dmg --notes-file <说明.md>
+./Scripts/generate_appcast.sh --arch x86_64 --archive build/dmg/FileHound_v<版本>_<构建号>_x86_64.dmg --notes-file <说明.md>
+```
+
+- `build_dmg.sh` 必须传入 `--arch`。它会校验 `project.yml` 与工程中的版本号是否一致，以及产物的架构和 Info.plist。两个架构可以并行打包。
+- `publish_github_release.sh` 默认要求 arm64 和 x86_64 各有一个 DMG。Release 已存在时，只覆盖上传资产，不覆盖已经写好的说明。
+- `generate_appcast.sh` 会校验 Keychain 中的 Sparkle 私钥是否与 `SUPublicEDKey` 匹配，并且不生成增量更新（delta）。
+
+### 前置条件
 
 - 已执行 `gh auth login`
 - 本机存在 `vanjay_mac_stapler` notarytool profile
+- 已安装 `create_pretty_dmg.sh`
 - 已生成 Sparkle 私钥：
 
 ```bash
 <Sparkle bin>/generate_keys --account cn.vanjay.FileHound.sparkle
 ```
 
-当前 Sparkle feed 地址为：
+### 更新源
+
+App 运行时按自身架构选择更新源。打包脚本也会把对应地址写入 Info.plist 的 `SUFeedURL`：
 
 ```text
 arm64:   https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast-arm64.xml
 x86_64:  https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast-x86_64.xml
+旧版通用: https://raw.githubusercontent.com/wangwanjie/FileHound/main/appcast.xml   （仅供 1.1.0 及更早版本升级）
 ```

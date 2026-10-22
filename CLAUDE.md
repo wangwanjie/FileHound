@@ -32,9 +32,10 @@ xcodebuild test -workspace FileHound.xcworkspace -scheme FileHound -destination 
 `SearchFormViewController` / `SearchRulesViewController` 收集规则 → `SearchRequest`（`rootPath` + `[SearchRuleSelection]`）→ `SearchWorkflowController.start` 在后台 `Task` 中调用 `SearchExecutor.executeStreaming` → 通过 `onStateChange` / `onResults` 回到主线程驱动 UI 与 `SearchResultsWindowController`。
 
 - 规则模型 `SearchRuleField` / `SearchRuleSelection` 定义在 `Modules/SearchRules/SearchRuleCatalog.swift`，新增搜索条件从这里开始，再在 `SearchExecutor` 的匹配逻辑和 `SpotlightSearchService.buildPredicate` 中补实现。
-- `SearchExecutor` 先尝试 Spotlight（`SpotlightSearchService`，受 `includeSpotlightResults` 偏好控制），文本内容搜索若 Spotlight 已有结果则直接返回；否则用 `DirectoryWalker` 遍历，结合 `SpecialFolderPlanner`（偏好中的特殊文件夹包含/排除/慢速路径）、`ContentMatcher`、`MetadataEvaluator` 过滤，按路径去重。
+- `SearchExecutor` 在专用线程上执行（`SearchWorkflowController` 用 continuation 衔接，取消走 `SearchCancellationToken`）。Spotlight 预取（`SpotlightSearchService`，受 `includeSpotlightResults` 偏好控制）在后台线程与卷目录搜索（`LocalVolumeCatalogSearcher` / searchfs）或 `DirectoryWalker` 遍历**并行**，所有候选按同一套规则复核后进入 `SearchResultCollector` 按路径去重。规则在搜索开始时预处理为 `PreparedSearchRule`（`Matching/MetadataEvaluator.swift`），日期、字节数、正则只解析一次。`SpecialFolderPlanner` 按搜索根分别规划特殊文件夹的包含 / 排除 / 慢速（最后遍历）路径。
+- searchfs 区分变音符号：忽略变音符号时只有不带变音的字符（数字、标点、汉字等）能作为交给内核的名称片段，纯字母条件改走遍历。改动名称片段提取时注意保持“返回超集”的前提。
 - `FilesystemAccessProviding` 抽象了文件访问，`LocalFilesystemProvider` 为默认实现；`PrivilegedFilesystemProvider` 与 `FileHoundHelper` 目前只是骨架。
-- `SearchEngine/Query`（`SearchQuery` / `QueryRule` / `QueryCompiler`）和 `SearchPlanBuilder` 只被单元测试引用，未接入运行路径。
+- `SearchEngine/Query`（`SearchQuery` / `QueryRule`）是旧的查询模型，只剩已保存搜索的兼容字段和 `ContentMatcher.matches(data:query:)` 在用，未接入运行路径。
 
 ### 持久化与设置
 
@@ -52,10 +53,19 @@ xcodebuild test -workspace FileHound.xcworkspace -scheme FileHound -destination 
 
 ## 测试约定
 
-- 单元测试用 `FileHoundTests/Support/TemporaryFixtureTree.swift` 构造临时目录树。
+- 单元测试用 `FileHoundTests/Support/TemporaryFixtureTree.swift` 构造临时目录树。测试必须封闭：用 `InMemoryKeyValueStore` 构造 `AppSettings` / 各 Store，搜索执行器用 `SearchExecutor.hermetic`（假 Spotlight、假卷搜索、内存特殊文件夹配置），不读写用户真实数据。
+- 作为单元测试 test host 运行时（`AppRuntimeEnvironment.isRunningUnitTests`），`AppDelegate` 只初始化独立目录的 MMKV，跳过热键、更新检查和窗口恢复。
 - UI 测试通过启动参数控制 App 行为：`--uitesting` 重置语言/主题/更新策略；`--fixture-results*`、`--fixture-streaming-search*`、`--fixture-delayed-search` 注入假搜索结果；`--open-*-preferences-on-launch` 直接打开偏好设置指定页；`--enable-*/--disable-*` 切换搜索偏好。这些分支散布在 `AppDelegate` 和 `SearchWorkflowController` 中，新增 UI 测试场景时沿用此模式。启动前调用 `AppLaunchHelper.prepareForLaunch` 结束残留实例。
 
 ## 发布
+
+一键发布（预检 → 并行构建公证两个架构 → 校验 → 草稿 Release → 生成并校验 appcast → 正式发布 → 推送 appcast）：
+
+```bash
+./Scripts/release.sh --notes-file docs/release-notes/v<版本>.md
+```
+
+也可以分步执行：
 
 ```bash
 ./Scripts/build_dmg.sh --arch arm64            # 归档 Release、签名、notarize + staple；本地测试加 --no-notarize
@@ -65,7 +75,7 @@ xcodebuild test -workspace FileHound.xcworkspace -scheme FileHound -destination 
 ./Scripts/generate_appcast.sh --arch x86_64 --archive build/dmg/<x86_64>.dmg
 ```
 
-`--arch` 必填。生成的 `appcast-<arch>.xml` 需提交并推送到 `main`（Sparkle 从 raw.githubusercontent 读取）。前置条件：`gh auth login`、notarytool profile `vanjay_mac_stapler`、Keychain 中的 Sparkle 私钥（account `cn.vanjay.FileHound.sparkle`）。
+`--arch` 必填。生成的 `appcast-<arch>.xml` 需提交并推送到 `main`（Sparkle 从 raw.githubusercontent 读取）；App 运行时按架构选择 feed（`SparkleDriver.feedURLString(for:)`）。`appcast.xml` 是给 1.1.0 及更早版本用的旧通用 feed，由 `release.sh` 同步。前置条件：`gh auth login`、notarytool profile `vanjay_mac_stapler`、Keychain 中的 Sparkle 私钥（account `cn.vanjay.FileHound.sparkle`）。
 
 ## 开发流程
 
