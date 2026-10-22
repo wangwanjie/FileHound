@@ -6,8 +6,11 @@ struct PreferencesWindowControllerTests {
     @MainActor
     @Test
     func createsCompactNonResizableWindow() {
-        let controller = PreferencesWindowController()
+        let controller = PreferencesWindowController(dependencies: makeTestPreferencesDependencies())
         let window = try! #require(controller.window)
+        defer {
+            window.close()
+        }
 
         #expect(window.styleMask.contains(.resizable) == false)
         #expect(window.contentLayoutRect.width < 700)
@@ -17,8 +20,11 @@ struct PreferencesWindowControllerTests {
     @MainActor
     @Test
     func activeSectionUsesRoundedCardBackground() {
-        let controller = PreferencesWindowController()
+        let controller = PreferencesWindowController(dependencies: makeTestPreferencesDependencies())
         controller.show()
+        defer {
+            controller.window?.close()
+        }
 
         let rootController = try! #require(controller.window?.contentViewController as? PreferencesRootViewController)
         #expect(rootController.debugActiveSectionHasCardBackground == true)
@@ -27,7 +33,10 @@ struct PreferencesWindowControllerTests {
     @MainActor
     @Test
     func preferencesRootBackgroundRefreshesAcrossAppearances() {
-        let controller = PreferencesRootViewController(initialSegment: 0)
+        let controller = PreferencesRootViewController(
+            initialSegment: 0,
+            contentControllers: makeTestPreferencesDependencies().makeContentControllers()
+        )
         _ = controller.view
 
         let light = controller.debugRootBackgroundHex(for: .aqua)
@@ -68,7 +77,8 @@ struct AppearancePreferencesViewControllerTests {
         let settings = AppSettings(storage: storage)
         settings.preferredTheme = .dark
         settings.preferredLanguage = .en
-        settings.resultsFontSize = 18
+        // 使用范围内的非默认值，确保重置确实改变了字号
+        settings.resultsFontSize = 15
         settings.dimColorHex = "#6E7E91"
         let controller = AppearancePreferencesViewController(
             settings: settings,
@@ -87,6 +97,53 @@ struct AppearancePreferencesViewControllerTests {
         #expect(controller.debugSelectedLanguage == .system)
         #expect(controller.debugFontSizeValue == 13)
         #expect(controller.debugDimColorHex == "#A0A7B3")
+    }
+
+    @MainActor
+    @Test
+    func outOfRangeStoredFontSizeIsClampedForDisplay() {
+        let settings = AppSettings(storage: InMemoryKeyValueStore())
+        // 旧版本允许更大的字号
+        settings.resultsFontSize = 18
+        let controller = AppearancePreferencesViewController(
+            settings: settings,
+            themeController: ThemeController(settings: settings),
+            localizationController: LocalizationController(settings: settings)
+        )
+        _ = controller.view
+
+        #expect(controller.debugFontSizeValue == 16)
+        #expect(controller.debugFontSizeFieldText == "16")
+    }
+
+    @MainActor
+    @Test
+    func fontSizeFieldEntryIsValidatedClampedAndSaved() {
+        let settings = AppSettings(storage: InMemoryKeyValueStore())
+        let controller = AppearancePreferencesViewController(
+            settings: settings,
+            themeController: ThemeController(settings: settings),
+            localizationController: LocalizationController(settings: settings)
+        )
+        _ = controller.view
+
+        controller.debugEnterFontSize(" 15 ")
+        #expect(settings.resultsFontSize == 15)
+        #expect(controller.debugFontSizeValue == 15)
+        #expect(controller.debugFontSizeFieldText == "15")
+
+        controller.debugEnterFontSize("40")
+        #expect(settings.resultsFontSize == 16)
+        #expect(controller.debugFontSizeValue == 16)
+        #expect(controller.debugFontSizeFieldText == "16")
+
+        controller.debugEnterFontSize("3")
+        #expect(settings.resultsFontSize == 10)
+        #expect(controller.debugFontSizeFieldText == "10")
+
+        controller.debugEnterFontSize("abc")
+        #expect(settings.resultsFontSize == 10)
+        #expect(controller.debugFontSizeFieldText == "10")
     }
 
     @MainActor
@@ -132,6 +189,94 @@ struct GeneralPreferencesViewControllerTests {
         #expect(settings.launchShortcut == "cmd-shift-space")
         #expect(controller.debugDisplayedLaunchShortcut == "⌘⇧Space")
         #expect(controller.debugHotKeyControlHeight >= 30)
+    }
+
+    @MainActor
+    @Test
+    func recordingShortcutSuspendsGlobalHotKeyUntilRecordingEnds() {
+        let settings = AppSettings(storage: InMemoryKeyValueStore())
+        settings.launchShortcut = "cmd-shift-space"
+        settings.activationMode = .global
+        let registrar = TestHotKeyRegistrar()
+        let shortcutController = LaunchShortcutController(
+            settings: settings,
+            hotKeyRegistrar: registrar,
+            frontmostApplicationObserver: TestFrontmostApplicationObserver(),
+            frontmostApplicationProvider: { nil }
+        )
+        shortcutController.configure {}
+        let controller = GeneralPreferencesViewController(settings: settings, launchShortcutController: shortcutController)
+        _ = controller.view
+        #expect(registrar.registeredShortcut != nil)
+
+        controller.debugHotKeyField.debugSetRecording(true)
+        #expect(registrar.registeredShortcut == nil)
+
+        // 录制期间保存新快捷键也不能重新注册
+        controller.debugRecordShortcut(.init(keyCode: 40, modifierFlags: [.command, .option]))
+        #expect(registrar.registeredShortcut == nil)
+
+        controller.debugHotKeyField.debugSetRecording(false)
+        #expect(registrar.registeredShortcut == KeyboardShortcut(keyCode: 40, modifierFlags: [.command, .option]))
+    }
+
+    @MainActor
+    @Test
+    func recorderInterceptsCommandKeyEquivalentsWhileFirstResponder() throws {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 100), styleMask: [.titled], backing: .buffered, defer: true)
+        window.isReleasedWhenClosed = false
+        defer {
+            window.close()
+        }
+        let field = ShortcutRecorderField(frame: NSRect(x: 0, y: 0, width: 180, height: 32))
+        window.contentView?.addSubview(field)
+        let commandQ = try #require(NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: [.command],
+            timestamp: 0,
+            windowNumber: window.windowNumber,
+            context: nil,
+            characters: "q",
+            charactersIgnoringModifiers: "q",
+            isARepeat: false,
+            keyCode: 12
+        ))
+
+        // 不是第一响应者时不拦截，交给菜单等正常处理
+        #expect(field.performKeyEquivalent(with: commandQ) == false)
+        #expect(field.shortcut == nil)
+
+        #expect(window.makeFirstResponder(field))
+        #expect(field.performKeyEquivalent(with: commandQ) == true)
+        #expect(field.shortcut == KeyboardShortcut(keyCode: 12, modifierFlags: [.command]))
+    }
+}
+
+struct KeyboardShortcutTests {
+    @Test
+    func serializationRoundTrips() throws {
+        let shortcut = KeyboardShortcut(keyCode: 49, modifierFlags: [.command, .control, .option, .shift])
+        let restored = try #require(KeyboardShortcut(serialized: shortcut.serialized))
+
+        #expect(shortcut.serialized == "cmd-ctrl-opt-shift-space")
+        #expect(restored == shortcut)
+        #expect(KeyboardShortcut(serialized: " Command+Alt+K ") == KeyboardShortcut(keyCode: 40, modifierFlags: [.command, .option]))
+    }
+
+    @Test
+    func rejectsInvalidTokens() {
+        #expect(KeyboardShortcut(serialized: "") == nil)
+        #expect(KeyboardShortcut(serialized: "cmd-unknownkey") == nil)
+        #expect(KeyboardShortcut(serialized: "hyper-space") == nil)
+        #expect(KeyboardShortcut(serialized: "space") == nil)
+    }
+
+    @Test
+    func rejectsShiftOnlyCombinationLikeCapture() {
+        // 与 capture 的规则一致：必须带 ⌘ / ⌃ / ⌥ 之一
+        #expect(KeyboardShortcut(serialized: "shift-space") == nil)
+        #expect(KeyboardShortcut(serialized: "ctrl-shift-space") != nil)
     }
 }
 
@@ -199,6 +344,56 @@ struct LaunchShortcutControllerTests {
         #expect(observer.isObserving == false)
         #expect(registrar.registeredShortcut != nil)
     }
+
+    @MainActor
+    @Test
+    func clearingShortcutUnregistersHotKey() {
+        let settings = AppSettings(storage: InMemoryKeyValueStore())
+        settings.launchShortcut = "cmd-shift-space"
+        settings.activationMode = .global
+        let registrar = TestHotKeyRegistrar()
+        let controller = LaunchShortcutController(
+            settings: settings,
+            hotKeyRegistrar: registrar,
+            frontmostApplicationObserver: TestFrontmostApplicationObserver(),
+            frontmostApplicationProvider: { nil }
+        )
+        controller.configure {}
+        #expect(registrar.registeredShortcut != nil)
+
+        settings.launchShortcut = ""
+        controller.reload()
+
+        #expect(registrar.registeredShortcut == nil)
+    }
+
+    @MainActor
+    @Test
+    func suspendUnregistersAndResumeRestoresHotKey() {
+        let settings = AppSettings(storage: InMemoryKeyValueStore())
+        settings.launchShortcut = "cmd-shift-space"
+        settings.activationMode = .finderOnly
+        let registrar = TestHotKeyRegistrar()
+        let observer = TestFrontmostApplicationObserver()
+        let controller = LaunchShortcutController(
+            settings: settings,
+            hotKeyRegistrar: registrar,
+            frontmostApplicationObserver: observer,
+            frontmostApplicationProvider: { "com.apple.finder" }
+        )
+        controller.configure {}
+        #expect(registrar.registeredShortcut != nil)
+
+        controller.suspend()
+        #expect(registrar.registeredShortcut == nil)
+        #expect(observer.isObserving == false)
+        controller.reload()
+        #expect(registrar.registeredShortcut == nil)
+
+        controller.resume()
+        #expect(registrar.registeredShortcut == KeyboardShortcut(keyCode: 49, modifierFlags: [.command, .shift]))
+        #expect(observer.isObserving == true)
+    }
 }
 
 struct UpdatePreferencesViewControllerTests {
@@ -209,7 +404,11 @@ struct UpdatePreferencesViewControllerTests {
         let settings = AppSettings(storage: storage)
         settings.updateCheckPolicy = .dailyAutomatic
         settings.autoDownloadUpdates = true
-        let controller = UpdatePreferencesViewController(settings: settings)
+        let driver = StubSparkleDriver(canCheckForUpdates: true)
+        let controller = UpdatePreferencesViewController(
+            settings: settings,
+            updateManager: makeUpdateManager(settings: settings, driver: driver)
+        )
         _ = controller.view
 
         controller.debugTriggerResetDefaults()
@@ -218,6 +417,32 @@ struct UpdatePreferencesViewControllerTests {
         #expect(settings.autoDownloadUpdates == false)
         #expect(controller.debugSelectedPolicyIndex == 0)
         #expect(controller.debugAutoDownloadEnabled == false)
+        #expect(driver.appliedPolicies.last == .onLaunch)
+        #expect(driver.appliedAutoDownloadFlags.last == false)
+    }
+
+    @MainActor
+    @Test
+    func changingPolicyAndAutoDownloadAppliesToSparkleImmediately() {
+        let settings = AppSettings(storage: InMemoryKeyValueStore())
+        settings.updateCheckPolicy = .manualOnly
+        let driver = StubSparkleDriver(canCheckForUpdates: true)
+        let controller = UpdatePreferencesViewController(
+            settings: settings,
+            updateManager: makeUpdateManager(settings: settings, driver: driver)
+        )
+        _ = controller.view
+
+        controller.debugSelectPolicy(at: 2)
+        #expect(settings.updateCheckPolicy == .dailyAutomatic)
+        #expect(driver.appliedPolicies == [.dailyAutomatic])
+        // 切到「每天自动检查」需立即启动 updater 排期，不必重启
+        #expect(driver.startCalls == 1)
+
+        controller.debugSetAutoDownload(true)
+        #expect(settings.autoDownloadUpdates == true)
+        #expect(driver.appliedAutoDownloadFlags.last == true)
+        #expect(driver.checkCalls == 0)
     }
 }
 
@@ -424,6 +649,46 @@ struct SpecialFoldersEditorViewControllerTests {
     }
 }
 
+struct ThemeControllerTests {
+    @MainActor
+    @Test
+    func applyMapsThemesToAppearances() {
+        let themeController = ThemeController(settings: AppSettings(storage: InMemoryKeyValueStore()))
+        let view = NSView()
+
+        themeController.apply(theme: .dark, to: view)
+        #expect(view.appearance?.name == .darkAqua)
+        themeController.apply(theme: .light, to: view)
+        #expect(view.appearance?.name == .aqua)
+        themeController.apply(theme: .system, to: view)
+        #expect(view.appearance == nil)
+    }
+
+    @MainActor
+    @Test
+    func applyToApplicationSetsAppWideAppearanceSoAllWindowsInherit() {
+        let themeController = ThemeController(settings: AppSettings(storage: InMemoryKeyValueStore()))
+        let previous = NSApp.appearance
+        defer {
+            NSApp.appearance = previous
+        }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100), styleMask: [.titled], backing: .buffered, defer: true)
+        window.isReleasedWhenClosed = false
+        defer {
+            window.close()
+        }
+
+        themeController.applyToApplication(theme: .dark)
+        #expect(NSApp.appearance?.name == .darkAqua)
+        // 未单独设置外观的窗口（结果窗口、NSAlert 等）继承 App 外观
+        #expect(window.appearance == nil)
+        #expect(window.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua)
+
+        themeController.applyToApplication(theme: .system)
+        #expect(NSApp.appearance == nil)
+    }
+}
+
 struct PreferencesAppearanceRefreshTests {
     @MainActor
     @Test
@@ -435,6 +700,26 @@ struct PreferencesAppearanceRefreshTests {
 
         #expect(light != dark)
     }
+}
+
+/// 偏好设置测试依赖：内存存储、假 Sparkle 驱动、假热键注册器，避免触碰真实 MMKV / Sparkle / 全局热键
+@MainActor
+func makeTestPreferencesDependencies(storage: InMemoryKeyValueStore = InMemoryKeyValueStore()) -> PreferencesDependencies {
+    let settings = AppSettings(storage: storage)
+    return PreferencesDependencies(
+        settings: settings,
+        themeController: ThemeController(settings: settings),
+        localizationController: LocalizationController(settings: settings),
+        launchShortcutController: LaunchShortcutController(
+            settings: settings,
+            hotKeyRegistrar: TestHotKeyRegistrar(),
+            frontmostApplicationObserver: TestFrontmostApplicationObserver(),
+            frontmostApplicationProvider: { nil }
+        ),
+        updateManager: makeUpdateManager(settings: settings, driver: StubSparkleDriver(canCheckForUpdates: true)),
+        specialFoldersStore: SpecialFoldersStore(storage: storage),
+        permissionCoordinator: PermissionGuidanceCoordinator(probePaths: ["/nonexistent"], canOpen: { _ in false }, fileExists: { _ in false })
+    )
 }
 
 private final class TestHotKeyRegistrar: HotKeyRegistering {
