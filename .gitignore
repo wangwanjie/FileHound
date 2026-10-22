@@ -17,3 +17,6 @@ xcuserdata/
 /*.gcno
 **/xcshareddata/WorkspaceSettings.xcsettings
 Pods/
+
+# 覆盖率原始数据
+*.profraw
