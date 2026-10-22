@@ -24,6 +24,11 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
     private weak var savedSearchMenu: NSMenu?
     private let confirmSavedSearchDeletion: (SavedSearch) -> Bool
     private let promptSavedSearchName: (SavedSearch) -> String?
+    /// 是否把窗口 / 帮助 / 服务菜单登记到 NSApp。测试中传 false，避免改写全局状态
+    private let installsApplicationMenus: Bool
+
+    /// 「导出结果…」的动作，target 为 nil 走响应链，由结果窗口（SearchResultsViewController）实现并负责菜单校验
+    static let exportSearchResultsAction = Selector(("exportSearchResults:"))
 
     init(
         target: AnyObject? = nil,
@@ -31,7 +36,8 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
         searchHistoryStore: SearchHistoryStore = .shared,
         savedSearchStore: SavedSearchStore = .shared,
         confirmSavedSearchDeletion: @escaping (SavedSearch) -> Bool = MainMenuBuilder.runSavedSearchDeletionAlert,
-        promptSavedSearchName: @escaping (SavedSearch) -> String? = MainMenuBuilder.runSavedSearchRenameAlert
+        promptSavedSearchName: @escaping (SavedSearch) -> String? = MainMenuBuilder.runSavedSearchRenameAlert,
+        installsApplicationMenus: Bool = true
     ) {
         self.target = target
         self.settings = settings
@@ -39,6 +45,7 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
         self.savedSearchStore = savedSearchStore
         self.confirmSavedSearchDeletion = confirmSavedSearchDeletion
         self.promptSavedSearchName = promptSavedSearchName
+        self.installsApplicationMenus = installsApplicationMenus
     }
 
     func build() -> NSMenu {
@@ -50,11 +57,15 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
 
         let windowMenu = buildWindowMenu()
         addSubmenu(windowMenu, title: L10n.string("menu.window"), to: mainMenu)
-        NSApp.windowsMenu = windowMenu
+        if installsApplicationMenus {
+            NSApp.windowsMenu = windowMenu
+        }
 
         let helpMenu = buildHelpMenu()
         addSubmenu(helpMenu, title: L10n.string("menu.help"), to: mainMenu)
-        NSApp.helpMenu = helpMenu
+        if installsApplicationMenus {
+            NSApp.helpMenu = helpMenu
+        }
 
         return mainMenu
     }
@@ -97,8 +108,8 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
             action: #selector(AppDelegate.checkForUpdates(_:)),
             keyEquivalent: ""
         )
+        // 启用状态由 AppDelegate.validateMenuItem 决定（菜单开启了 autoenablesItems，这里设置 isEnabled 无效）
         checkForUpdatesItem.target = target
-        checkForUpdatesItem.isEnabled = UpdateManager.shared.canCheckForUpdates
         appMenu.addItem(checkForUpdatesItem)
 
         appMenu.addItem(.separator())
@@ -107,7 +118,9 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
         let servicesItem = NSMenuItem(title: L10n.string("menu.services"), action: nil, keyEquivalent: "")
         servicesItem.submenu = servicesMenu
         appMenu.addItem(servicesItem)
-        NSApp.servicesMenu = servicesMenu
+        if installsApplicationMenus {
+            NSApp.servicesMenu = servicesMenu
+        }
 
         appMenu.addItem(.separator())
 
@@ -196,6 +209,15 @@ final class MainMenuBuilder: NSObject, NSMenuDelegate {
         )
         saveSearchItem.target = target
         fileMenu.addItem(saveSearchItem)
+
+        // target 为 nil：沿响应链交给当前结果窗口处理，没有结果窗口时自动禁用
+        let exportResultsItem = NSMenuItem(
+            title: L10n.string("menu.export_results"),
+            action: Self.exportSearchResultsAction,
+            keyEquivalent: "e"
+        )
+        exportResultsItem.keyEquivalentModifierMask = [.command, .shift]
+        fileMenu.addItem(exportResultsItem)
         fileMenu.addItem(
             NSMenuItem(
                 title: L10n.string("menu.search_again"),

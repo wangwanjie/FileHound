@@ -50,6 +50,10 @@ final class AppearancePreferencesViewController: NSViewController {
         dimColorButton.title = L10n.string("preferences.appearance.choose_color")
         resetButton.title = L10n.string("preferences.reset_defaults")
         fontSizeField.alignment = .left
+        // 文本框可直接输入字号：回车或结束编辑时校验并保存，与步进器保持一致
+        fontSizeField.target = self
+        fontSizeField.action = #selector(fontSizeFieldChanged)
+        fontSizeField.cell?.sendsActionOnEndEditing = true
         fontSizeStepper.minValue = Double(ResultsAppearance.minimumFontSize)
         fontSizeStepper.maxValue = Double(ResultsAppearance.maximumFontSize)
         fontSizeStepper.increment = 1
@@ -98,6 +102,28 @@ final class AppearancePreferencesViewController: NSViewController {
     private func fontSizeStepperChanged() {
         fontSizeField.stringValue = String(fontSizeStepper.integerValue)
         settings.resultsFontSize = fontSizeStepper.integerValue
+    }
+
+    @objc
+    private func fontSizeFieldChanged() {
+        let text = fontSizeField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let value = Int(text) else {
+            // 非数字输入不保存，恢复显示当前字号
+            fontSizeField.stringValue = String(fontSizeStepper.integerValue)
+            return
+        }
+
+        // 超出范围时收敛到上下限（10–16），并同步步进器与文本框
+        let clamped = Self.clampedFontSize(value)
+        fontSizeStepper.integerValue = clamped
+        fontSizeField.stringValue = String(clamped)
+        if settings.resultsFontSize != clamped {
+            settings.resultsFontSize = clamped
+        }
+    }
+
+    static func clampedFontSize(_ value: Int) -> Int {
+        min(max(value, Int(ResultsAppearance.minimumFontSize)), Int(ResultsAppearance.maximumFontSize))
     }
 
     @objc
@@ -191,6 +217,15 @@ extension AppearancePreferencesViewController {
 
     var debugFontSizeValue: Int {
         fontSizeStepper.integerValue
+    }
+
+    var debugFontSizeFieldText: String {
+        fontSizeField.stringValue
+    }
+
+    func debugEnterFontSize(_ text: String) {
+        fontSizeField.stringValue = text
+        fontSizeFieldChanged()
     }
 
     var debugDimColorHex: String {

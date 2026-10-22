@@ -305,3 +305,5 @@
 "search_window.accessibility.searching" = "正在搜尋";
 "search_rule.accessibility.add" = "加入條件";
 "search_rule.accessibility.remove" = "移除條件";
+/* App Shell */
+"menu.export_results" = "匯出結果…";

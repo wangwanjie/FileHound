@@ -58,7 +58,10 @@ struct PermissionGuidanceTests {
     @MainActor
     @Test
     func preferencesWindowIncludesPermissionsTab() {
-        let root = PreferencesRootViewController(initialSegment: 4)
+        let root = PreferencesRootViewController(
+            initialSegment: 4,
+            contentControllers: makeTestPreferencesDependencies().makeContentControllers()
+        )
         _ = root.view
         #expect(root.debugSegmentLabels.last == L10n.string("preferences.tab.permissions"))
         #expect(root.debugActiveController is PermissionsPreferencesViewController)

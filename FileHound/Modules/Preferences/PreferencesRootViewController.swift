@@ -17,17 +17,18 @@ final class PreferencesRootViewController: NSViewController {
     )
     private let contentContainer = NSView()
 
-    private lazy var contentControllers: [NSViewController] = [
-        GeneralPreferencesViewController(),
-        SearchPreferencesViewController(),
-        AppearancePreferencesViewController(),
-        UpdatePreferencesViewController(),
-        PermissionsPreferencesViewController()
-    ]
+    /// 各分段对应的页面，由调用方按依赖创建（见 PreferencesDependencies.makeContentControllers）
+    private let contentControllers: [NSViewController]
 
-    init(initialSegment: Int = 2) {
+    init(initialSegment: Int = 2, contentControllers: [NSViewController]) {
         self.initialSegment = initialSegment
+        self.contentControllers = contentControllers
         super.init(nibName: nil, bundle: nil)
+    }
+
+    /// 使用生产依赖（各单例）
+    convenience init(initialSegment: Int = 2) {
+        self.init(initialSegment: initialSegment, contentControllers: PreferencesDependencies.live.makeContentControllers())
     }
 
     @available(*, unavailable)

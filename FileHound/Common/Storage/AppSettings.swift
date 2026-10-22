@@ -28,6 +28,67 @@ extension KeyValueStoring {
     }
 }
 
+/// 逐元素宽容解码的包装：单个元素解码失败时记为 nil，而不是让整个数组解码失败
+struct FailableDecodable<Value: Decodable>: Decodable {
+    let value: Value?
+
+    init(from decoder: Decoder) throws {
+        value = try? Value(from: decoder)
+    }
+}
+
+/// 宽容读取数组的结果
+struct LenientDecodedArray<Element> {
+    var elements: [Element]
+    /// 存储中有数据，但其中部分元素（或整体）无法完整解码。此时写回会丢失原始数据，需要先备份
+    var isLossy: Bool
+
+    static var empty: LenientDecodedArray<Element> {
+        LenientDecodedArray(elements: [], isLossy: false)
+    }
+}
+
+extension KeyValueStoring {
+    /// 备份键：原始数据无法完整解码时，写回前先把原始 data 复制到这里，避免用户数据被永久覆盖
+    static func backupKey(for key: String) -> String {
+        key + ".backup"
+    }
+
+    /// 逐元素宽容读取数组：跳过无法解码的坏元素，保留其余元素
+    func lenientArray<Element: Decodable>(_ type: Element.Type, forKey key: String) -> LenientDecodedArray<Element> {
+        guard let data = data(forKey: key) else {
+            return .empty
+        }
+        guard let wrapped = try? JSONDecoder().decode([FailableDecodable<Element>].self, from: data) else {
+            // 整体不是合法的 JSON 数组：读出空数组，但标记为有损，写回前需要备份
+            return LenientDecodedArray(elements: [], isLossy: true)
+        }
+        let elements = wrapped.compactMap(\.value)
+        return LenientDecodedArray(elements: elements, isLossy: elements.count != wrapped.count)
+    }
+
+    /// 把当前原始数据备份到 `<key>.backup`。仅在即将用有损结果覆盖原数据前调用
+    func backupRawValue(forKey key: String) {
+        guard let data = data(forKey: key) else {
+            return
+        }
+        set(data, forKey: Self.backupKey(for: key))
+    }
+}
+
+/// 运行环境识别：单元测试 / UI 测试时需要隔离用户数据并跳过启动副作用
+enum AppRuntimeEnvironment {
+    /// UI 测试通过启动参数 `--uitesting` 启动 App
+    static var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("--uitesting")
+    }
+
+    /// 作为单元测试的 test host 运行：XCTest 会注入 XCTestConfigurationFilePath 环境变量（UI 测试中的 App 进程不受影响）
+    static var isRunningUnitTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil && isUITesting == false
+    }
+}
+
 final class InMemoryKeyValueStore: KeyValueStoring {
     private var strings: [String: String] = [:]
     private var values: [String: Data] = [:]
@@ -55,8 +116,15 @@ final class MMKVKeyValueStore: KeyValueStoring {
     private let mmkv: MMKV
 
     static func initializeStore() {
-        // UI 测试会通过启动参数改写偏好，使用独立目录，避免污染用户真实的设置
-        let directoryName = ProcessInfo.processInfo.arguments.contains("--uitesting") ? "MMKV-UITesting" : "MMKV"
+        // UI 测试会通过启动参数改写偏好，单元测试的 test host 也会读写 .shared，均使用独立目录，避免污染用户真实的设置
+        let directoryName: String
+        if AppRuntimeEnvironment.isUITesting {
+            directoryName = "MMKV-UITesting"
+        } else if AppRuntimeEnvironment.isRunningUnitTests {
+            directoryName = "MMKV-UnitTesting"
+        } else {
+            directoryName = "MMKV"
+        }
         let rootURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("FileHound", isDirectory: true)
             .appendingPathComponent(directoryName, isDirectory: true)
@@ -65,9 +133,9 @@ final class MMKVKeyValueStore: KeyValueStoring {
     }
 
     private init() {
-        if MMKV.default() == nil {
-            Self.initializeStore()
-        }
+        // 不能先用 MMKV.default() 判断是否已初始化：未初始化时访问它会触发 libMMKV 的 NSAssert（Debug 下崩溃）。
+        // MMKV.initialize 重复调用会被忽略（libMMKV 内部有 g_hasCalledInitializeMMKV 标记），因此这里无条件调用
+        Self.initializeStore()
         guard let mmkv = MMKV.default() else {
             fatalError("MMKV 初始化失败")
         }

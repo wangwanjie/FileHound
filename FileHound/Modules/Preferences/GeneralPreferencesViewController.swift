@@ -36,6 +36,14 @@ final class GeneralPreferencesViewController: NSViewController {
         hotKeyField.shortcut = KeyboardShortcut(serialized: settings.launchShortcut)
         hotKeyField.target = self
         hotKeyField.action = #selector(launchShortcutChanged)
+        // 录制期间临时注销全局热键，避免按下当前热键时直接触发；结束录制后按新设置恢复
+        hotKeyField.onRecordingStateChange = { [weak self] isRecording in
+            if isRecording {
+                self?.launchShortcutController.suspend()
+            } else {
+                self?.launchShortcutController.resume()
+            }
+        }
         finderOnlyButton.title = L10n.string("preferences.general.activation.finder_only")
         globalButton.title = L10n.string("preferences.general.activation.global")
         openRecentButton.title = L10n.string("preferences.general.open_recent_search_menu")
@@ -143,6 +151,10 @@ extension GeneralPreferencesViewController {
 
     var debugHotKeyControlHeight: CGFloat {
         hotKeyField.fittingSize.height
+    }
+
+    var debugHotKeyField: ShortcutRecorderField {
+        hotKeyField
     }
 }
 #endif

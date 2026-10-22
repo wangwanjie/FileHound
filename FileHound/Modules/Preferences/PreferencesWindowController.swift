@@ -1,16 +1,54 @@
 import AppKit
 import SnapKit
 
+/// 偏好设置各页面的依赖。生产环境用 `.live`（各单例）；测试注入内存存储与假的 UpdateManager，
+/// 避免读写用户真实 MMKV、创建真实的 Sparkle 控制器或注册全局热键
+struct PreferencesDependencies {
+    var settings: AppSettings
+    var themeController: ThemeController
+    var localizationController: LocalizationController
+    var launchShortcutController: LaunchShortcutControlling
+    var updateManager: UpdateManager
+    var specialFoldersStore: SpecialFoldersStore
+    var permissionCoordinator: PermissionGuidanceCoordinator
+
+    static var live: PreferencesDependencies {
+        PreferencesDependencies(
+            settings: .shared,
+            themeController: .shared,
+            localizationController: .shared,
+            launchShortcutController: LaunchShortcutController.shared,
+            updateManager: .shared,
+            specialFoldersStore: .shared,
+            permissionCoordinator: PermissionGuidanceCoordinator()
+        )
+    }
+
+    /// 按分段顺序（通用、搜索、外观、更新、权限）创建各页面
+    func makeContentControllers() -> [NSViewController] {
+        [
+            GeneralPreferencesViewController(settings: settings, launchShortcutController: launchShortcutController),
+            SearchPreferencesViewController(settings: settings, specialFoldersStore: specialFoldersStore),
+            AppearancePreferencesViewController(
+                settings: settings,
+                themeController: themeController,
+                localizationController: localizationController
+            ),
+            UpdatePreferencesViewController(settings: settings, updateManager: updateManager),
+            PermissionsPreferencesViewController(coordinator: permissionCoordinator)
+        ]
+    }
+}
+
 final class PreferencesWindowController: NSWindowController {
-    convenience init() {
-        let rootViewController = PreferencesRootViewController()
-        let window = NSWindow(contentViewController: rootViewController)
-        window.setContentSize(NSSize(width: PreferencesLayout.windowWidth, height: PreferencesLayout.minWindowHeight))
-        window.title = L10n.string("preferences.window.title")
-        window.center()
-        window.styleMask = [.titled, .closable, .miniaturizable]
-        self.init(window: window)
-        window.styleMask.remove(.resizable)
+    /// 延迟到首次创建页面时才求值，避免构造窗口控制器时就创建各单例
+    private var dependenciesProvider: (() -> PreferencesDependencies)!
+    private lazy var dependencies: PreferencesDependencies = dependenciesProvider()
+
+    convenience init(dependencies dependenciesProvider: @escaping @autoclosure () -> PreferencesDependencies = .live) {
+        self.init(window: nil)
+        self.dependenciesProvider = dependenciesProvider
+        installRootViewController(initialSegment: 2)
     }
 
     func show(segment initialSegment: Int? = nil, sender: Any? = nil) {
@@ -39,7 +77,10 @@ final class PreferencesWindowController: NSWindowController {
     }
 
     private func installRootViewController(initialSegment: Int) {
-        let rootViewController = PreferencesRootViewController(initialSegment: initialSegment)
+        let rootViewController = PreferencesRootViewController(
+            initialSegment: initialSegment,
+            contentControllers: dependencies.makeContentControllers()
+        )
 
         if let window {
             window.contentViewController = rootViewController
@@ -53,6 +94,8 @@ final class PreferencesWindowController: NSWindowController {
         window.center()
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.styleMask.remove(.resizable)
+        // 窗口由本控制器持有并可反复显示；关闭时不能让 AppKit 额外 release（ARC 下会造成过度释放）
+        window.isReleasedWhenClosed = false
         self.window = window
     }
 }

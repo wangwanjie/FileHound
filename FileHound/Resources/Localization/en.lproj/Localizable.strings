@@ -305,3 +305,5 @@
 "search_window.accessibility.searching" = "Searching";
 "search_rule.accessibility.add" = "Add criterion";
 "search_rule.accessibility.remove" = "Remove criterion";
+/* App Shell */
+"menu.export_results" = "Export Results…";

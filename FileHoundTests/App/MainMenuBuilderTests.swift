@@ -6,7 +6,7 @@ struct MainMenuBuilderTests {
     @MainActor
     @Test
     func buildAddsEditMenuWithTextCommands() {
-        let menu = MainMenuBuilder().build()
+        let menu = makeIsolatedMenuBuilder().build()
 
         #expect(menu.items.count == 6)
 
@@ -40,7 +40,7 @@ struct MainMenuBuilderTests {
             )
         )
 
-        let menu = MainMenuBuilder(settings: settings, searchHistoryStore: historyStore).build()
+        let menu = MainMenuBuilder(settings: settings, searchHistoryStore: historyStore, savedSearchStore: SavedSearchStore(storage: storage), installsApplicationMenus: false).build()
         let fileMenu = try #require(menu.item(at: 1)?.submenu)
         let recentItem = try #require(fileMenu.items.first { $0.title == L10n.string("menu.open_recent_search") })
         let recentMenu = try #require(recentItem.submenu)
@@ -64,7 +64,8 @@ struct MainMenuBuilderTests {
         let menu = MainMenuBuilder(
             settings: AppSettings(storage: storage),
             searchHistoryStore: SearchHistoryStore(storage: storage),
-            savedSearchStore: savedSearchStore
+            savedSearchStore: savedSearchStore,
+            installsApplicationMenus: false
         ).build()
         let fileMenu = try #require(menu.item(at: 1)?.submenu)
         let savedItem = try #require(fileMenu.items.first { $0.title == L10n.string("menu.open_saved_search") })
@@ -93,7 +94,8 @@ struct MainMenuBuilderTests {
         let menu = MainMenuBuilder(
             settings: AppSettings(storage: storage),
             searchHistoryStore: SearchHistoryStore(storage: storage),
-            savedSearchStore: savedSearchStore
+            savedSearchStore: savedSearchStore,
+            installsApplicationMenus: false
         ).build()
         let fileMenu = try #require(menu.item(at: 1)?.submenu)
         let savedItem = try #require(fileMenu.items.first { $0.title == L10n.string("menu.open_saved_search") })
@@ -106,7 +108,7 @@ struct MainMenuBuilderTests {
     @MainActor
     @Test
     func fileMenuIncludesSaveSearchCommand() throws {
-        let menu = MainMenuBuilder().build()
+        let menu = makeIsolatedMenuBuilder().build()
         let fileMenu = try #require(menu.item(at: 1)?.submenu)
 
         #expect(fileMenu.items.contains { $0.title == L10n.string("menu.save_search") })
@@ -119,7 +121,7 @@ struct MainMenuBuilderTests {
     @MainActor
     @Test
     func fileMenuIncludesSearchAgainShortcut() throws {
-        let menu = MainMenuBuilder().build()
+        let menu = makeIsolatedMenuBuilder().build()
         let fileMenu = try #require(menu.item(at: 1)?.submenu)
         let item = try #require(fileMenu.items.first { $0.action == #selector(SearchResultsWindowController.refreshSearchResults(_:)) })
 
@@ -134,7 +136,7 @@ struct MainMenuBuilderTests {
         let settings = AppSettings(storage: storage)
         settings.openRecentSearchMenu = false
 
-        let menu = MainMenuBuilder(settings: settings, searchHistoryStore: SearchHistoryStore(storage: storage)).build()
+        let menu = MainMenuBuilder(settings: settings, searchHistoryStore: SearchHistoryStore(storage: storage), savedSearchStore: SavedSearchStore(storage: storage), installsApplicationMenus: false).build()
         let fileMenu = try! #require(menu.item(at: 1)?.submenu)
 
         #expect(fileMenu.items.contains { $0.title == L10n.string("menu.open_recent_search") } == false)
@@ -143,7 +145,7 @@ struct MainMenuBuilderTests {
     @MainActor
     @Test
     func appMenuIncludesCheckForUpdatesCommand() throws {
-        let menu = MainMenuBuilder().build()
+        let menu = makeIsolatedMenuBuilder().build()
         let appMenu = try #require(menu.item(at: 0)?.submenu)
         let expectedTitle = L10n.string("menu.check_for_updates")
         let expectedAction = #selector(AppDelegate.checkForUpdates(_:))
@@ -158,7 +160,7 @@ extension MainMenuBuilderTests {
     @MainActor
     @Test
     func menuBarFollowsStandardOrderAndIncludesAppCommands() throws {
-        let menu = MainMenuBuilder().build()
+        let menu = makeIsolatedMenuBuilder().build()
         let appMenu = try #require(menu.item(at: 0)?.submenu)
         let fileMenu = try #require(menu.item(at: 1)?.submenu)
         let viewMenu = try #require(menu.item(at: 3)?.submenu)
@@ -185,7 +187,12 @@ extension MainMenuBuilderTests {
     func recentSearchMenuRefreshesAndClears() throws {
         let storage = InMemoryKeyValueStore()
         let historyStore = SearchHistoryStore(storage: storage)
-        let builder = MainMenuBuilder(settings: AppSettings(storage: storage), searchHistoryStore: historyStore)
+        let builder = MainMenuBuilder(
+            settings: AppSettings(storage: storage),
+            searchHistoryStore: historyStore,
+            savedSearchStore: SavedSearchStore(storage: storage),
+            installsApplicationMenus: false
+        )
         let menu = builder.build()
         let fileMenu = try #require(menu.item(at: 1)?.submenu)
         let recentMenu = try #require(fileMenu.items.first { $0.title == L10n.string("menu.open_recent_search") }?.submenu)
@@ -227,7 +234,8 @@ extension MainMenuBuilderTests {
                 confirmedNames.append(search.name)
                 return true
             },
-            promptSavedSearchName: { _ in "改名后" }
+            promptSavedSearchName: { _ in "改名后" },
+            installsApplicationMenus: false
         )
         let menu = builder.build()
         let fileMenu = try #require(menu.item(at: 1)?.submenu)
@@ -251,6 +259,71 @@ extension MainMenuBuilderTests {
         #expect(savedSearchStore.all().isEmpty)
         #expect(savedMenu.items.map(\.title) == [L10n.string("menu.no_saved_searches")])
     }
+}
+
+extension MainMenuBuilderTests {
+    @MainActor
+    @Test
+    func fileMenuIncludesExportResultsCommandRoutedThroughResponderChain() throws {
+        let menu = makeIsolatedMenuBuilder().build()
+        let fileMenu = try #require(menu.item(at: 1)?.submenu)
+        let exportItem = try #require(fileMenu.items.first { $0.action == Selector(("exportSearchResults:")) })
+
+        #expect(exportItem.title == L10n.string("menu.export_results"))
+        #expect(exportItem.keyEquivalent == "e")
+        #expect(exportItem.keyEquivalentModifierMask == [.command, .shift])
+        #expect(exportItem.target == nil)
+
+        // 紧跟在「存储搜索」之后
+        let saveIndex = try #require(fileMenu.items.firstIndex { $0.action == #selector(AppDelegate.saveCurrentSearch(_:)) })
+        #expect(fileMenu.items.firstIndex(of: exportItem) == saveIndex + 1)
+    }
+
+    @MainActor
+    @Test
+    func buildDoesNotTouchApplicationMenusWhenIsolated() {
+        let previousWindowsMenu = NSApp.windowsMenu
+        let previousHelpMenu = NSApp.helpMenu
+        let previousServicesMenu = NSApp.servicesMenu
+
+        _ = makeIsolatedMenuBuilder().build()
+
+        #expect(NSApp.windowsMenu === previousWindowsMenu)
+        #expect(NSApp.helpMenu === previousHelpMenu)
+        #expect(NSApp.servicesMenu === previousServicesMenu)
+    }
+
+    @MainActor
+    @Test
+    func appDelegateValidatesCheckForUpdatesItemAgainstUpdateManager() {
+        let unavailable = makeUpdateManager(
+            settings: AppSettings(storage: InMemoryKeyValueStore()),
+            driver: StubSparkleDriver(canCheckForUpdates: true),
+            feedURL: nil
+        )
+        let available = makeUpdateManager(
+            settings: AppSettings(storage: InMemoryKeyValueStore()),
+            driver: StubSparkleDriver(canCheckForUpdates: true)
+        )
+        let item = NSMenuItem(title: "", action: #selector(AppDelegate.checkForUpdates(_:)), keyEquivalent: "")
+        let otherItem = NSMenuItem(title: "", action: #selector(AppDelegate.openPreferences(_:)), keyEquivalent: "")
+
+        #expect(AppDelegate(updateManagerProvider: { unavailable }).validateMenuItem(item) == false)
+        #expect(AppDelegate(updateManagerProvider: { available }).validateMenuItem(item) == true)
+        #expect(AppDelegate(updateManagerProvider: { unavailable }).validateMenuItem(otherItem) == true)
+    }
+}
+
+/// 全部依赖使用内存存储，且不改写 NSApp 的窗口 / 帮助 / 服务菜单
+@MainActor
+private func makeIsolatedMenuBuilder() -> MainMenuBuilder {
+    let storage = InMemoryKeyValueStore()
+    return MainMenuBuilder(
+        settings: AppSettings(storage: storage),
+        searchHistoryStore: SearchHistoryStore(storage: storage),
+        savedSearchStore: SavedSearchStore(storage: storage),
+        installsApplicationMenus: false
+    )
 }
 
 private struct LegacySavedSearchMenuFixture: Codable {
