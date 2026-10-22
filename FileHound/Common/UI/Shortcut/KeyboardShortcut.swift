@@ -39,12 +39,13 @@ struct KeyboardShortcut: Equatable, Sendable {
             }
         }
 
-        let normalizedFlags = modifierFlags.intersection([.command, .control, .option, .shift])
-        guard normalizedFlags.isEmpty == false else {
+        // 与 capture 的规则一致：必须包含 ⌘ / ⌃ / ⌥ 之一，只带 ⇧ 的组合会吞掉普通输入（例如 ⇧Space），不作为全局快捷键
+        let shortcut = KeyboardShortcut(keyCode: keyCode, modifierFlags: modifierFlags)
+        guard shortcut.hasPrimaryModifier else {
             return nil
         }
 
-        self.init(keyCode: keyCode, modifierFlags: normalizedFlags)
+        self = shortcut
     }
 
     var serialized: String {
@@ -141,6 +142,12 @@ final class ShortcutRecorderField: NSControl {
         }
     }
 
+    /// 录制状态变化回调：成为第一响应者且所在窗口为 key window 时为录制中。
+    /// 外部据此临时注销全局热键，避免录制时按下当前热键直接触发
+    var onRecordingStateChange: ((Bool) -> Void)?
+    private(set) var isRecording = false
+    private var windowObservers: [NSObjectProtocol] = []
+
     override var acceptsFirstResponder: Bool {
         true
     }
@@ -173,8 +180,23 @@ final class ShortcutRecorderField: NSControl {
         fatalError("init(coder:) has not been implemented")
     }
 
+    deinit {
+        windowObservers.forEach { NotificationCenter.default.removeObserver($0) }
+    }
+
     override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
+    }
+
+    /// 带 ⌘ 的组合会先走 performKeyEquivalent，被主菜单截获（例如录 ⌘Q 会直接退出 App）。
+    /// 录制中（自身为第一响应者）时拦截下来交给 keyDown 处理
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.type == .keyDown, window?.firstResponder === self else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        keyDown(with: event)
+        return true
     }
 
     override func keyDown(with event: NSEvent) {
@@ -197,13 +219,52 @@ final class ShortcutRecorderField: NSControl {
     override func becomeFirstResponder() -> Bool {
         let didBecome = super.becomeFirstResponder()
         isFocused = didBecome
+        updateRecordingState()
         return didBecome
     }
 
     override func resignFirstResponder() -> Bool {
         let didResign = super.resignFirstResponder()
         isFocused = false
+        updateRecordingState()
         return didResign
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        windowObservers.forEach { NotificationCenter.default.removeObserver($0) }
+        windowObservers = []
+
+        guard let newWindow else {
+            return
+        }
+
+        // 窗口失去 key 状态（切到其他 App / 窗口）时结束录制，恢复全局热键
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
+            let token = NotificationCenter.default.addObserver(forName: name, object: newWindow, queue: .main) { [weak self] _ in
+                self?.updateRecordingState()
+            }
+            windowObservers.append(token)
+        }
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        // 从窗口移除（例如切换偏好设置分页、关闭窗口）时结束录制
+        if window == nil {
+            isFocused = false
+        }
+        updateRecordingState()
+    }
+
+    private func updateRecordingState() {
+        let recording = isFocused && (window?.isKeyWindow ?? false)
+        guard recording != isRecording else {
+            return
+        }
+
+        isRecording = recording
+        onRecordingStateChange?(recording)
     }
 
     override func viewDidChangeEffectiveAppearance() {
@@ -227,6 +288,16 @@ final class ShortcutRecorderField: NSControl {
 extension ShortcutRecorderField {
     var debugDisplayedString: String {
         label.stringValue
+    }
+
+    /// 测试用：模拟进入 / 退出录制状态（单元测试中窗口通常无法成为 key window）
+    func debugSetRecording(_ recording: Bool) {
+        guard recording != isRecording else {
+            return
+        }
+
+        isRecording = recording
+        onRecordingStateChange?(recording)
     }
 }
 #endif

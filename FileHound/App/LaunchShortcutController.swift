@@ -4,6 +4,10 @@ import Carbon.HIToolbox
 protocol LaunchShortcutControlling: AnyObject {
     func configure(action: @escaping () -> Void)
     func reload()
+    /// 临时注销全局热键（例如录制新快捷键期间），直到 resume
+    func suspend()
+    /// 结束暂停，按当前设置重新注册
+    func resume()
 }
 
 protocol HotKeyRegistering: AnyObject {
@@ -27,6 +31,8 @@ final class LaunchShortcutController: LaunchShortcutControlling {
     private let frontmostApplicationObserver: FrontmostApplicationObserving
     private let frontmostApplicationProvider: () -> String?
     private var action: (() -> Void)?
+    /// 暂停期间 reload 只注销不注册
+    private(set) var isSuspended = false
 
     init(
         settings: AppSettings,
@@ -62,9 +68,27 @@ final class LaunchShortcutController: LaunchShortcutControlling {
         reload()
     }
 
+    func suspend() {
+        isSuspended = true
+        reload()
+    }
+
+    func resume() {
+        guard isSuspended else {
+            return
+        }
+
+        isSuspended = false
+        reload()
+    }
+
     func reload() {
         hotKeyRegistrar.unregister()
         frontmostApplicationObserver.stopObserving()
+
+        guard isSuspended == false else {
+            return
+        }
 
         let settings = settingsProvider()
 
@@ -80,7 +104,9 @@ final class LaunchShortcutController: LaunchShortcutControlling {
         case .finderOnly:
             // 全局事件监听需要辅助功能权限；改为仅在访达位于最前时注册 Carbon 热键，无需额外授权且不会把按键传给访达
             let updateRegistration: (String?) -> Void = { [weak self] bundleIdentifier in
-                guard let self else { return }
+                guard let self else {
+                    return
+                }
                 if bundleIdentifier == Self.finderBundleIdentifier {
                     _ = self.hotKeyRegistrar.register(shortcut: shortcut) { [weak self] in
                         self?.action?()
