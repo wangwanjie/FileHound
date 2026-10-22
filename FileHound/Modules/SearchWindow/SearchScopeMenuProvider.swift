@@ -92,13 +92,20 @@ struct SearchScopeMenuItem: Equatable, Sendable {
     }
 }
 
+/// 已挂载卷宗：显示名与真实挂载点。同名卷宗（第二个挂在 /Volumes/Untitled 1）靠挂载点区分
+struct SearchScopeMountedVolume: Equatable, Sendable {
+    let name: String
+    let path: String
+}
+
 struct SearchScopeMenuProvider {
-    var mountedVolumes: [String]
+    /// 每次生成菜单时重新读取，插拔磁盘后再次打开菜单即可看到最新卷宗
+    var mountedVolumes: () -> [SearchScopeMountedVolume]
     var recentLocations: [RecentLocationRecord]
 
     init(
-        mountedVolumes: [String] = Self.defaultMountedVolumes(),
-        recentLocations: [RecentLocationRecord] = Self.defaultRecentLocations()
+        mountedVolumes: @escaping () -> [SearchScopeMountedVolume] = SearchScopeMenuProvider.currentMountedVolumes,
+        recentLocations: [RecentLocationRecord] = []
     ) {
         self.mountedVolumes = mountedVolumes
         self.recentLocations = recentLocations
@@ -155,14 +162,20 @@ struct SearchScopeMenuProvider {
         })
 
         let recentPaths = Set(recentItems.compactMap(\.representedPath))
+        let visibleVolumes = mountedVolumes().filter { Self.isVisibleMountedVolumeName($0.name) }
+        // 同名卷宗在标题后附上挂载点目录名，避免菜单里出现两条一模一样的项
+        let volumeNameCounts = Dictionary(visibleVolumes.map { ($0.name, 1) }, uniquingKeysWith: +)
         let mountedItems = deduplicatedItems(
-            mountedVolumes
-                .filter(Self.isVisibleMountedVolumeName)
-                .map { volumeName in
-                    SearchScopeMenuItem(
-                        title: L10n.format("search_scope.on_volume", volumeName),
-                        representedPath: "/Volumes/\(volumeName)",
-                        scopeDescription: volumeName,
+            visibleVolumes
+                .map { volume in
+                    let mountPointName = URL(fileURLWithPath: volume.path).lastPathComponent
+                    let displayName = (volumeNameCounts[volume.name] ?? 0) > 1 && mountPointName != volume.name
+                        ? "\(volume.name) (\(mountPointName))"
+                        : volume.name
+                    return SearchScopeMenuItem(
+                        title: L10n.format("search_scope.on_volume", displayName),
+                        representedPath: volume.path,
+                        scopeDescription: volume.name,
                         sourceKind: .mountedVolume
                     )
                 }
@@ -236,7 +249,8 @@ struct SearchScopeMenuProvider {
         }
     }
 
-    private static func defaultMountedVolumes() -> [String] {
+    /// 除启动卷外的可浏览卷宗，路径取真实挂载 URL，而不是按卷名拼接 /Volumes/<name>
+    static func currentMountedVolumes() -> [SearchScopeMountedVolume] {
         let keys: Set<URLResourceKey> = [.volumeIsBrowsableKey, .volumeNameKey]
         return (FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: Array(keys), options: []) ?? [])
             .compactMap { url in
@@ -246,13 +260,9 @@ struct SearchScopeMenuProvider {
                     return nil
                 }
 
-                return values.volumeName ?? url.lastPathComponent
+                return SearchScopeMountedVolume(name: values.volumeName ?? url.lastPathComponent, path: url.path)
             }
-            .filter(isVisibleMountedVolumeName)
-    }
-
-    private static func defaultRecentLocations() -> [RecentLocationRecord] {
-        RecentLocationStore.shared.all()
+            .filter { isVisibleMountedVolumeName($0.name) }
     }
 
     static func isVisibleMountedVolumeName(_ name: String) -> Bool {
