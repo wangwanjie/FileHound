@@ -303,6 +303,10 @@ for notes_path in "$ARCHIVES_DIR"/*.md "$ARCHIVES_DIR"/*.txt "$ARCHIVES_DIR"/*.h
 done
 
 TMP_APPCAST="$TMP_DIR/appcast.xml"
+# 以现有 appcast 为基础增量更新，保留旧版本条目的发布日期等信息
+if [[ -f "$OUTPUT_PATH" ]]; then
+    cp "$OUTPUT_PATH" "$TMP_APPCAST"
+fi
 # 不生成 delta：delta 文件不会上传到 GitHub Release，生成的 sparkle:deltas 地址会 404
 "$SPARKLE_BIN_DIR/generate_appcast" \
     --account "$ACCOUNT" \

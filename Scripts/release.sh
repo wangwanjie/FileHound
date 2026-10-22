@@ -87,6 +87,21 @@ print(best)
 PY
 }
 
+# 用 App 内置的 SUPublicEDKey 离线校验 EdDSA 签名，与 App 实际校验更新包的方式一致。
+# 不用 sign_update --verify：它会访问钥匙串，无人值守时可能卡在授权弹窗上
+verify_ed_signature() {
+    python3 - "$1" "$2" "$SPARKLE_PUBLIC_KEY" <<'PY'
+import base64
+import sys
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+path, signature, public_key = sys.argv[1:4]
+with open(path, "rb") as handle:
+    data = handle.read()
+Ed25519PublicKey.from_public_bytes(base64.b64decode(public_key)).verify(base64.b64decode(signature), data)
+PY
+}
+
 # 输出 appcast 中指定 DMG 的「length edSignature」
 enclosure_info() {
     /usr/bin/python3 - "$1" "$2" <<'PY'
@@ -313,8 +328,8 @@ legacy_tree.write(legacy_path, encoding="utf-8", xml_declaration=True)
 PY
 
 step "校验 appcast 与 DMG 一致"
-SPARKLE_BIN_DIR="$(find "$ROOT_DIR"/build/DerivedData-* -path '*/SourcePackages/artifacts/sparkle/Sparkle/bin' -type d 2>/dev/null | head -1)"
-[[ -n "$SPARKLE_BIN_DIR" ]] || fail "未找到 Sparkle 工具"
+SPARKLE_PUBLIC_KEY="$(sed -n 's/^[[:space:]]*INFOPLIST_KEY_SUPublicEDKey:[[:space:]]*//p' project.yml | head -1 | tr -d ' "')"
+python3 -c "import cryptography" 2>/dev/null || fail "校验 EdDSA 签名需要 Python cryptography 模块：python3 -m pip install cryptography"
 for index in "${!ARCHS[@]}"; do
     arch="${ARCHS[$index]}"
     dmg_path="${DMG_PATHS[$index]}"
@@ -324,7 +339,7 @@ for index in "${!ARCHS[@]}"; do
         feed_length="${enclosure%% *}"
         feed_signature="${enclosure#* }"
         [[ "$feed_length" == "$(stat -f '%z' "$dmg_path")" ]] || fail "$feed 中 $dmg_name 的 length 与文件大小不一致"
-        "$SPARKLE_BIN_DIR/sign_update" --verify "$dmg_path" "$feed_signature" >/dev/null 2>&1 || fail "$feed 中 $dmg_name 的 EdDSA 签名校验失败"
+        verify_ed_signature "$dmg_path" "$feed_signature" || fail "$feed 中 $dmg_name 的 EdDSA 签名校验失败"
     done
     echo "$arch: appcast 校验通过"
 done

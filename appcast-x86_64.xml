@@ -3,6 +3,21 @@
     <channel>
         <title>FileHound</title>
         <item>
+            <title>1.3.0</title>
+            <pubDate>Thu, 22 Oct 2026 12:35:25 +0800</pubDate>
+            <link>https://github.com/wangwanjie/FileHound/releases/tag/v1.3.0</link>
+            <sparkle:version>4</sparkle:version>
+            <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/wangwanjie/FileHound/releases/download/v1.3.0/FileHound_v1.3.0_4_x86_64.dmg" length="2794731" type="application/octet-stream" sparkle:edSignature="4CurdhrIIRqEwXycUPb0Aei5gjbIfuL6voEJrlyPe4YjihpMZowGbqbS/9fQLEhLPT89KvNZXOebLg7DRG8UAA==" />
+            <description>&lt;h2&gt;新功能&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;导出结果：可以把当前结果导出为 CSV 或纯文本路径列表（文件 &amp;gt; 导出结果…，⇧⌘E；结果窗口工具栏和右键菜单中也有入口）&lt;/li&gt;&lt;li&gt;可以把结果从列表、树形、网格视图直接拖到访达或其他 App&lt;/li&gt;&lt;li&gt;把访达中的文件夹拖到查找窗口，即可把它设为搜索范围&lt;/li&gt;&lt;li&gt;偏好设置中的「慢速搜索」文件夹现在会生效：这些文件夹会在其他位置都搜完之后再搜索&lt;/li&gt;&lt;/ul&gt;
+&lt;h2&gt;改进&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;Spotlight 预取改为与目录遍历同时进行，搜索过程中可以随时停止，第一批结果出现得更早&lt;/li&gt;&lt;li&gt;按日期、大小、正则等条件搜索时，条件只在开始时解析一次，搜索大量文件时明显更快&lt;/li&gt;&lt;li&gt;「注释」条件不再逐个文件查询 Spotlight，搜索整个磁盘时快很多&lt;/li&gt;&lt;li&gt;文件大小单位与访达一致：KB / MB / GB 按 1000 进制，KiB / MiB / GiB 按 1024 进制；支持「1,024」这样带千分位的写法&lt;/li&gt;&lt;li&gt;多个查找窗口同时搜索时互不拖慢&lt;/li&gt;&lt;li&gt;启动时改为在后台检查更新，没有新版本时不再弹窗；「每天自动检查」现在真正生效；在偏好设置中修改更新选项后立即生效&lt;/li&gt;&lt;li&gt;应用内选择的浅色 / 深色外观同样作用于结果窗口和各类弹窗&lt;/li&gt;&lt;li&gt;切换语言后，已打开的结果窗口也会立即更新文案&lt;/li&gt;&lt;li&gt;插拔磁盘后，搜索范围菜单中的卷宗列表会自动更新；同名卷宗可以分别选择&lt;/li&gt;&lt;li&gt;结果很多时，结果窗口刷新更流畅&lt;/li&gt;&lt;li&gt;改进 VoiceOver 朗读：按钮和控件使用本地化的名称&lt;/li&gt;&lt;/ul&gt;
+&lt;h2&gt;修复&lt;/h2&gt;
+&lt;ul&gt;&lt;li&gt;文本内容搜索可能把只有文件名包含关键词的文件（甚至文件夹）当成命中；有 Spotlight 结果时会漏掉 Spotlight 没有收录的文件&lt;/li&gt;&lt;li&gt;多个条件组合时，Spotlight 查询的优先级错误，可能返回不满足全部条件的结果&lt;/li&gt;&lt;li&gt;忽略变音符号时，搜索整个卷宗可能找不到带变音符号的文件名（例如用「cafe」找「café」）&lt;/li&gt;&lt;li&gt;区分大小写、忽略变音符号搜索文本内容时，「Resume」找不到「Résumé」&lt;/li&gt;&lt;li&gt;输入很大的文件大小数值时 App 崩溃&lt;/li&gt;&lt;li&gt;「种类是视频」会把音频文件也算进来&lt;/li&gt;&lt;li&gt;在应用程序包内搜索并关闭「包内容」时，没有任何结果&lt;/li&gt;&lt;li&gt;「今天 / 昨天」日期条件会匹配所有文件&lt;/li&gt;&lt;li&gt;「不可见项目」在不同搜索方式下判断不一致，可能进入 ~/Library 等隐藏文件夹&lt;/li&gt;&lt;li&gt;用键盘或 ⌘A 改变选中后，打开、移到废纸篓、拷贝等操作仍然作用于之前选中的项目&lt;/li&gt;&lt;li&gt;树形视图中，路径分叉时生成错误的上级文件夹；补出的上级文件夹可以被移到废纸篓或删除&lt;/li&gt;&lt;li&gt;树形视图中折叠的文件夹在结果刷新后被重新展开&lt;/li&gt;&lt;li&gt;搜索进行中移除、移到废纸篓或重命名的结果，会在下一次刷新时重新出现&lt;/li&gt;&lt;li&gt;重命名时没有检查名称是否合法；重命名文件夹后，其中的结果路径失效&lt;/li&gt;&lt;li&gt;设为不可见、解锁失败时没有任何提示&lt;/li&gt;&lt;li&gt;文件名包含 emoji 时，名称高亮的位置错位&lt;/li&gt;&lt;li&gt;关闭「结果窗口跟随查找窗口」后，⌘R 重新搜索没有反应&lt;/li&gt;&lt;li&gt;新搜索没有结果时，绑定的结果窗口仍然显示上一次的结果&lt;/li&gt;&lt;li&gt;多显示器下增删条件时，查找窗口会跳到主显示器&lt;/li&gt;&lt;li&gt;快捷键录制框无法录制与菜单冲突的组合，录制 ⌘Q 会直接退出 App&lt;/li&gt;&lt;li&gt;已存储搜索、搜索历史或特殊文件夹配置中有一条数据损坏时，其他数据也会丢失（现在会跳过损坏的条目并备份原始数据）&lt;/li&gt;&lt;li&gt;开启「打开最近搜索」菜单后，已存储搜索的重命名、删除菜单失效&lt;/li&gt;&lt;li&gt;外观偏好中手动输入的字号不会保存&lt;/li&gt;&lt;/ul&gt;</description>
+        </item>
+        <item>
             <title>1.2.0</title>
             <pubDate>Fri, 02 Oct 2026 18:02:45 +0800</pubDate>
             <link>https://github.com/wangwanjie/FileHound/releases/tag/v1.2.0</link>
