@@ -224,7 +224,6 @@ for index in "${!ARCHS[@]}"; do
     dmg_path="${DMG_PATHS[$index]}"
     [[ -f "$dmg_path" ]] || fail "未找到 $dmg_path"
     xcrun stapler validate "$dmg_path" >/dev/null || fail "$dmg_path 未完成公证 staple"
-    spctl -a -t open --context context:primary-signature "$dmg_path" >/dev/null 2>&1 || fail "$dmg_path 未通过 Gatekeeper 校验"
 
     # 挂载 DMG，检查其中 App 的架构、版本号和更新源
     mount_point="$(mktemp -d "${TMPDIR:-/tmp}/filehound-verify.XXXXXX")"
@@ -245,6 +244,9 @@ for index in "${!ARCHS[@]}"; do
             verify_error="App 更新源为 $app_feed，应指向 appcast-$arch.xml"
         elif ! codesign --verify --deep --strict "$app_path" 2>/dev/null; then
             verify_error="App 签名校验失败"
+        elif ! spctl -a -t exec "$app_path" >/dev/null 2>&1; then
+            # DMG 本身不做代码签名（公证票据已 staple 在 DMG 上），Gatekeeper 校验针对其中的 App
+            verify_error="App 未通过 Gatekeeper 校验"
         fi
     fi
     hdiutil detach "$mount_point" -quiet || true
