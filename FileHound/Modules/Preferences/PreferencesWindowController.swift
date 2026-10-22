@@ -41,8 +41,10 @@ struct PreferencesDependencies {
 }
 
 final class PreferencesWindowController: NSWindowController {
-    /// 延迟到首次创建页面时才求值，避免构造窗口控制器时就创建各单例
-    private var dependenciesProvider: (() -> PreferencesDependencies)!
+    /// 延迟到首次创建页面时才求值，避免构造窗口控制器时就创建各单例。
+    /// 默认值不能省：`PreferencesWindowController()` 会优先匹配继承来的无参 `NSWindowController.init()`，
+    /// 不经过下面的便利构造器，此时也必须能拿到生产依赖
+    private var dependenciesProvider: () -> PreferencesDependencies = { .live }
     private lazy var dependencies: PreferencesDependencies = dependenciesProvider()
 
     convenience init(dependencies dependenciesProvider: @escaping @autoclosure () -> PreferencesDependencies = .live) {

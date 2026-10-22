@@ -18,7 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         return manager
     }()
-    private lazy var preferencesWindowController = PreferencesWindowController()
+    private lazy var preferencesWindowController = PreferencesWindowController(dependencies: .live)
     private lazy var launchShortcutController: LaunchShortcutControlling = LaunchShortcutController.shared
     /// 延迟创建：UpdateManager.shared 会创建真实的 Sparkle 控制器，测试中构造 AppDelegate 时不应触发
     private let updateManagerProvider: () -> UpdateManager
