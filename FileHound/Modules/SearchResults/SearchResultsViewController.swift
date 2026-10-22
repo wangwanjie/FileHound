@@ -220,9 +220,9 @@ final class SearchResultsViewController: NSViewController, QLPreviewPanelDataSou
         statusBarView.updateSelectedItem(viewModel.selectedItem)
 
         // 应用内切换语言时自行刷新结果窗口文案；CurrentValueSubject 订阅时会立即发送当前语言，跳过这一次
+        // 语言切换由主线程的偏好设置触发，这里同步处理
         localizationPublisher
             .dropFirst()
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 self?.reloadLocalizedStrings()
             }

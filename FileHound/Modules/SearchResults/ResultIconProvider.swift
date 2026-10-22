@@ -47,12 +47,16 @@ actor ResultIconProvider {
 
     private func loadIcon(for url: URL, size: NSSize, preferThumbnail: Bool) async -> NSImage? {
         if preferThumbnail, let thumbnail = await thumbnailLoader(url) {
-            thumbnail.size = size
-            return thumbnail
+            return Self.resized(thumbnail, to: size)
         }
 
-        let icon = workspaceIconLoader(url)
-        icon.size = size
-        return icon
+        return Self.resized(workspaceIconLoader(url), to: size)
+    }
+
+    /// 复制后再设置尺寸：加载器可能返回共享的图片对象，直接修改会影响其他尺寸的缓存
+    private static func resized(_ image: NSImage, to size: NSSize) -> NSImage {
+        let copy = (image.copy() as? NSImage) ?? image
+        copy.size = size
+        return copy
     }
 }

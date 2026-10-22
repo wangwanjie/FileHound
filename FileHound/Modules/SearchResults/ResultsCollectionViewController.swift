@@ -9,7 +9,7 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
     private let iconProvider = ResultIconProvider()
     private var previewSize: CGFloat = 72
     private(set) var resultsAppearance = ResultsAppearance.current()
-    /// 监听选中变化：鼠标、键盘 ↑↓、⌘A 以及程序化修改都会改变 selectionIndexPaths
+    /// 监听 selectionIndexPaths 的程序化修改（如右键时选中点击项）；用户操作另由 delegate 通知
     private var selectionObservation: NSKeyValueObservation?
     /// 程序化修改选中（刷新数据、同步视图模型选中）时不回调，避免把旧选中写回视图模型
     private var isUpdatingSelectionProgrammatically = false
@@ -125,6 +125,21 @@ final class ResultsCollectionViewController: NSViewController, NSCollectionViewD
 
         resultItem.render(items[indexPath.item], iconProvider: iconProvider, previewSize: previewSize, appearance: resultsAppearance)
         return resultItem
+    }
+
+    /// 用户操作（鼠标、键盘 ↑↓、⌘A）触发的选中变化；selectAll 等内部修改不一定发出 KVO，这里同样通知
+    func collectionView(_ collectionView: NSCollectionView, didSelectItemsAt indexPaths: Set<IndexPath>) {
+        guard isUpdatingSelectionProgrammatically == false else {
+            return
+        }
+        notifySelectionChange()
+    }
+
+    func collectionView(_ collectionView: NSCollectionView, didDeselectItemsAt indexPaths: Set<IndexPath>) {
+        guard isUpdatingSelectionProgrammatically == false else {
+            return
+        }
+        notifySelectionChange()
     }
 
     func collectionView(_ collectionView: NSCollectionView, canDragItemsAt indexPaths: Set<IndexPath>, with event: NSEvent) -> Bool {
