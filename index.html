@@ -1,335 +1,354 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark light">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FileHound — 不建索引的 macOS 文件搜索工具</title>
-<meta name="description" content="FileHound 每次直接搜索磁盘，能找到 Spotlight 不收录的系统目录、隐藏文件和包内容。按名称、日期、大小、种类、标签、文本内容等条件组合搜索。">
+<meta name="description" content="FileHound 每次直接搜索磁盘，能找到 Spotlight 不收录的系统目录、隐藏文件和包内容。支持按名称、扩展名、日期、大小、种类、标签、文本内容等条件组合搜索。">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#050a14">
+<meta property="og:type" content="website">
 <meta property="og:title" content="FileHound — 不建索引的 macOS 文件搜索工具">
-<meta property="og:description" content="直接搜索磁盘，找到 Spotlight 找不到的文件。支持 Apple 芯片与 Intel，macOS 13 及以上。">
-<meta property="og:image" content="https://wangwanjie.github.io/FileHound/assets/icon.png">
+<meta property="og:description" content="FileHound 每次直接搜索磁盘，能找到 Spotlight 不收录的系统目录、隐藏文件和包内容。支持按名称、扩展名、日期、大小、种类、标签、文本内容等条件组合搜索。">
+<meta property="og:image" content="assets/icon-256.png">
 <link rel="icon" type="image/png" href="assets/icon-256.png">
-<style>
-  :root {
-    --bg: #070d1c;
-    --nav-bg: rgba(7, 13, 28, 0.6);
-    --card: rgba(255, 255, 255, 0.045);
-    --card-border: rgba(255, 255, 255, 0.08);
-    --text: #eef3ff;
-    --muted: #97a3c2;
-    --accent: #2f6bff;
-    --accent-2: #3fa9ff;
-    --highlight: #ffd23f;
-    --glow-1: rgba(47, 107, 255, 0.30);
-    --glow-2: rgba(63, 169, 255, 0.12);
-    --shadow: 0 40px 120px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 255, 255, .06);
-    --code-bg: rgba(255, 255, 255, .08);
-    --radius: 18px;
-    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #f5f8ff;
-      --nav-bg: rgba(245, 248, 255, 0.7);
-      --card: rgba(255, 255, 255, 0.85);
-      --card-border: rgba(15, 35, 80, 0.10);
-      --text: #0d1630;
-      --muted: #56627f;
-      --glow-1: rgba(47, 107, 255, 0.18);
-      --glow-2: rgba(63, 169, 255, 0.10);
-      --shadow: 0 30px 80px rgba(20, 40, 90, .22), 0 0 0 1px rgba(15, 35, 80, .08);
-      --code-bg: rgba(15, 35, 80, .07);
+<link rel="apple-touch-icon" href="assets/icon-256.png">
+<script>
+  // 首屏前确定主题与语言，避免闪烁；URL 参数优先于 localStorage
+  (function () {
+    var root = document.documentElement;
+    var params = new URLSearchParams(location.search);
+    var pref = params.get("theme");
+    var lang = params.get("lang");
+    try {
+      if (!pref) {
+        pref = localStorage.getItem("filehound.theme");
+      }
+      if (!lang) {
+        lang = localStorage.getItem("filehound.lang");
+      }
+    } catch (e) {}
+    if (pref !== "light" && pref !== "dark") {
+      pref = "system";
     }
-  }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0;
-    font-family: var(--sans);
-    color: var(--text);
-    background:
-      radial-gradient(1200px 600px at 50% -10%, var(--glow-1), transparent 60%),
-      radial-gradient(800px 500px at 90% 30%, var(--glow-2), transparent 60%),
-      var(--bg);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
-  a { color: inherit; }
-  code { background: var(--code-bg); border-radius: 6px; padding: 1px 6px; font-size: 13px; }
-  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
-
-  nav {
-    position: sticky; top: 0; z-index: 10;
-    backdrop-filter: saturate(180%) blur(18px);
-    -webkit-backdrop-filter: saturate(180%) blur(18px);
-    background: var(--nav-bg);
-    border-bottom: 1px solid var(--card-border);
-  }
-  nav .wrap { display: flex; align-items: center; height: 56px; gap: 28px; }
-  nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; text-decoration: none; }
-  nav .brand img { width: 26px; height: 26px; }
-  nav .links { margin-left: auto; display: flex; gap: 22px; font-size: 14px; }
-  nav .links a { color: var(--muted); text-decoration: none; }
-  nav .links a:hover { color: var(--text); }
-  nav .lang { cursor: pointer; border: 1px solid var(--card-border); border-radius: 999px; padding: 3px 12px; background: none; color: var(--muted); font: inherit; font-size: 13px; }
-
-  header.hero { text-align: center; padding: 88px 0 40px; }
-  .hero img.icon { width: 148px; height: 148px; filter: drop-shadow(0 24px 48px rgba(47, 107, 255, 0.45)); }
-  .hero h1 { font-size: clamp(40px, 7vw, 68px); letter-spacing: -0.03em; margin: 18px 0 8px; line-height: 1.05; }
-  .hero h1 span {
-    background: linear-gradient(120deg, #9cc8ff, var(--accent-2) 40%, var(--accent));
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-  }
-  .hero p.lead { font-size: clamp(17px, 2.2vw, 21px); color: var(--muted); max-width: 720px; margin: 0 auto; }
-  .hero p.lead mark { background: none; color: var(--text); box-shadow: inset 0 -0.42em 0 rgba(255, 210, 63, .38); }
-  .downloads { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 36px 0 14px; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 10px; text-align: left;
-    padding: 13px 22px; border-radius: 14px; text-decoration: none; font-weight: 600; font-size: 16px;
-    transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-  }
-  .btn small { display: block; font-weight: 400; font-size: 12px; opacity: .75; }
-  .btn.primary { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 10px 30px rgba(47, 107, 255, .35); }
-  .btn.secondary { background: var(--card); border: 1px solid var(--card-border); }
-  .btn:hover { transform: translateY(-2px); }
-  .btn svg { width: 22px; height: 22px; flex: none; }
-  .meta { color: var(--muted); font-size: 13px; }
-
-  .shot { margin: 56px auto 0; max-width: 1000px; }
-  .shot img { width: 100%; display: block; filter: drop-shadow(0 30px 60px rgba(0, 0, 0, .35)); }
-
-  section { padding: 96px 0 0; }
-  section h2 { font-size: clamp(28px, 4vw, 40px); letter-spacing: -0.02em; margin: 0 0 8px; text-align: center; }
-  section p.sub { text-align: center; color: var(--muted); margin: 0 auto 44px; max-width: 640px; }
-
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
-  .card {
-    background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
-    padding: 20px; transition: border-color .15s ease, transform .15s ease;
-  }
-  .card:hover { border-color: rgba(47, 107, 255, .5); transform: translateY(-2px); }
-  .card .tile {
-    width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
-    font-size: 19px; color: #fff; margin-bottom: 12px;
-  }
-  .card h3 { margin: 0 0 6px; font-size: 17px; }
-  .card p { margin: 0; color: var(--muted); font-size: 14px; }
-
-  .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-  .point { padding: 24px; border-radius: var(--radius); background: var(--card); border: 1px solid var(--card-border); }
-  .point b { display: block; font-size: 18px; margin-bottom: 6px; }
-  .point span { color: var(--muted); font-size: 14px; }
-
-  .bench { width: 100%; max-width: 860px; margin: 0 auto; border-collapse: separate; border-spacing: 0; background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius); overflow: hidden; font-size: 14px; }
-  .bench th, .bench td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--card-border); }
-  .bench tr:last-child td { border-bottom: none; }
-  .bench th { color: var(--muted); font-weight: 500; font-size: 13px; }
-  .bench td.fh { font-weight: 700; color: var(--accent-2); white-space: nowrap; }
-  .bench td.other { color: var(--muted); }
-  .note { text-align: center; color: var(--muted); font-size: 13px; max-width: 760px; margin: 16px auto 0; }
-
-  .install ol { counter-reset: step; list-style: none; padding: 0; margin: 0 auto; max-width: 720px; }
-  .install li { counter-increment: step; position: relative; padding: 18px 20px 18px 64px; margin-bottom: 10px; background: var(--card); border: 1px solid var(--card-border); border-radius: 14px; }
-  .install li::before {
-    content: counter(step); position: absolute; left: 18px; top: 16px; width: 30px; height: 30px; border-radius: 50%;
-    display: grid; place-items: center; font-weight: 700; background: rgba(47, 107, 255, .22); color: var(--accent-2);
-  }
-
-  footer { margin-top: 110px; padding: 36px 0 48px; border-top: 1px solid var(--card-border); color: var(--muted); font-size: 13px; }
-  footer .wrap { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; }
-  footer a { color: var(--muted); }
-
-  [data-lang="en"] .zh, [data-lang="zh"] .en { display: none !important; }
-
-  @media (max-width: 640px) {
-    nav .links a.hide-sm { display: none; }
-    header.hero { padding-top: 56px; }
-    .bench th, .bench td { padding: 10px 12px; }
-  }
-</style>
+    var dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+    root.setAttribute("data-theme", dark ? "dark" : "light");
+    root.setAttribute("data-theme-pref", pref);
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#050a14" : "#f3eee2");
+    // 非简体中文时先隐藏正文，等 i18n 替换完成再显示；1.5 秒兜底
+    if (!lang) {
+      var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"];
+      var first = String(list[0] || "en").toLowerCase();
+      lang = /^zh-(tw|hk|mo|hant)/.test(first) ? "zh-TW" : (first.indexOf("zh") === 0 ? "zh-CN" : "en");
+    }
+    if (lang !== "zh-CN") {
+      root.classList.add("i18n-pending");
+      setTimeout(function () { root.classList.remove("i18n-pending"); }, 1500);
+    }
+  })();
+</script>
+<link rel="stylesheet" href="assets/site.css">
+<script src="assets/i18n.js" defer></script>
+<script src="assets/site.js" defer></script>
 </head>
-<body data-lang="zh">
+<body>
+<a class="skip" href="#main" data-i18n="skip">跳到正文</a>
 
-<nav>
-  <div class="wrap">
-    <a class="brand" href="#"><img src="assets/icon-256.png" alt="">FileHound</a>
-    <div class="links">
-      <a class="hide-sm" href="#features"><span class="zh">功能</span><span class="en">Features</span></a>
-      <a class="hide-sm" href="#speed"><span class="zh">性能</span><span class="en">Speed</span></a>
-      <a class="hide-sm" href="#install"><span class="zh">安装</span><span class="en">Install</span></a>
-      <a href="https://github.com/wangwanjie/FileHound/releases"><span class="zh">版本历史</span><span class="en">Releases</span></a>
-      <a href="https://github.com/wangwanjie/FileHound">GitHub</a>
-    </div>
-    <button class="lang" id="lang-toggle" type="button">EN</button>
-  </div>
-</nav>
-
-<header class="hero">
-  <div class="wrap">
-    <img class="icon" src="assets/icon.png" alt="FileHound">
-    <h1><span>FileHound</span></h1>
-    <p class="lead">
-      <span class="zh">不建索引的 macOS 文件搜索工具。每次直接搜索磁盘，<mark>找到 Spotlight 找不到的文件</mark>：系统目录、隐藏文件、包内容，一个不漏。</span>
-      <span class="en">An index-free file search tool for macOS. It searches the disk directly every time and <mark>finds what Spotlight misses</mark> — system folders, hidden files and package contents.</span>
-    </p>
-    <div class="downloads">
-      <a class="btn primary" id="dl-arm" href="https://github.com/wangwanjie/FileHound/releases/latest/download/FileHound-arm64.dmg">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
-        <span><span class="zh">下载 Apple 芯片版</span><span class="en">Download for Apple silicon</span><small>M1 / M2 / M3 / M4 …</small></span>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#top" aria-label="FileHound">
+      <img src="assets/icon-64.webp" srcset="assets/icon-64.webp 1x, assets/icon-128.webp 2x" width="30" height="30" alt="" decoding="async">
+      <span>FileHound</span>
+    </a>
+    <nav class="nav" data-i18n-attr="aria-label:aria.nav" aria-label="页面导航">
+      <a href="#blind" data-i18n="nav.blind">盲区</a>
+      <a href="#features" data-i18n="nav.features">功能</a>
+      <a href="#how" data-i18n="nav.how">原理</a>
+      <a href="#perf" data-i18n="nav.perf">性能</a>
+      <a href="#download" data-i18n="nav.download">下载</a>
+    </nav>
+    <div class="controls">
+      <div class="seg" role="group" data-i18n-attr="aria-label:aria.lang" aria-label="语言">
+        <button type="button" data-lang="zh-CN" lang="zh-CN" title="简体中文">简</button>
+        <button type="button" data-lang="en" lang="en" title="English">EN</button>
+        <button type="button" data-lang="zh-TW" lang="zh-TW" title="繁體中文">繁</button>
+      </div>
+      <div class="seg seg-icons" role="group" data-i18n-attr="aria-label:aria.theme" aria-label="主题">
+        <button type="button" data-theme-set="light" data-i18n-attr="aria-label:theme.light;title:theme.light" aria-label="浅色" title="浅色">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6"/><path d="M10 1.8v2.4M10 15.8v2.4M1.8 10h2.4M15.8 10h2.4M4.2 4.2l1.7 1.7M14.1 14.1l1.7 1.7M4.2 15.8l1.7-1.7M14.1 5.9l1.7-1.7"/></svg>
+        </button>
+        <button type="button" data-theme-set="dark" data-i18n-attr="aria-label:theme.dark;title:theme.dark" aria-label="深色" title="深色">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.6 12.6A6.6 6.6 0 0 1 7.4 4.4a6.6 6.6 0 1 0 8.2 8.2z"/></svg>
+        </button>
+        <button type="button" data-theme-set="system" data-i18n-attr="aria-label:theme.system;title:theme.system" aria-label="跟随系统" title="跟随系统">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="10" rx="1.6"/><path d="M7 17h6M10 13.5V17"/></svg>
+        </button>
+      </div>
+      <a class="gh" href="https://github.com/wangwanjie/FileHound" data-i18n-attr="aria-label:aria.github;title:aria.github" aria-label="GitHub 仓库" title="GitHub 仓库">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
       </a>
-      <a class="btn secondary" id="dl-intel" href="https://github.com/wangwanjie/FileHound/releases/latest/download/FileHound-x86_64.dmg">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
-        <span><span class="zh">下载 Intel 版</span><span class="en">Download for Intel</span><small>x86_64</small></span>
-      </a>
-    </div>
-    <div class="meta">
-      <span class="zh">免费 · macOS 13.0 及以上 · 已通过 Apple 公证 · 内置自动更新</span>
-      <span class="en">Free · macOS 13.0 or later · Notarized by Apple · Built-in auto update</span>
-      <span id="version"></span>
-    </div>
-
-    <div class="shot">
-      <img src="assets/screenshots/main.png" alt="FileHound">
     </div>
   </div>
 </header>
 
-<section>
-  <div class="wrap">
-    <div class="points">
-      <div class="point"><b><span class="zh">不建索引</span><span class="en">No index</span></b><span class="zh">没有常驻后台进程，不占额外磁盘，每次搜索看到的都是磁盘此刻的真实状态。</span><span class="en">No background daemon, no extra disk usage. Every search sees the disk exactly as it is right now.</span></div>
-      <div class="point"><b><span class="zh">找得全</span><span class="en">Finds everything</span></b><span class="zh">系统目录、隐藏文件、包内容都能搜到；安装特权辅助程序后还能搜索仅 root 可读的位置。</span><span class="en">System folders, hidden files and package contents. With the privileged helper it can also read root-only locations.</span></div>
-      <div class="point"><b><span class="zh">边搜边看</span><span class="en">Results as you go</span></b><span class="zh">通常不到一秒给出第一批结果，搜索过程中结果窗口持续刷新。</span><span class="en">The first results usually arrive in under a second and keep streaming in while the search runs.</span></div>
-      <div class="point"><b><span class="zh">三种语言</span><span class="en">Three languages</span></b><span class="zh">简体中文、繁体中文、English，应用内随时切换，无需重启。</span><span class="en">Simplified Chinese, Traditional Chinese and English, switchable without restarting.</span></div>
+<main id="main">
+  <!-- 首屏：文案 + 雷达扫描演示 -->
+  <section class="hero" id="top">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="kicker"><span class="blip" aria-hidden="true"></span><span data-i18n="hero.kicker">macOS 文件搜索 · 不建索引</span></p>
+        <h1 data-i18n="hero.title">直接搜磁盘，<mark>Spotlight 漏掉的</mark>也能找到</h1>
+        <p class="lead" data-i18n="hero.lead">FileHound 不维护索引，每次搜索都读取磁盘此刻的真实状态。系统目录、隐藏文件、App 包内容都在搜索范围内，可以按名称、扩展名、日期、大小、种类、标签、注释、文本内容等条件组合查找。</p>
+        <div class="cta">
+          <a class="btn btn-primary dl-arm" href="https://github.com/wangwanjie/FileHound/releases/latest/download/FileHound-arm64.dmg">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10M5.5 8.5 10 13l4.5-4.5M4 16.5h12"/></svg>
+            <span data-i18n="dl.arm.btn">下载 · Apple 芯片</span>
+          </a>
+          <a class="btn btn-ghost dl-intel" href="https://github.com/wangwanjie/FileHound/releases/latest/download/FileHound-x86_64.dmg">
+            <span data-i18n="dl.intel.btn">Intel 版</span>
+          </a>
+        </div>
+        <p class="hero-meta"><span class="ver" data-version hidden></span><span data-i18n="hero.meta">macOS 13.0+ · 已经过 Apple 公证 · 应用内自动更新</span></p>
+      </div>
+
+      <div class="scope" aria-describedby="scope-note">
+        <div class="scope-bar">
+          <span class="scope-tag" data-i18n="scope.demo">演示</span>
+          <span class="scope-query"><span class="scope-label" data-i18n="scope.query">条件</span><code id="scope-query">名称 包含 “config”</code></span>
+          <span class="scope-status" id="scope-status">扫描中</span>
+        </div>
+        <div class="scope-body">
+          <div class="radar">
+            <canvas id="radar" width="440" height="440" role="img" data-i18n-attr="aria-label:scope.canvas" aria-label="雷达扫过一棵文件树，逐个点亮匹配的文件"></canvas>
+            <div class="radar-readout" aria-hidden="true">
+              <span><b id="scope-scanned">0</b>/<i id="scope-total">0</i> <em data-i18n="scope.scanned">已检查</em></span>
+              <span><b id="scope-hits">0</b> <em data-i18n="scope.hits">命中</em></span>
+            </div>
+          </div>
+          <div class="results">
+            <div class="results-head">
+              <span data-i18n="scope.results">结果</span>
+              <span class="results-scope" data-i18n="scope.scope">启动卷</span>
+            </div>
+            <ol class="results-list" id="results-list" aria-live="off"></ol>
+            <div class="results-foot" id="results-foot">&nbsp;</div>
+          </div>
+        </div>
+        <p class="scope-note" id="scope-note" data-i18n="scope.note">示意动画：琥珀色是匹配项，标签说明它在 Spotlight 的盲区里。</p>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="features">
-  <div class="wrap">
-    <h2><span class="zh">功能</span><span class="en">Features</span></h2>
-    <p class="sub"><span class="zh">⌘N 另开查找窗口，各窗口的条件和结果互不影响；全局快捷键随时唤起。</span><span class="en">Press ⌘N for another search window with its own rules and results, or summon one anytime with a global shortcut.</span></p>
-    <div class="grid" id="feature-grid"></div>
-  </div>
-</section>
+  <!-- 盲区：图例风格 -->
+  <section class="section" id="blind">
+    <div class="wrap">
+      <p class="sec-kicker"><span>01</span><span data-i18n="blind.kicker">盲区</span></p>
+      <h2 data-i18n="blind.title">Spotlight 的盲区，正是 FileHound 的搜索范围</h2>
+      <p class="sec-lead" data-i18n="blind.lead">Spotlight 依赖索引，系统目录、隐藏文件和包内容都不在它的收录范围里。FileHound 每次直接遍历目录或扫描卷目录，这些位置会被逐项检查。</p>
+      <div class="legend">
+        <article class="legend-item reveal">
+          <span class="glyph glyph-sys" aria-hidden="true"></span>
+          <h3 data-i18n="blind.sys.t">系统目录</h3>
+          <p data-i18n="blind.sys.d"><code>/System</code>、<code>/private/etc</code> 等系统位置。授予「完全磁盘访问权限」后，其他 App 的数据也能搜到。</p>
+        </article>
+        <article class="legend-item reveal">
+          <span class="glyph glyph-hid" aria-hidden="true"></span>
+          <h3 data-i18n="blind.hid.t">隐藏文件</h3>
+          <p data-i18n="blind.hid.d"><code>.ssh</code>、<code>.config</code>、<code>~/Library</code> 等不可见项目。搜索时可以选择包含或排除。</p>
+        </article>
+        <article class="legend-item reveal">
+          <span class="glyph glyph-pkg" aria-hidden="true"></span>
+          <h3 data-i18n="blind.pkg.t">包内容</h3>
+          <p data-i18n="blind.pkg.d"><code>.app</code> 等包内部的文件，例如 <code>Contents/Info.plist</code>。同样可以选择包含或排除。</p>
+        </article>
+        <article class="legend-item reveal">
+          <span class="glyph glyph-root" aria-hidden="true"></span>
+          <h3 data-i18n="blind.root.t">只有 root 能读的位置</h3>
+          <p data-i18n="blind.root.d">其他用户的主目录、<code>/private/var/root</code> 等。安装特权辅助程序后，只在当前账户无权读取时经由它访问，只读文件。</p>
+        </article>
+      </div>
+    </div>
+  </section>
 
-<section id="speed">
-  <div class="wrap">
-    <h2><span class="zh">为什么这么快</span><span class="en">Why it is fast</span></h2>
-    <p class="sub"><span class="zh">批量列目录、多线程遍历、内核直接扫描卷目录、廉价条件先判、内容按字节预筛。</span><span class="en">Bulk directory listing, multithreaded traversal, kernel-level volume catalog search, cheap rules first and byte-level content prefiltering.</span></p>
-    <table class="bench">
-      <thead>
-        <tr>
-          <th><span class="zh">场景</span><span class="en">Scenario</span></th>
-          <th><span class="zh">对比对象</span><span class="en">Baseline</span></th>
-          <th>FileHound</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><span class="zh"><code>/System/Library</code>（约 46 万个条目）按名称搜索</span><span class="en">Name search in <code>/System/Library</code> (~458K items)</span></td>
-          <td class="other"><code>find -iname</code> 11.81 s</td>
-          <td class="fh">1.52 s · 7.7×</td>
-        </tr>
-        <tr>
-          <td><span class="zh">整个启动卷（约 707 万个对象）按名称搜索</span><span class="en">Name search across the startup volume (~7.07M objects)</span></td>
-          <td class="other"><span class="zh">多线程遍历</span><span class="en">Multithreaded walk</span> 48.49 s</td>
-          <td class="fh">31.89 s · 1.5×</td>
-        </tr>
-        <tr>
-          <td><span class="zh">macOS SDK Frameworks（约 1.3 万个条目）按内容搜索</span><span class="en">Content search in the macOS SDK Frameworks (~13K items)</span></td>
-          <td class="other"><code>grep -rlF</code> 3.51 s</td>
-          <td class="fh">0.36 s · 9.7×</td>
-        </tr>
-      </tbody>
-    </table>
-    <p class="note"><span class="zh">测于 Apple M2 Max、32 GB 内存、macOS 27.2，热缓存下取 3 次中位数，测的是搜索引擎核心。</span><span class="en">Measured on Apple M2 Max, 32 GB RAM, macOS 27.2 with warm caches, median of 3 runs, search engine core only.</span></p>
-  </div>
-</section>
+  <!-- 功能 -->
+  <section class="section" id="features">
+    <div class="wrap">
+      <p class="sec-kicker"><span>02</span><span data-i18n="feat.kicker">功能</span></p>
+      <h2 data-i18n="feat.title">组合条件，一次说清要找什么</h2>
+      <figure class="plate reveal">
+        <img src="assets/screenshots/main-1600.webp" srcset="assets/screenshots/main-800.webp 800w, assets/screenshots/main-1600.webp 1600w" sizes="(max-width: 1100px) 94vw, 1040px" width="1600" height="1028" loading="lazy" decoding="async" data-i18n-attr="alt:feat.shot" alt="FileHound 的查找窗口与结果窗口">
+        <figcaption><span class="coord" aria-hidden="true">FIG. 1</span><span data-i18n="feat.cap">查找窗口按「名称 包含 报告」搜索，结果窗口高亮命中片段</span></figcaption>
+      </figure>
+      <div class="feat-grid">
+        <article class="feat reveal"><h3 data-i18n="feat.1.t">组合条件搜索</h3><p data-i18n="feat.1.d">名称、扩展名、路径、文件夹名、修改 / 创建 / 上次打开日期、大小、种类、标签、注释、文本内容、脚本，条件之间是“且”。支持通配符、正则表达式与“包含任一”，可区分大小写和变音符号。</p></article>
+        <article class="feat reveal"><h3 data-i18n="feat.2.t">搜索范围</h3><p data-i18n="feat.2.d">启动卷、所有磁盘、主目录、访达当前选中的文件夹、最近使用的位置，或任意文件夹（可从访达直接拖入）。可以限制文件夹深度和结果数量。</p></article>
+        <article class="feat reveal"><h3 data-i18n="feat.3.t">三种结果视图</h3><p data-i18n="feat.3.d">列表、树形、网格，支持过滤、排序和 Quick Look 预览。</p></article>
+        <article class="feat reveal"><h3 data-i18n="feat.4.t">直接处理结果</h3><p data-i18n="feat.4.d">打开、在访达中显示、重命名、移到废纸篓（可放回原处）、设置标签、拷贝路径，也可以把结果拖到访达或其他 App。</p></article>
+        <article class="feat reveal"><h3 data-i18n="feat.5.t">导出结果</h3><p data-i18n="feat.5.d">导出为 CSV（Excel / Numbers 可打开）或纯文本路径列表，快捷键 <kbd>⇧⌘E</kbd>。</p></article>
+        <article class="feat reveal"><h3 data-i18n="feat.6.t">多窗口</h3><p data-i18n="feat.6.d"><kbd>⌘N</kbd> 另开查找窗口，条件与结果互不影响。搜索进行中就能查看已找到的结果，<kbd>⌘R</kbd> 按结果窗口的条件重新搜索。</p></article>
+        <article class="feat reveal"><h3 data-i18n="feat.7.t">常用操作</h3><p data-i18n="feat.7.d">存储常用搜索，查看最近的搜索记录，用全局快捷键随时唤起查找窗口。</p></article>
+        <article class="feat reveal"><h3 data-i18n="feat.8.t">界面</h3><p data-i18n="feat.8.d">简体中文、繁体中文、英文，应用内切换无需重启；外观可选浅色、深色或跟随系统。</p></article>
+      </div>
+    </div>
+  </section>
 
-<section id="install" class="install">
-  <div class="wrap">
-    <h2><span class="zh">安装</span><span class="en">Install</span></h2>
-    <p class="sub"><span class="zh">不确定芯片类型？打开「苹果菜单 › 关于本机」，看“芯片”或“处理器”一栏。</span><span class="en">Not sure which chip you have? Open  › About This Mac and check “Chip” or “Processor”.</span></p>
-    <ol>
-      <li><span class="zh">下载与本机芯片匹配的 DMG，打开后把 FileHound 拖进「应用程序」文件夹。</span><span class="en">Download the DMG for your chip, open it and drag FileHound into Applications.</span></li>
-      <li><span class="zh">在「系统设置 › 隐私与安全性 › 完全磁盘访问权限」中允许 FileHound，偏好设置的「权限」页可以检查授权状态。</span><span class="en">Allow FileHound in System Settings › Privacy &amp; Security › Full Disk Access. The Permissions pane in Settings shows the current status.</span></li>
-      <li><span class="zh">需要搜索仅 root 可读的位置（如 <code>/private/var/root</code>）时，在「权限」页安装特权辅助程序，并在「系统设置 › 通用 › 登录项」中允许。</span><span class="en">To search root-only locations such as <code>/private/var/root</code>, install the privileged helper from the Permissions pane and allow it in System Settings › General › Login Items.</span></li>
-      <li><span class="zh">应用内会自动检查更新，只会下载与本机芯片匹配的版本。</span><span class="en">FileHound checks for updates automatically and only downloads the build for your chip.</span></li>
-    </ol>
-  </div>
-</section>
+  <!-- 原理：信号流 -->
+  <section class="section" id="how">
+    <div class="wrap">
+      <p class="sec-kicker"><span>03</span><span data-i18n="how.kicker">原理</span></p>
+      <h2 data-i18n="how.title">三路并行搜索，逐项按完整规则复核</h2>
+      <p class="sec-lead" data-i18n="how.lead">没有常驻后台进程，也不占额外磁盘。每次搜索看到的都是磁盘此刻的状态，一次搜索的链路如下。</p>
+      <div class="flow reveal">
+        <div class="stage">
+          <span class="stage-n">IN</span>
+          <h3 data-i18n="how.s1.t">搜索条件</h3>
+          <p data-i18n="how.s1.d">搜索范围 + 若干规则，组装成 <code>SearchRequest</code></p>
+        </div>
+        <div class="wire" aria-hidden="true"><i></i></div>
+        <div class="stage stage-ch">
+          <div class="ch">
+            <h3 data-i18n="how.c1.t">① Spotlight 预取</h3>
+            <p data-i18n="how.c1.d"><code>mdfind</code> 流式读取候选，尽快给出第一屏</p>
+          </div>
+          <div class="ch">
+            <h3 data-i18n="how.c2.t">② 卷目录搜索</h3>
+            <p data-i18n="how.c2.d"><code>searchfs</code> 由内核直接扫描卷目录</p>
+          </div>
+          <div class="ch">
+            <h3 data-i18n="how.c3.t">③ 多线程遍历</h3>
+            <p data-i18n="how.c3.d"><code>getattrlistbulk</code> + 最多 8 个线程</p>
+          </div>
+        </div>
+        <div class="wire" aria-hidden="true"><i></i></div>
+        <div class="stage">
+          <span class="stage-n">CHK</span>
+          <h3 data-i18n="how.s3.t">逐项复核</h3>
+          <p data-i18n="how.s3.d">每个候选都走同一个判定函数，廉价规则先判</p>
+        </div>
+        <div class="wire" aria-hidden="true"><i></i></div>
+        <div class="stage">
+          <span class="stage-n">SUM</span>
+          <h3 data-i18n="how.s4.t">汇总</h3>
+          <p data-i18n="how.s4.d">按路径去重、限制数量，约 100ms 推送一次</p>
+        </div>
+        <div class="wire" aria-hidden="true"><i></i></div>
+        <div class="stage stage-out">
+          <span class="stage-n">OUT</span>
+          <h3 data-i18n="how.s5.t">结果窗口</h3>
+          <p data-i18n="how.s5.d">列表 / 树形 / 网格，搜索中持续刷新</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<footer>
-  <div class="wrap">
-    <span>© 2026 VanJay · FileHound</span>
-    <span>
-      <a href="https://github.com/wangwanjie/FileHound/releases"><span class="zh">版本历史</span><span class="en">Releases</span></a> ·
-      <a href="https://github.com/wangwanjie/FileHound/issues"><span class="zh">反馈问题</span><span class="en">Feedback</span></a> ·
-      <a href="https://github.com/wangwanjie/FileHound#致谢"><span class="zh">致谢</span><span class="en">Credits</span></a>
-    </span>
+  <!-- 性能：按真实耗时等比例回放的条形图 -->
+  <section class="section" id="perf">
+    <div class="wrap">
+      <p class="sec-kicker"><span>04</span><span data-i18n="perf.kicker">性能</span></p>
+      <h2 data-i18n="perf.title">不建索引，照样很快</h2>
+      <p class="sec-lead" data-i18n="perf.lead">基准测试使用与 App 相同的搜索引擎源码，编译成命令行程序后与系统工具对比。条形长度代表耗时，越短越快；动画按真实耗时等比例回放。</p>
+      <div class="perf-head">
+        <p class="perf-env" data-i18n="perf.env">测于 2026-10-02 · Apple M2 Max（12 核）· 32 GB · macOS 27.2 · 热缓存，预热 1 次后取 3 次中位数</p>
+        <button type="button" class="replay" id="perf-replay"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10a6 6 0 1 0 2-4.5M4 3.5V7h3.5"/></svg><span data-i18n="perf.replay">重放</span></button>
+      </div>
+
+      <div class="bench-grid">
+        <article class="bench reveal" data-bench>
+          <header>
+            <h3 data-i18n="perf.b1.t">目录树按名称搜索</h3>
+            <p data-i18n="perf.b1.d"><code>/System/Library</code> · 458,219 个条目 · 名称包含 <code>plist</code> · 35,699 个结果</p>
+          </header>
+          <ul class="bars">
+            <li data-t="11.81" data-x="1.0×"><span class="bl"><code>find -iname</code></span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+            <li data-t="17.08" data-x="0.7×"><span class="bl"><code>FileManager.enumerator</code></span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+            <li data-t="46.81" data-x="0.3×"><span class="bl" data-i18n="perf.b1.r3">列名 + 逐项读属性</span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+            <li data-t="5.69" data-x="2.1×"><span class="bl" data-i18n="perf.b1.r4">FileHound 单线程</span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+            <li class="hound" data-t="1.52" data-x="7.7×"><span class="bl" data-i18n="perf.hound">FileHound（App 默认）</span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+          </ul>
+          <p class="bench-note" data-i18n="perf.b1.n"><code>mdfind -onlyin</code> 用时 0.39 s，但 Spotlight 不收录 <code>/System</code>，只返回 2 个结果，无法比较。倍数相对 <code>find</code>。</p>
+        </article>
+
+        <article class="bench reveal" data-bench>
+          <header>
+            <h3 data-i18n="perf.b2.t">整个启动卷按名称搜索</h3>
+            <p data-i18n="perf.b2.d">System + Data 卷约 707 万个对象，另有 4 个嵌套卷 · 名称包含 <code>plist</code></p>
+          </header>
+          <ul class="bars">
+            <li data-t="48.49" data-x="1.0×"><span class="bl" data-i18n="perf.b2.r1">FileHound 遍历</span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+            <li class="hound" data-t="31.89" data-x="1.5×"><span class="bl" data-i18n="perf.b2.r2">FileHound 卷目录搜索</span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+          </ul>
+          <p class="bench-note" data-i18n="perf.b2.n">卷目录搜索返回 295,472 个结果，遍历为 290,156 个。<code>mdfind -name</code> 用时 1.06 s，只含 Spotlight 已索引的 11,430 条。纯字母片段需勾选「区分变音符号」才会走卷目录搜索。</p>
+        </article>
+
+        <article class="bench reveal" data-bench>
+          <header>
+            <h3 data-i18n="perf.b3.t">按文本内容搜索</h3>
+            <p data-i18n="perf.b3.d">Xcode 自带 <code>MacOSX.sdk</code> 的 Frameworks · 13,290 个条目 · 内容包含 <code>kCFAllocatorDefault</code></p>
+          </header>
+          <ul class="bars">
+            <li data-t="3.51" data-x="1.0×"><span class="bl"><code>grep -rlF</code></span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+            <li data-t="0.31" data-x="11.3×"><span class="bl"><code>rg -l -F -uuu</code></span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+            <li class="hound" data-t="0.36" data-x="9.7×"><span class="bl" data-i18n="perf.hound">FileHound（App 默认）</span><span class="track"><i></i></span><span class="bv">0.00 s</span><span class="bx"></span></li>
+          </ul>
+          <p class="bench-note" data-i18n="perf.b3.n">FileHound 与 ripgrep 处在同一量级。它多出的 1 个结果是指向 <code>CoreFoundation.tbd</code> 的符号链接，<code>grep -r</code> 与 <code>rg</code> 默认跳过。</p>
+        </article>
+      </div>
+      <p class="perf-limit" data-i18n="perf.limit">测的是引擎核心（列目录 / 卷搜索 + 规则匹配），不含为每个命中项读取完整属性、生成结果行和渲染界面的开销。冷缓存时各实现都会明显变慢，请以数量级和相对关系为准。</p>
+
+      <h3 class="sub-title" data-i18n="fast.title">快在哪里</h3>
+      <div class="fast-grid">
+        <article class="fast reveal"><b class="fast-x">8×</b><h4 data-i18n="fast.1.t">批量列目录</h4><p data-i18n="fast.1.d"><code>getattrlistbulk</code> 一次系统调用取回一批子项的名称和类型。单线程遍历 <code>/System/Library</code> 从 46.8 s 降到 5.7 s。</p></article>
+        <article class="fast reveal"><b class="fast-x">3.7×</b><h4 data-i18n="fast.2.t">8 个线程共享目录栈</h4><p data-i18n="fast.2.d">工作线程共享一个深度优先的待遍历目录栈，内存平稳。在批量读取的基础上再从 5.7 s 降到 1.5 s。</p></article>
+        <article class="fast reveal"><b class="fast-x">1.5×</b><h4 data-i18n="fast.3.t">内核扫描卷目录</h4><p data-i18n="fast.3.d"><code>searchfs</code> 在内核里线性扫描卷目录，多个卷并发，每次最多停留 200ms 就交出已找到的结果。</p></article>
+        <article class="fast reveal"><b class="fast-x">+0</b><h4 data-i18n="fast.4.t">廉价规则先判</h4><p data-i18n="fast.4.d">名称、扩展名、路径先判，属性按需读取并缓存。不命中的条目除了批量列目录，不再多一次系统调用。</p></article>
+        <article class="fast reveal"><b class="fast-x">9.7×</b><h4 data-i18n="fast.5.t">内容按字节预筛</h4><p data-i18n="fast.5.d">64MB 以内用 <code>pread</code> 一次读入，更大的文件用内存映射；<code>memmem</code> 按 UTF-8 / UTF-16 / Latin-1 编码预筛。</p></article>
+        <article class="fast reveal"><b class="fast-x">100ms</b><h4 data-i18n="fast.6.t">先出结果，持续刷新</h4><p data-i18n="fast.6.d">Spotlight 预取与遍历并行，通常不到一秒就有第一批结果，之后约每 100ms 推送一次。</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 下载 -->
+  <section class="section" id="download">
+    <div class="wrap">
+      <p class="sec-kicker"><span>05</span><span data-i18n="dl.kicker">下载</span></p>
+      <h2 data-i18n="dl.title">放出猎犬，开始搜索</h2>
+      <div class="dl-grid">
+        <a class="dl-card dl-arm reveal" href="https://github.com/wangwanjie/FileHound/releases/latest/download/FileHound-arm64.dmg">
+          <span class="dl-chip">ARM64</span>
+          <strong data-i18n="dl.arm.t">Apple 芯片</strong>
+          <span class="dl-sub" data-i18n="dl.arm.d">M1 及更新的 Mac</span>
+          <span class="dl-file"><code>FileHound-arm64.dmg</code><span class="dl-size" data-size="FileHound-arm64.dmg"></span></span>
+        </a>
+        <a class="dl-card dl-intel reveal" href="https://github.com/wangwanjie/FileHound/releases/latest/download/FileHound-x86_64.dmg">
+          <span class="dl-chip">X86_64</span>
+          <strong data-i18n="dl.intel.t">Intel 芯片</strong>
+          <span class="dl-sub" data-i18n="dl.intel.d">使用 Intel 处理器的 Mac</span>
+          <span class="dl-file"><code>FileHound-x86_64.dmg</code><span class="dl-size" data-size="FileHound-x86_64.dmg"></span></span>
+        </a>
+      </div>
+      <div class="dl-notes">
+        <p data-i18n="dl.n1">需要 macOS 13.0 或更高版本。不确定芯片类型时，打开「苹果菜单 &gt; 关于本机」，看「芯片」或「处理器」一栏。</p>
+        <p data-i18n="dl.n2">安装包已经过 Apple 公证，打开 DMG 后把 FileHound 拖进「应用程序」文件夹即可。应用内会自动检查更新，只下载与本机芯片匹配的版本。</p>
+        <p data-i18n="dl.n3">搜索系统目录或其他 App 的数据时，在「系统设置 &gt; 隐私与安全性 &gt; 完全磁盘访问权限」中允许 FileHound；偏好设置的「权限」页可以检查授权状态。</p>
+        <p><a class="link" href="https://github.com/wangwanjie/FileHound/releases" data-i18n="dl.history">历史版本与更新说明 →</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div class="footer-brand">
+      <img src="assets/icon-64.webp" width="28" height="28" alt="" loading="lazy" decoding="async">
+      <span>FileHound</span>
+    </div>
+    <nav class="footer-links" data-i18n-attr="aria-label:aria.footer" aria-label="页脚链接">
+      <a href="https://vanjay.cn" data-i18n="foot.more">VanJay 的更多作品</a>
+      <a href="https://github.com/wangwanjie/FileHound" data-i18n="foot.repo">GitHub 仓库</a>
+      <a href="https://github.com/wangwanjie/FileHound/issues" data-i18n="foot.issues">反馈问题</a>
+    </nav>
+    <p class="copy">© 2026 VanJay</p>
   </div>
 </footer>
-
-<script>
-  // 功能卡片：[图标, 颜色, 中文名, 英文名, 中文说明, 英文说明]
-  const features = [
-    ["⌕", "#2f6bff", "组合条件搜索", "Combined rules", "名称、扩展名、路径、日期、大小、种类、标签、注释、文本内容、脚本等条件自由组合，支持通配符与正则表达式。", "Combine name, extension, path, dates, size, kind, tags, comments, text content and script rules, with wildcards and regex."],
-    ["◎", "#0ea5e9", "灵活的搜索范围", "Flexible scope", "启动卷、所有磁盘、主目录、访达选中的文件夹，或从访达拖入任意文件夹；可含不可见项目、包内容和废纸篓。", "Startup volume, all disks, home, the Finder selection or any dropped folder; include invisible items, packages and Trash."],
-    ["▤", "#6366f1", "三种结果视图", "Three result views", "列表、树形、网格视图，过滤、排序、Quick Look 预览，结果可直接拖到访达或其他 App。", "List, tree and grid views with filtering, sorting and Quick Look. Drag results straight into Finder or other apps."],
-    ["✎", "#f59e0b", "结果操作", "Act on results", "打开、在访达中显示、重命名、移到废纸篓（可放回原处）、设置标签、拷贝路径。", "Open, reveal in Finder, rename, move to Trash (with Put Back), set tags and copy paths."],
-    ["⇪", "#16a34a", "导出结果", "Export", "把当前结果导出为 CSV 或纯文本路径列表，快捷键 ⇧⌘E。", "Export results as CSV or a plain list of paths with ⇧⌘E."],
-    ["★", "#e11d48", "存储常用搜索", "Saved searches", "存储常用搜索，查看最近的搜索记录，⌘R 按结果窗口自己的条件重新搜索。", "Save frequent searches, browse recent ones, and press ⌘R to rerun a result window’s own search."],
-    ["⛨", "#64748b", "特权辅助程序", "Privileged helper", "可选安装，以 root 身份按需只读访问，仅在当前账户无权读取时才经由它，不影响普通搜索速度。", "Optional, read-only root access used only when your account lacks permission — normal searches stay fast."],
-    ["◐", "#a855f7", "语言与外观", "Language & appearance", "简体中文、繁体中文、英文随时切换；外观可选浅色、深色或跟随系统。", "Switch between Simplified Chinese, Traditional Chinese and English; light, dark or system appearance."]
-  ];
-
-  const grid = document.getElementById("feature-grid");
-  for (const [glyph, color, zh, en, zhText, enText] of features) {
-    const card = document.createElement("div");
-    card.className = "card";
-    card.innerHTML =
-      `<div class="tile" style="background:${color}">${glyph}</div>` +
-      `<h3><span class="zh">${zh}</span><span class="en">${en}</span></h3>` +
-      `<p><span class="zh">${zhText}</span><span class="en">${enText}</span></p>`;
-    grid.appendChild(card);
-  }
-
-  // 语言：默认跟随浏览器，记住用户的选择
-  const toggle = document.getElementById("lang-toggle");
-  function applyLanguage(lang) {
-    document.body.dataset.lang = lang;
-    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
-    toggle.textContent = lang === "zh" ? "EN" : "中文";
-    localStorage.setItem("filehound.lang", lang);
-  }
-  const saved = localStorage.getItem("filehound.lang");
-  applyLanguage(saved || (navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
-  toggle.addEventListener("click", () => applyLanguage(document.body.dataset.lang === "zh" ? "en" : "zh"));
-
-  // 尽量识别 Intel Mac（浏览器无法可靠区分时保持 Apple 芯片优先）
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl");
-    const info = gl && gl.getExtension("WEBGL_debug_renderer_info");
-    const renderer = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : "";
-    if (/Intel|AMD|Radeon/i.test(renderer) && !/Apple/i.test(renderer)) {
-      document.getElementById("dl-intel").className = "btn primary";
-      document.getElementById("dl-arm").className = "btn secondary";
-      document.querySelector(".downloads").prepend(document.getElementById("dl-intel"));
-    }
-  } catch (error) {}
-
-  // 显示最新版本号
-  fetch("https://api.github.com/repos/wangwanjie/FileHound/releases/latest")
-    .then((response) => (response.ok ? response.json() : null))
-    .then((release) => {
-      if (release && release.tag_name) {
-        document.getElementById("version").textContent = ` · ${release.tag_name}`;
-      }
-    })
-    .catch(() => {});
-</script>
 </body>
 </html>
